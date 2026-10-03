@@ -1,0 +1,6 @@
+{
+  "postgres-language-server.bin": "./node_modules/.bin/postgres-language-server.cmd",
+  "files.associations": {
+    "*.sql": "sql"
+  }
+}
