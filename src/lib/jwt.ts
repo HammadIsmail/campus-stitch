@@ -1,4 +1,4 @@
-import * as jose from "jose";
+import { encode, decode } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
 export interface JwtUserPayload {
@@ -12,38 +12,58 @@ export interface JwtUserPayload {
   hostelBlock?: string;
 }
 
-const JWT_SECRET_STRING =
-  process.env.JWT_SECRET ||
-  "campus-stitch-jwt-secret-key-2026-uet-lahore-student-platform-secure";
-
-const secretKey = new TextEncoder().encode(JWT_SECRET_STRING);
+const AUTH_SECRET =
+  process.env.AUTH_SECRET ||
+  process.env.NEXTAUTH_SECRET ||
+  "campus-stitch-uet-lahore-nextauth-super-secret-key-2026-authjs";
 
 export const JWT_COOKIE_NAME = "campus_stitch_token";
+const SALT = "campus_stitch_session";
 
 /**
- * Sign a JWT token with the user payload and expiration time
+ * Sign a JWT token using NextAuth's native encoder
  */
 export async function signJwtToken(
   payload: JwtUserPayload,
-  expiresIn: string = "7d",
+  expiresIn: number | string = 7 * 24 * 60 * 60,
 ): Promise<string> {
-  const jwt = await new jose.SignJWT({ ...payload })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(expiresIn)
-    .sign(secretKey);
+  let maxAge = 7 * 24 * 60 * 60;
+  if (typeof expiresIn === "number") {
+    maxAge = expiresIn;
+  } else if (typeof expiresIn === "string") {
+    if (expiresIn.endsWith("d")) {
+      maxAge = parseInt(expiresIn, 10) * 24 * 60 * 60;
+    } else if (expiresIn.endsWith("h")) {
+      maxAge = parseInt(expiresIn, 10) * 60 * 60;
+    } else if (expiresIn.endsWith("m")) {
+      maxAge = parseInt(expiresIn, 10) * 60;
+    }
+  }
+
+  const jwt = await encode({
+    token: { ...payload, sub: payload.userId },
+    secret: AUTH_SECRET,
+    salt: SALT,
+    maxAge,
+  });
 
   return jwt;
 }
 
 /**
- * Verify a JWT token string. Returns the decoded payload or null if invalid/expired.
+ * Verify a JWT token string using NextAuth's native decoder.
+ * Returns the decoded payload or null if invalid/expired.
  */
 export async function verifyJwtToken(
   token: string,
 ): Promise<JwtUserPayload | null> {
   try {
-    const { payload } = await jose.jwtVerify(token, secretKey);
+    const payload = await decode({
+      token,
+      secret: AUTH_SECRET,
+      salt: SALT,
+    });
+    if (!payload || !payload.email) return null;
     return payload as unknown as JwtUserPayload;
   } catch (err) {
     return null;
@@ -54,8 +74,11 @@ export async function verifyJwtToken(
  * Extract JWT token from NextRequest cookies or Authorization header
  */
 export function getJwtFromRequest(request: NextRequest): string | null {
-  // 1. Check HTTP-only cookie
-  const cookieToken = request.cookies.get(JWT_COOKIE_NAME)?.value;
+  // 1. Check HTTP-only cookies
+  const cookieToken =
+    request.cookies.get(JWT_COOKIE_NAME)?.value ||
+    request.cookies.get("authjs.session-token")?.value ||
+    request.cookies.get("__Secure-authjs.session-token")?.value;
   if (cookieToken) return cookieToken;
 
   // 2. Check Authorization header: Bearer <token>
@@ -88,6 +111,15 @@ export function setJwtCookie(response: NextResponse, token: string): void {
 export function clearJwtCookie(response: NextResponse): void {
   response.cookies.set({
     name: JWT_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+  response.cookies.set({
+    name: "authjs.session-token",
     value: "",
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
