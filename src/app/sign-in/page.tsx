@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Loader2,
   CheckCircle2,
-  Sparkles,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,31 @@ export default function SignInPage() {
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
   const { login } = useAuth();
 
+  // Listen for Supabase session changes (e.g. if student clicks Magic Link in email)
+  React.useEffect(() => {
+    const supabase = createClient();
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (
+          (event === "SIGNED_IN" || event === "USER_UPDATED") &&
+          session?.user?.email
+        ) {
+          await login({
+            email: session.user.email,
+            studentId: session.user.email.split("@")[0].toUpperCase(),
+          });
+          const params = new URLSearchParams(window.location.search);
+          const redirectTarget = params.get("redirect") || "/";
+          router.push(redirectTarget);
+        }
+      },
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [login, router]);
+
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -37,17 +61,27 @@ export default function SignInPage() {
 
     try {
       const supabase = createClient();
-      await supabase.auth.signInWithOtp({
+      const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+        new URLSearchParams(window.location.search).get("redirect") || "/",
+      )}`;
+
+      const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
           shouldCreateUser: true,
+          emailRedirectTo: redirectUrl,
         },
       });
-      setSuccessMsg("Verification code sent to your email! (Enter 123456 or your code)");
+
+      if (error) {
+        setErrorMsg(error.message || "Failed to send code. Please try again.");
+        return;
+      }
+
+      setSuccessMsg("Verification code sent to your email!");
       setStep("otp");
     } catch (err: any) {
-      setSuccessMsg("We sent a 6-digit code to your email. (Use 123456 for instant test)");
-      setStep("otp");
+      setErrorMsg(err.message || "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -61,39 +95,33 @@ export default function SignInPage() {
     setErrorMsg(null);
 
     try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: otp.trim(),
+        type: "email",
+      });
+
+      if (error) {
+        setErrorMsg(error.message || "Invalid or expired verification code.");
+        return;
+      }
+
       const ok = await login({
         email: email.trim(),
         studentId: email.split("@")[0].toUpperCase(),
       });
 
       if (!ok) {
-        setErrorMsg("Authentication failed. Please verify your credentials.");
+        setErrorMsg("Authentication session could not be established. Please try again.");
         return;
       }
 
-      // Check redirect param
       const params = new URLSearchParams(window.location.search);
-      const redirectTarget = params.get("redirect") || "/profile";
+      const redirectTarget = params.get("redirect") || "/";
       router.push(redirectTarget);
     } catch (err: any) {
       setErrorMsg("Verification failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoSignIn = async () => {
-    setLoading(true);
-    try {
-      await login({
-        email: "2021-cs-104@uet.edu.pk",
-        name: "Muhammad Hammad",
-        studentId: "2021-CS-104",
-        isDemo: true,
-      });
-      const params = new URLSearchParams(window.location.search);
-      const redirectTarget = params.get("redirect") || "/profile";
-      router.push(redirectTarget);
     } finally {
       setLoading(false);
     }
@@ -193,9 +221,9 @@ export default function SignInPage() {
                     required
                     maxLength={6}
                     aria-label="Verification code"
-                    placeholder="123456"
+                    placeholder="------"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
+                    onChange={(e) => setOtp(e.target.value.trim())}
                     className="w-full h-11 px-3 border border-zinc-300 rounded-xl text-center text-base tracking-widest font-mono font-bold text-black focus:outline-none focus:border-black"
                   />
                   <span className="text-[11px] text-zinc-400 text-center block">
@@ -223,16 +251,16 @@ export default function SignInPage() {
               </form>
             )}
 
-            {/* Quick Demo Bypass */}
-            <div className="pt-2 border-t border-zinc-100">
-              <button
-                type="button"
-                onClick={handleDemoSignIn}
-                className="w-full py-2.5 px-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <ShieldCheck size={14} className="text-black" />
-                <span>Instant Demo: Verified Student (2021-CS-104)</span>
-              </button>
+            <div className="pt-2 border-t border-zinc-100 text-center">
+              <span className="text-xs text-zinc-500">
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="/sign-up"
+                  className="font-bold text-black hover:underline"
+                >
+                  Create Student Account
+                </Link>
+              </span>
             </div>
           </div>
 
