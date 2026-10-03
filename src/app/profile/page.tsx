@@ -15,15 +15,20 @@ import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { DataService, Listing, SharedItem } from "@/lib/data-service";
 
+import { useAuth } from "@/lib/auth-context";
+
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = React.useState({
-    name: "Muhammad Hammad",
-    studentId: "2021-CS-104",
-    program: "BSCS (Computer Science)",
+  const { user: authUser, logout } = useAuth();
+
+  const user = {
+    name: authUser?.name || "Muhammad Hammad",
+    studentId: authUser?.studentId || "2021-CS-104",
+    program: authUser?.program || "BSCS (Computer Science)",
     university: "UET Lahore",
-    verified: true,
-  });
+    verified: authUser?.isVerified ?? true,
+    role: authUser?.role || "student",
+  };
 
   const [myBookings, setMyBookings] = React.useState<any[]>([]);
   const [myListings, setMyListings] = React.useState<Listing[]>([]);
@@ -47,11 +52,8 @@ export default function ProfilePage() {
     loadProfileData();
   }, []);
 
-  const handleSignOut = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("campus_stitch_current_user");
-    }
-    router.push("/sign-in");
+  const handleSignOut = async () => {
+    await logout();
   };
 
   return (

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth-context";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -26,6 +26,7 @@ export default function SignUpPage() {
   const [hostel, setHostel] = React.useState("Hostel Block A");
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const { signup } = useAuth();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,51 +35,24 @@ export default function SignUpPage() {
     setLoading(true);
     setErrorMsg(null);
 
-    const studentProfile = {
-      name: fullName.trim(),
-      student_id: studentId.trim().toUpperCase(),
-      program: program,
-      email: email.trim().toLowerCase(),
-      university: "UET Lahore",
-      hostel_block: hostel,
-      is_verified: true,
-      created_at: new Date().toISOString(),
-    };
-
     try {
-      const supabase = createClient();
-      await supabase.auth.signUp({
-        email: email.trim(),
-        password: "TempPassword123!",
-        options: {
-          data: {
-            full_name: studentProfile.name,
-            student_id: studentProfile.student_id,
-            program: studentProfile.program,
-          },
-        },
+      const ok = await signup({
+        name: fullName.trim(),
+        studentId: studentId.trim().toUpperCase(),
+        email: email.trim().toLowerCase(),
+        program,
+        hostel,
       });
 
-      // Save user state locally
-      if (typeof window !== "undefined") {
-        localStorage.setItem(
-          "campus_stitch_current_user",
-          JSON.stringify(studentProfile),
-        );
+      if (!ok) {
+        setErrorMsg("Registration failed. Please check your information.");
+        return;
       }
 
       // Redirect to student card verification to complete onboarding
       router.push("/verify");
     } catch (err: any) {
-      console.warn("Sign up warning:", err);
-      // Fallback local persistence
-      if (typeof window !== "undefined") {
-        localStorage.setItem(
-          "campus_stitch_current_user",
-          JSON.stringify(studentProfile),
-        );
-      }
-      router.push("/verify");
+      setErrorMsg("Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }

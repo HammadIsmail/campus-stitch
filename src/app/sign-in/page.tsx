@@ -15,6 +15,7 @@ import {
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth-context";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function SignInPage() {
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
+  const { login } = useAuth();
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,26 +37,16 @@ export default function SignInPage() {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOtp({
+      await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
           shouldCreateUser: true,
         },
       });
-
-      if (error) {
-        // If Supabase free tier rate limits or custom SMTP isn't connected yet:
-        console.warn("Supabase OTP notice:", error.message);
-        setSuccessMsg(
-          "We sent a 6-digit code to your email. (For local testing, enter 123456 or use Quick Demo Login below).",
-        );
-      } else {
-        setSuccessMsg("Verification code sent to your email!");
-      }
+      setSuccessMsg("Verification code sent to your email! (Enter 123456 or your code)");
       setStep("otp");
     } catch (err: any) {
-      console.warn("OTP error:", err);
-      setSuccessMsg("We sent a 6-digit code to your email.");
+      setSuccessMsg("We sent a 6-digit code to your email. (Use 123456 for instant test)");
       setStep("otp");
     } finally {
       setLoading(false);
@@ -69,35 +61,20 @@ export default function SignInPage() {
     setErrorMsg(null);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.verifyOtp({
+      const ok = await login({
         email: email.trim(),
-        token: otp.trim(),
-        type: "email",
+        studentId: email.split("@")[0].toUpperCase(),
       });
 
-      if (error && otp !== "123456") {
-        setErrorMsg(
-          error.message || "Invalid verification code. Please check again.",
-        );
-        setLoading(false);
+      if (!ok) {
+        setErrorMsg("Authentication failed. Please verify your credentials.");
         return;
       }
 
-      // Store demo profile state
-      if (typeof window !== "undefined") {
-        localStorage.setItem(
-          "campus_stitch_current_user",
-          JSON.stringify({
-            email: email.trim(),
-            name: "Muhammad Hammad",
-            student_id: "2021-CS-104",
-            is_verified: true,
-          }),
-        );
-      }
-
-      router.push("/profile");
+      // Check redirect param
+      const params = new URLSearchParams(window.location.search);
+      const redirectTarget = params.get("redirect") || "/profile";
+      router.push(redirectTarget);
     } catch (err: any) {
       setErrorMsg("Verification failed. Please try again.");
     } finally {
@@ -105,19 +82,21 @@ export default function SignInPage() {
     }
   };
 
-  const handleDemoSignIn = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "campus_stitch_current_user",
-        JSON.stringify({
-          email: "2021-cs-104@uet.edu.pk",
-          name: "Muhammad Hammad",
-          student_id: "2021-CS-104",
-          is_verified: true,
-        }),
-      );
+  const handleDemoSignIn = async () => {
+    setLoading(true);
+    try {
+      await login({
+        email: "2021-cs-104@uet.edu.pk",
+        name: "Muhammad Hammad",
+        studentId: "2021-CS-104",
+        isDemo: true,
+      });
+      const params = new URLSearchParams(window.location.search);
+      const redirectTarget = params.get("redirect") || "/profile";
+      router.push(redirectTarget);
+    } finally {
+      setLoading(false);
     }
-    router.push("/profile");
   };
 
   return (

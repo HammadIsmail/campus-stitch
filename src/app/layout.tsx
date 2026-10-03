@@ -14,6 +14,8 @@ export const metadata: Metadata = {
     "Student-verified commute sharing, marketplace, hostel services, and AI campus assistant for UET Lahore.",
 };
 
+import { AuthProvider } from "@/lib/auth-context";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${figtree.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-[#ECEEF2]">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

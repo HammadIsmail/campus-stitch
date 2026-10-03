@@ -143,14 +143,6 @@ export function MobileShell({
               <User size={16} />
             </Link>
 
-            {/* Offer Ride CTA */}
-            <Link
-              href="/commute/offer"
-              className="h-9 px-3 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs ml-0.5"
-            >
-              <Plus size={14} className="stroke-[2.5px]" />
-              <span className="hidden sm:inline">Offer Ride</span>
-            </Link>
           </div>
         </div>
       </header>
