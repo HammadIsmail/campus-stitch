@@ -10,12 +10,11 @@ import {
   ArrowRight,
   Loader2,
   CheckCircle2,
-  ExternalLink,
   RefreshCw,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { signIn } from "next-auth/react";
 import { useAuth } from "@/lib/auth-context";
 
 export default function SignInPage() {
@@ -23,36 +22,10 @@ export default function SignInPage() {
   const [email, setEmail] = React.useState("");
   const [otp, setOtp] = React.useState("");
   const [step, setStep] = React.useState<"email" | "otp">("email");
-  const [showCodeInput, setShowCodeInput] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
-  const { login } = useAuth();
-
-  // Listen for Supabase session changes (e.g. if student clicks Magic Link in email)
-  React.useEffect(() => {
-    const supabase = createClient();
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (
-          (event === "SIGNED_IN" || event === "USER_UPDATED") &&
-          session?.user?.email
-        ) {
-          await login({
-            email: session.user.email,
-            studentId: session.user.email.split("@")[0].toUpperCase(),
-          });
-          const params = new URLSearchParams(window.location.search);
-          const redirectTarget = params.get("redirect") || "/";
-          router.push(redirectTarget);
-        }
-      },
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [login, router]);
+  const { refreshAuth } = useAuth();
 
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -63,28 +36,23 @@ export default function SignInPage() {
     setSuccessMsg(null);
 
     try {
-      const supabase = createClient();
-      const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-        new URLSearchParams(window.location.search).get("redirect") || "/",
-      )}`;
-
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: redirectUrl,
-        },
+      const res = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
       });
 
-      if (error) {
-        setErrorMsg(error.message || "Failed to send sign-in link. Please try again.");
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.message || "Failed to send verification code. Please try again.");
         return;
       }
 
-      setSuccessMsg(`Sign-in link sent to ${email.trim()}!`);
+      setSuccessMsg(`6-digit verification code sent to ${email.trim()}!`);
       setStep("otp");
     } catch (err: any) {
-      setErrorMsg(err.message || "An unexpected error occurred. Please try again.");
+      setErrorMsg(err.message || "Failed to connect to email service. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -98,40 +66,36 @@ export default function SignInPage() {
     setErrorMsg(null);
 
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.verifyOtp({
+      // 1. Verify with NextAuth credentials provider
+      const nextAuthResult = await signIn("credentials", {
         email: email.trim(),
-        token: otp.trim(),
-        type: "email",
+        code: otp.trim(),
+        redirect: false,
       });
 
-      if (error) {
-        setErrorMsg(error.message || "Invalid or expired verification code.");
+      if (nextAuthResult?.error) {
+        setErrorMsg("Invalid or expired 6-digit code. Please check your inbox and try again.");
         return;
       }
 
-      const ok = await login({
-        email: email.trim(),
-        studentId: email.split("@")[0].toUpperCase(),
+      // 2. Also ensure local session and JWT cookie are synced
+      await fetch("/api/auth/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), code: otp.trim() }),
       });
 
-      if (!ok) {
-        setErrorMsg("Authentication session could not be established. Please try again.");
-        return;
-      }
+      await refreshAuth();
 
       const params = new URLSearchParams(window.location.search);
       const redirectTarget = params.get("redirect") || "/";
       router.push(redirectTarget);
     } catch (err: any) {
-      setErrorMsg("Verification failed. Please try again.");
+      setErrorMsg(err.message || "Verification failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-
-  const emailDomain = email.split("@")[1]?.toLowerCase() || "";
-  const isGmail = emailDomain === "gmail.com" || emailDomain.includes("uet.edu.pk");
 
   return (
     <MobileShell>
@@ -147,7 +111,7 @@ export default function SignInPage() {
               Sign In to CampuStitch
             </h1>
             <p className="text-xs text-zinc-500 max-w-xs">
-              UET Lahore Student Life Platform. Enter your email to receive your secure sign-in access.
+              UET Lahore Student Life Platform. Enter your email to receive your 6-digit OTP code.
             </p>
           </div>
 
@@ -183,7 +147,7 @@ export default function SignInPage() {
                     className="w-full h-11 px-3 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black"
                   />
                   <span className="text-[11px] text-zinc-400">
-                    We’ll send a secure sign-in link or verification code. No password needed.
+                    We will send a 6-digit OTP code directly to your email.
                   </span>
                 </div>
 
@@ -195,7 +159,7 @@ export default function SignInPage() {
                   {loading ? (
                     <>
                       <Loader2 size={14} className="animate-spin" />
-                      <span>Sending sign-in access...</span>
+                      <span>Sending OTP code...</span>
                     </>
                   ) : (
                     <>
@@ -206,88 +170,60 @@ export default function SignInPage() {
                 </Button>
               </form>
             ) : (
-              <div className="space-y-4">
-                {/* Magic Link Guidance Card */}
-                <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl text-center space-y-3">
-                  <div className="w-10 h-10 bg-black text-white rounded-full mx-auto flex items-center justify-center">
-                    <Mail size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-black">
-                      Check your inbox
-                    </h3>
-                    <p className="text-[11px] text-zinc-500 mt-0.5">
-                      We sent a one-time sign-in link to{" "}
-                      <span className="font-semibold text-black">{email}</span>.
-                    </p>
-                  </div>
-
-                  <a
-                    href={isGmail ? "https://mail.google.com" : "mailto:"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    <span>Open Email Inbox</span>
-                    <ExternalLink size={13} />
-                  </a>
-
-                  <p className="text-[10px] text-zinc-400">
-                    Click the <strong>Sign in</strong> link in your email to immediately access your account.
-                  </p>
-                </div>
-
-                {/* Option to enter 6-digit code if custom SMTP is used */}
-                <div className="pt-1 text-center">
-                  {!showCodeInput ? (
+              <form onSubmit={handleVerifyOtp} className="space-y-3.5">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-black flex items-center gap-1.5">
+                      <KeyRound size={13} />
+                      <span>6-Digit Passcode</span>
+                    </label>
                     <button
                       type="button"
-                      onClick={() => setShowCodeInput(true)}
+                      onClick={() => {
+                        setStep("email");
+                        setOtp("");
+                        setErrorMsg(null);
+                        setSuccessMsg(null);
+                      }}
                       className="text-[11px] text-zinc-500 hover:text-black font-semibold underline cursor-pointer"
                     >
-                      Received a 6-digit OTP code? Enter code
+                      Change email
                     </button>
-                  ) : (
-                    <form onSubmit={handleVerifyOtp} className="space-y-3 pt-2 text-left">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-black flex items-center gap-1.5">
-                          <KeyRound size={13} />
-                          <span>6-Digit Passcode</span>
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          maxLength={6}
-                          aria-label="Verification code"
-                          placeholder="------"
-                          value={otp}
-                          onChange={(e) => setOtp(e.target.value.trim())}
-                          className="w-full h-11 px-3 border border-zinc-300 rounded-xl text-center text-base tracking-widest font-mono font-bold text-black focus:outline-none focus:border-black"
-                        />
-                      </div>
+                  </div>
 
-                      <Button
-                        type="submit"
-                        disabled={loading || otp.length < 6}
-                        className="w-full h-10 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 size={14} className="animate-spin" />
-                            <span>Verifying...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Verify Code</span>
-                            <ArrowRight size={14} />
-                          </>
-                        )}
-                      </Button>
-                    </form>
-                  )}
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    aria-label="Verification code"
+                    placeholder="------"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.trim())}
+                    className="w-full h-11 px-3 border border-zinc-300 rounded-xl text-center text-base tracking-widest font-mono font-bold text-black focus:outline-none focus:border-black"
+                  />
+                  <span className="text-[11px] text-zinc-400 text-center block">
+                    Enter the code sent to {email}
+                  </span>
                 </div>
 
-                {/* Secondary Actions */}
+                <Button
+                  type="submit"
+                  disabled={loading || otp.length < 6}
+                  className="w-full h-11 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In</span>
+                      <ArrowRight size={14} />
+                    </>
+                  )}
+                </Button>
+
                 <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px]">
                   <button
                     type="button"
@@ -296,21 +232,11 @@ export default function SignInPage() {
                     className="text-zinc-500 hover:text-black font-semibold flex items-center gap-1 cursor-pointer"
                   >
                     <RefreshCw size={11} />
-                    <span>Resend email</span>
+                    <span>Resend code</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep("email");
-                      setShowCodeInput(false);
-                      setOtp("");
-                    }}
-                    className="text-zinc-500 hover:text-black font-semibold underline cursor-pointer"
-                  >
-                    Change email
-                  </button>
+                  <span className="text-zinc-400">Expires in 10 mins</span>
                 </div>
-              </div>
+              </form>
             )}
 
             <div className="pt-2 border-t border-zinc-100 text-center">

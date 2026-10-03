@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "@/lib/auth-context";
+import { AuthSessionProvider } from "@/components/auth-session-provider";
 
 export default function RootLayout({
   children,
@@ -24,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${figtree.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-[#ECEEF2]">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthSessionProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );
