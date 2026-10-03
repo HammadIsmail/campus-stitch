@@ -13,13 +13,21 @@ import {
   ArrowLeft,
   ChevronRight,
   CheckCheck,
+  Mic,
+  Square,
+  Play,
+  Pause,
+  Trash2,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 
 interface Message {
   id: string;
   sender: "user" | "other";
-  text: string;
+  text?: string;
+  type?: "text" | "voice";
+  audioUrl?: string;
+  duration?: string;
   time: string;
 }
 
@@ -37,6 +45,70 @@ interface Conversation {
   messages: Message[];
 }
 
+function VoiceMessageBubble({ message, isMe }: { message: Message; isMe: boolean }) {
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  return (
+    <div
+      className={`p-3 rounded-2xl flex items-center gap-3 min-w-[220px] ${
+        isMe
+          ? "bg-black text-white rounded-tr-xs shadow-xs"
+          : "bg-white text-zinc-900 border border-zinc-200 rounded-tl-xs shadow-2xs"
+      }`}
+    >
+      {message.audioUrl && (
+        <audio
+          ref={audioRef}
+          src={message.audioUrl}
+          onEnded={() => setIsPlaying(false)}
+          onPause={() => setIsPlaying(false)}
+          className="hidden"
+        />
+      )}
+      <button
+        type="button"
+        onClick={togglePlay}
+        className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-90 cursor-pointer ${
+          isMe ? "bg-white text-black" : "bg-black text-white"
+        }`}
+      >
+        {isPlaying ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
+      </button>
+
+      {/* Waveform graphic bars */}
+      <div className="flex-1 flex items-center gap-1 h-6">
+        {[40, 75, 55, 90, 60, 80, 45, 100, 70, 50, 85, 60, 40].map((h, i) => (
+          <span
+            key={i}
+            className={`w-1 rounded-full transition-all ${
+              isMe ? "bg-white/70" : "bg-black/70"
+            }`}
+            style={{
+              height: `${isPlaying ? Math.max(20, (h * (i % 2 === 0 ? 1 : 0.6))) : h}%`,
+            }}
+          />
+        ))}
+      </div>
+
+      <span className="text-[11px] font-mono shrink-0 opacity-80">
+        {message.duration || "0:04"}
+      </span>
+    </div>
+  );
+}
+
 function MessagesContent() {
   const searchParams = useSearchParams();
   const contextParam = searchParams.get("context") as "ride" | "listing" | "bike" | null;
@@ -45,6 +117,13 @@ function MessagesContent() {
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [inputMsg, setInputMsg] = React.useState("");
+
+  // Voice recording state
+  const [isRecording, setIsRecording] = React.useState(false);
+  const [recordingSeconds, setRecordingSeconds] = React.useState(0);
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const audioChunksRef = React.useRef<Blob[]>([]);
+  const timerIntervalRef = React.useRef<any>(null);
 
   React.useEffect(() => {
     let currentConvs: Conversation[] = [];
@@ -55,13 +134,17 @@ function MessagesContent() {
       }
     } catch {}
 
-    // If navigated with context query params, create an initial chat if none exists for this item
     if (contextParam && idParam) {
       const existing = currentConvs.find((c) => c.contextLink.includes(idParam));
       if (!existing) {
         const newChat: Conversation = {
           id: "c_" + Date.now(),
-          contactName: contextParam === "ride" ? "Ride Organizer" : contextParam === "bike" ? "Bike Owner" : "Seller",
+          contactName:
+            contextParam === "ride"
+              ? "Ride Organizer"
+              : contextParam === "bike"
+                ? "Bike Owner"
+                : "Seller",
           contactVerified: true,
           contextType: contextParam,
           contextTitle:
@@ -77,7 +160,7 @@ function MessagesContent() {
               : contextParam === "bike"
                 ? `/commute/bike?id=${idParam}`
                 : `/market`,
-          lastMessage: "Chat created. Say hello to start discussing details!",
+          lastMessage: "Chat created. Say hello or record a voice note!",
           lastTime: "Just now",
           unreadCount: 0,
           messages: [],
@@ -106,6 +189,7 @@ function MessagesContent() {
     const newMsg: Message = {
       id: "m_" + Date.now(),
       sender: "user",
+      type: "text",
       text: inputMsg.trim(),
       time: "Just now",
     };
@@ -114,7 +198,7 @@ function MessagesContent() {
       if (c.id === selectedId) {
         return {
           ...c,
-          lastMessage: newMsg.text,
+          lastMessage: newMsg.text || "",
           lastTime: "Just now",
           messages: [...c.messages, newMsg],
         };
@@ -130,6 +214,111 @@ function MessagesContent() {
     setInputMsg("");
   };
 
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.warn("Microphone access denied or unavailable:", err);
+      // Fallback simulated voice note for testing
+      simulateVoiceNote();
+    }
+  };
+
+  const stopVoiceRecording = (send: boolean) => {
+    if (!isRecording) return;
+    clearInterval(timerIntervalRef.current);
+    setIsRecording(false);
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+
+    if (send && selectedId) {
+      const durationStr = `0:${recordingSeconds < 10 ? "0" + recordingSeconds : recordingSeconds}`;
+      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const audioUrl = URL.createObjectURL(blob);
+
+      const newMsg: Message = {
+        id: "m_" + Date.now(),
+        sender: "user",
+        type: "voice",
+        audioUrl: audioUrl,
+        duration: durationStr,
+        text: "Voice message",
+        time: "Just now",
+      };
+
+      const updated = conversations.map((c) => {
+        if (c.id === selectedId) {
+          return {
+            ...c,
+            lastMessage: "🎤 Voice message",
+            lastTime: "Just now",
+            messages: [...c.messages, newMsg],
+          };
+        }
+        return c;
+      });
+
+      setConversations(updated);
+      try {
+        localStorage.setItem("campus_stitch_conversations", JSON.stringify(updated));
+      } catch {}
+    }
+
+    setRecordingSeconds(0);
+  };
+
+  const simulateVoiceNote = () => {
+    if (!selectedId) return;
+    const newMsg: Message = {
+      id: "m_" + Date.now(),
+      sender: "user",
+      type: "voice",
+      audioUrl: "",
+      duration: "0:05",
+      text: "Voice message",
+      time: "Just now",
+    };
+
+    const updated = conversations.map((c) => {
+      if (c.id === selectedId) {
+        return {
+          ...c,
+          lastMessage: "🎤 Voice message",
+          lastTime: "Just now",
+          messages: [...c.messages, newMsg],
+        };
+      }
+      return c;
+    });
+
+    setConversations(updated);
+    try {
+      localStorage.setItem("campus_stitch_conversations", JSON.stringify(updated));
+    } catch {}
+  };
+
   return (
     <div className="w-full h-full flex flex-col bg-[#F9F9FB] text-zinc-900 select-none">
       {/* Header */}
@@ -139,7 +328,7 @@ function MessagesContent() {
             Messages
           </div>
           <div className="text-[11px] text-zinc-500 font-medium">
-            Contextual Student Conversations
+            Text & Voice Chat with Verified Students
           </div>
         </div>
         <span className="text-[11px] text-zinc-600 font-semibold bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-md">
@@ -251,7 +440,7 @@ function MessagesContent() {
               <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
                 {activeConv.messages.length === 0 ? (
                   <div className="py-12 text-center text-xs text-zinc-400">
-                    Send a message to start chatting with {activeConv.contactName}.
+                    Send a text or voice note to start chatting with {activeConv.contactName}.
                   </div>
                 ) : (
                   activeConv.messages.map((m) => {
@@ -261,15 +450,19 @@ function MessagesContent() {
                         key={m.id}
                         className={`flex flex-col ${isMe ? "items-end ml-auto" : "items-start mr-auto"} max-w-[320px]`}
                       >
-                        <div
-                          className={`p-3 rounded-2xl text-xs leading-relaxed ${
-                            isMe
-                              ? "bg-black text-white rounded-tr-xs shadow-xs font-medium"
-                              : "bg-white text-zinc-900 border border-zinc-200 rounded-tl-xs shadow-2xs"
-                          }`}
-                        >
-                          {m.text}
-                        </div>
+                        {m.type === "voice" ? (
+                          <VoiceMessageBubble message={m} isMe={isMe} />
+                        ) : (
+                          <div
+                            className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                              isMe
+                                ? "bg-black text-white rounded-tr-xs shadow-xs font-medium"
+                                : "bg-white text-zinc-900 border border-zinc-200 rounded-tl-xs shadow-2xs"
+                            }`}
+                          >
+                            {m.text}
+                          </div>
+                        )}
                         <span className="text-[10px] text-zinc-400 mt-1 px-1 flex items-center gap-1 font-medium">
                           <span>{m.time}</span>
                           {isMe && (
@@ -282,27 +475,66 @@ function MessagesContent() {
                 )}
               </div>
 
-              {/* Chat Input Bar */}
-              <form
-                onSubmit={handleSendMessage}
-                className="p-3 bg-white border-t border-zinc-200 flex items-center gap-2 flex-none"
-              >
-                <input
-                  aria-label="Type message"
-                  placeholder={`Message ${activeConv.contactName}...`}
-                  value={inputMsg}
-                  onChange={(e) => setInputMsg(e.target.value)}
-                  className="flex-1 min-w-0 h-10 px-3 border border-zinc-300 rounded-lg text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-black"
-                />
-                <button
-                  type="submit"
-                  aria-label="Send message"
-                  disabled={!inputMsg.trim()}
-                  className="w-10 h-10 shrink-0 rounded-lg bg-black hover:bg-zinc-800 disabled:opacity-40 text-white flex items-center justify-center transition-colors active:scale-95 cursor-pointer"
-                >
-                  <Send size={15} />
-                </button>
-              </form>
+              {/* Chat Input Bar with Text & Voice */}
+              <div className="p-3 bg-white border-t border-zinc-200 flex-none">
+                {isRecording ? (
+                  <div className="flex items-center justify-between gap-3 h-10 px-3 bg-zinc-100 rounded-xl border border-zinc-300">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
+                      <span className="text-xs font-bold text-black font-mono">
+                        Recording 0:{recordingSeconds < 10 ? "0" + recordingSeconds : recordingSeconds}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => stopVoiceRecording(false)}
+                        className="p-1.5 text-zinc-500 hover:text-black transition-colors"
+                        title="Cancel recording"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => stopVoiceRecording(true)}
+                        className="px-3 py-1 rounded-lg bg-black text-white text-xs font-bold hover:bg-zinc-800 transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Send Audio</span>
+                        <Send size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={startVoiceRecording}
+                      title="Record Voice Note"
+                      className="w-10 h-10 shrink-0 rounded-lg border border-zinc-300 hover:border-black bg-white hover:bg-zinc-50 text-black flex items-center justify-center transition-all cursor-pointer"
+                    >
+                      <Mic size={17} />
+                    </button>
+
+                    <input
+                      aria-label="Type message"
+                      placeholder={`Message ${activeConv.contactName}...`}
+                      value={inputMsg}
+                      onChange={(e) => setInputMsg(e.target.value)}
+                      className="flex-1 min-w-0 h-10 px-3 border border-zinc-300 rounded-lg text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-black"
+                    />
+
+                    <button
+                      type="submit"
+                      aria-label="Send message"
+                      disabled={!inputMsg.trim()}
+                      className="w-10 h-10 shrink-0 rounded-lg bg-black hover:bg-zinc-800 disabled:opacity-40 text-white flex items-center justify-center transition-colors active:scale-95 cursor-pointer"
+                    >
+                      <Send size={15} />
+                    </button>
+                  </form>
+                )}
+              </div>
             </main>
           ) : (
             <div className="flex-1 flex items-center justify-center text-xs text-zinc-500">

@@ -125,11 +125,11 @@ export default function HostelPage() {
 
             <div className="flex items-center gap-2">
               <Link
-                href="/assistant"
-                className="h-9 px-3.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 text-xs font-semibold text-zinc-800 flex items-center gap-1.5 transition-colors shadow-2xs"
+                href="/hostel/offer"
+                className="h-9 px-3 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 text-xs font-semibold text-zinc-800 flex items-center gap-1.5 transition-colors shadow-2xs"
               >
-                <Search size={14} className="text-zinc-500" />
-                <span>Search Hostel</span>
+                <Wrench size={13} className="text-zinc-600" />
+                <span>Offer Service</span>
               </Link>
               <button
                 type="button"

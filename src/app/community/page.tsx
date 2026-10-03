@@ -93,13 +93,22 @@ export default function CommunityPage() {
               UET Lahore · Verified student societies & groups
             </div>
           </div>
-          <Link
-            href="/assistant"
-            aria-label="Search or ask"
-            className="w-9 h-9 flex items-center justify-center text-zinc-800 hover:bg-zinc-100 rounded-full transition-colors"
-          >
-            <Search size={18} className="stroke-[2px]" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/community/create"
+              className="h-9 px-3 rounded-lg bg-black text-white hover:bg-zinc-800 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+            >
+              <Plus size={13} />
+              <span>Create Group</span>
+            </Link>
+            <Link
+              href="/assistant"
+              aria-label="Search or ask"
+              className="w-9 h-9 flex items-center justify-center text-zinc-800 hover:bg-zinc-100 rounded-full transition-colors"
+            >
+              <Search size={18} className="stroke-[2px]" />
+            </Link>
+          </div>
         </header>
 
         {/* Scrollable Content */}

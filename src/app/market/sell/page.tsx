@@ -20,13 +20,13 @@ const CONDITIONS = ["New", "Like new", "Good", "Fair"] as const;
 
 export default function SellSomethingPage() {
   const router = useRouter();
-  const [title, setTitle] = React.useState("Phone cooler");
+  const [title, setTitle] = React.useState("");
   const [category, setCategory] =
     React.useState<(typeof CATEGORIES)[number]>("Electronics");
-  const [price, setPrice] = React.useState("1800");
+  const [price, setPrice] = React.useState("");
   const [condition, setCondition] =
-    React.useState<(typeof CONDITIONS)[number]>("Like new");
-  const [location, setLocation] = React.useState("Hostel Block B");
+    React.useState<(typeof CONDITIONS)[number]>("Good");
+  const [location, setLocation] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
