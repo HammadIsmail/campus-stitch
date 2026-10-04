@@ -105,7 +105,10 @@ export default function ProfilePage() {
     loadData();
   }, [user.userId]);
 
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
+
   const handleSignOut = async () => {
+    setIsSigningOut(true);
     await logout();
   };
 
@@ -158,10 +161,20 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={handleSignOut}
-            className="text-xs font-semibold text-zinc-600 hover:text-black flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
+            disabled={isSigningOut}
+            className="text-xs font-semibold text-zinc-600 hover:text-black flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-50"
           >
-            <LogOut size={14} />
-            <span>Sign Out</span>
+            {isSigningOut ? (
+              <>
+                <Loader2 size={14} className="animate-spin text-black" />
+                <span>Signing Out...</span>
+              </>
+            ) : (
+              <>
+                <LogOut size={14} />
+                <span>Sign Out</span>
+              </>
+            )}
           </button>
         </header>
 
@@ -454,6 +467,28 @@ export default function ProfilePage() {
                 <ChevronRight size={16} className="text-zinc-400" />
               </Link>
             </div>
+          </div>
+
+          {/* Account Sign Out Action Card */}
+          <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-2xs">
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="w-full h-11 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-50 text-red-600 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isSigningOut ? (
+                <>
+                  <Loader2 size={15} className="animate-spin text-red-600" />
+                  <span>Signing Out of CampuStitch...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut size={15} />
+                  <span>Sign Out of CampuStitch</span>
+                </>
+              )}
+            </button>
           </div>
         </main>
 

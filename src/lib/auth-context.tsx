@@ -158,13 +158,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/sign-out", { method: "POST" });
+      await fetch("/api/auth/sign-out", {
+        method: "POST",
+        cache: "no-store",
+      });
     } catch {}
 
     setUser(null);
     setToken(null);
-    localStorage.removeItem("campus_stitch_current_user");
-    router.push("/sign-in");
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("campus_stitch_current_user");
+        localStorage.removeItem("campus_stitch_my_bookings");
+        sessionStorage.clear();
+      } catch {}
+
+      // Clear cookies from client side
+      document.cookie =
+        "campus_stitch_jwt=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0";
+      document.cookie =
+        "authjs.session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0";
+
+      // Full clean navigation to /sign-in
+      window.location.href = "/sign-in?logout=true";
+    }
   };
 
   return (

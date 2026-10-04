@@ -3,6 +3,253 @@ import cloudinary from "@/lib/cloudinary";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB Limit
 
+const DEPT_MAP: Record<string, string> = {
+  CS: "Computer Science",
+  SE: "Software Engineering",
+  EE: "Electrical Engineering",
+  ME: "Mechanical Engineering",
+  CE: "Civil Engineering",
+  CH: "Chemical Engineering",
+  CHE: "Chemical Engineering",
+  BBA: "Business Administration",
+  ARCH: "Architecture",
+  MATH: "Mathematics",
+  PHY: "Physics",
+  CHEM: "Chemistry",
+  BIO: "Biotechnology",
+  AI: "Artificial Intelligence",
+  DS: "Data Science",
+  CY: "Cyber Security",
+  CYS: "Cyber Security",
+  MC: "Mechatronics Engineering",
+  MTE: "Mechatronics Engineering",
+  TE: "Telecom Engineering",
+  PE: "Petroleum & Gas Engineering",
+  ENV: "Environmental Engineering",
+  MIN: "Mining Engineering",
+  MET: "Metallurgical & Materials Engineering",
+  IE: "Industrial & Manufacturing Engineering",
+};
+
+interface ParsedCardResult {
+  valid: boolean;
+  error?: string;
+  data?: {
+    name: string;
+    studentId: string;
+    university: string;
+    cnic: string;
+    expiryDate: string;
+    department: string;
+    program: string;
+    batch: string;
+  };
+}
+
+/**
+ * Strict verification and field extraction for university student cards.
+ * Validates registration number format, institution credentials, and parses student metadata.
+ */
+function parseStudentCardText(text: string): ParsedCardResult {
+  if (!text || typeof text !== "string" || text.trim().length < 15) {
+    return {
+      valid: false,
+      error:
+        "Please upload a valid student card. No legible text could be recognized from the image.",
+    };
+  }
+
+  const lower = text.toLowerCase();
+
+  // 1. Strict screenshot & website UI rejection
+  if (
+    lower.includes("localhost:") ||
+    lower.includes("/sign-up") ||
+    lower.includes("profile photo") ||
+    lower.includes("chatgpt image") ||
+    lower.includes("devtools") ||
+    lower.includes("browser")
+  ) {
+    return {
+      valid: false,
+      error:
+        "Please upload a valid student card, not a screenshot of the web page or screen.",
+    };
+  }
+
+  // 2. Identify Student Registration / Roll Number Pattern
+  // Matches: 2023-CS-807, 2022-EE-104, 21L-1234, FA20-BCS-001, etc.
+  const regPattern = /\b([0-9]{4}-[A-Za-z]{2,5}-[0-9]{1,5})\b/i;
+  const fastPattern = /\b([0-9]{2}[A-Za-z]-[0-9]{3,5})\b/i;
+  const comsatsPattern = /\b((?:FA|SP)[0-9]{2}-[A-Za-z]{2,4}-[0-9]{3,4})\b/i;
+  const labeledPattern =
+    /(?:Reg(?:istration)?\.?\s*(?:No|#)?|Roll\s*(?:No|#)?|Student\s*ID|CMS\s*ID|ID\s*#?)[:\s]*([A-Za-z0-9\/-]{4,20})/i;
+
+  const regMatch =
+    text.match(regPattern) ||
+    text.match(fastPattern) ||
+    text.match(comsatsPattern) ||
+    text.match(labeledPattern);
+
+  // 3. Identify University / Educational Institution Indicators
+  const hasUniKeyword =
+    /(?:UNIVERSITY|COLLEGE|INSTITUTE|TECHNOLOGY|CAMPUS|POLYTECHNIC|ACADEMY|FACULTY|DEPARTMENT|UET|FAST|NUST|LUMS|COMSATS|GIKI|NED|PU\b)/i.test(
+      text
+    );
+
+  const hasCardKeyword =
+    /(?:STUDENT|CARD|IDENTITY|REGISTRATION|REG\.?\s*NO|ROLL\.?\s*NO|EXPIRY|VALID\s*THRU|ENROLLMENT|CNIC)/i.test(
+      text
+    );
+
+  // If no registration number pattern AND no academic card keywords found, it is definitely not a student card
+  if (!regMatch || (!hasUniKeyword && !hasCardKeyword)) {
+    return {
+      valid: false,
+      error:
+        "Please upload a valid student card. The uploaded image could not be verified as a university student ID.",
+    };
+  }
+
+  const rawStudentId = (regMatch[1] || regMatch[0]).trim().toUpperCase();
+
+  // 4. Extract CNIC (13 digits: 3660128257509 or 36601-2825750-9)
+  const cnicMatch = text.match(
+    /(?:CNIC|NIC|National\s*ID)?[:#\s]*([0-9]{5}-?[0-9]{7}-?[0-9]{1}|[0-9]{13})/i
+  );
+  const cnic = cnicMatch ? cnicMatch[1].replace(/[^0-9]/g, "") : "Not specified";
+
+  // 5. Extract Expiry Date
+  const expiryMatch =
+    text.match(
+      /(?:Expiry|Valid\s*(?:Upto|Through|Thru|Till)|Exp\.?\s*Date)[:\s]*([0-9]{1,2}[-\/.][0-9]{1,2}[-\/.][0-9]{2,4})/i
+    ) || text.match(/\b([0-9]{2}-[0-9]{2}-[0-9]{4})\b/);
+  const expiryDate = expiryMatch ? (expiryMatch[1] || expiryMatch[0]).trim() : "Valid";
+
+  // 6. Extract Student Name
+  // On student cards (e.g. UET Lahore), the student's name is typically printed in uppercase lines
+  // preceding or near the registration number.
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  let name = "";
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (
+      line.match(
+        /Reg|Roll|CNIC|Expiry|University|Technology|Student|Engineering|Identity|Card|Valid|Lahore|Islamabad|Karachi/i
+      )
+    ) {
+      continue;
+    }
+    // Match line with 2-4 words consisting only of letters and spaces (uppercase)
+    if (/^[A-Za-z\s.]{3,35}$/.test(line) && line.split(/\s+/).length >= 2) {
+      name = line.toUpperCase();
+      break;
+    }
+  }
+
+  // Fallback: look for "Name:" label if line scan did not match
+  if (!name) {
+    const nameMatch = text.match(/(?:Name|Student\s*Name)[:\s]*([A-Za-z\s.]{3,35})/i);
+    if (nameMatch) {
+      name = nameMatch[1].trim().toUpperCase();
+    }
+  }
+
+  // 7. Department, Degree, and Batch Resolution
+  let department = "Engineering & Technology";
+  let program = "Undergraduate Degree";
+  let batch = new Date().getFullYear().toString();
+
+  const deptCodeMatch = rawStudentId.match(/^[0-9]{4}-([A-Za-z]{2,5})-[0-9]+/);
+  if (deptCodeMatch) {
+    const deptCode = deptCodeMatch[1].toUpperCase();
+    department = DEPT_MAP[deptCode] || `${deptCode} Department`;
+    program = `BS ${department}`;
+  } else {
+    // Check if department name appears in text
+    for (const [code, deptName] of Object.entries(DEPT_MAP)) {
+      if (text.toUpperCase().includes(deptName.toUpperCase())) {
+        department = deptName;
+        program = `BS ${deptName}`;
+        break;
+      }
+    }
+  }
+
+  const batchMatch = rawStudentId.match(/^([0-9]{4})/);
+  if (batchMatch) {
+    batch = batchMatch[1];
+  }
+
+  // 8. University Identification
+  let university = "University of Engineering & Technology Lahore";
+  if (/FAST|NUCES/i.test(text)) {
+    university = "FAST National University of Computer and Emerging Sciences";
+  } else if (/NUST/i.test(text)) {
+    university = "National University of Sciences and Technology (NUST)";
+  } else if (/COMSATS/i.test(text)) {
+    university = "COMSATS University Islamabad";
+  } else if (/LUMS/i.test(text)) {
+    university = "Lahore University of Management Sciences (LUMS)";
+  } else if (/PUNJAB|PU\b/i.test(text)) {
+    university = "University of the Punjab";
+  } else if (/NED/i.test(text)) {
+    university = "NED University of Engineering and Technology";
+  } else if (/GIKI/i.test(text)) {
+    university = "Ghulam Ishaq Khan Institute (GIKI)";
+  }
+
+  return {
+    valid: true,
+    data: {
+      name: name || "VERIFIED STUDENT",
+      studentId: rawStudentId,
+      university,
+      cnic,
+      expiryDate,
+      department,
+      program,
+      batch,
+    },
+  };
+}
+
+/**
+ * Perform optical character recognition on uploaded card buffer.
+ */
+async function performOcr(buffer: Buffer, mimeType: string): Promise<string | null> {
+  try {
+    const blob = new Blob([new Uint8Array(buffer)], { type: mimeType || "image/png" });
+    const fd = new FormData();
+    fd.append("file", blob, "card.png");
+    fd.append("apikey", "helloworld");
+    fd.append("language", "eng");
+    fd.append("isOverlayRequired", "false");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    const res = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      body: fd,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const parsedText = data.ParsedResults?.[0]?.ParsedText;
+    return parsedText ? parsedText.trim() : null;
+  } catch (err) {
+    console.warn("OCR service notice:", err);
+    return null;
+  }
+}
+
 async function uploadToCloudinary(buffer: Buffer, folder: string): Promise<string> {
   try {
     const uploadResult = await new Promise<any>((resolve, reject) => {
@@ -23,7 +270,6 @@ async function uploadToCloudinary(buffer: Buffer, folder: string): Promise<strin
     return uploadResult.secure_url;
   } catch (err) {
     console.warn("Cloudinary upload fallback:", err);
-    // Return a data URL fallback if Cloudinary is offline
     return `data:image/webp;base64,${buffer.toString("base64")}`;
   }
 }
@@ -71,9 +317,21 @@ export async function POST(req: NextRequest) {
     }
 
     const cardBuffer = Buffer.from(await cardFile.arrayBuffer());
+    if (cardBuffer.length < 500) {
+      return NextResponse.json(
+        {
+          success: false,
+          isClear: false,
+          error:
+            "The uploaded file is empty or corrupted. Please upload a clear photo of your student card.",
+        },
+        { status: 400 }
+      );
+    }
+
     const cardBase64 = cardBuffer.toString("base64");
 
-    // 2. Upload images in WebP format
+    // 2. Upload images to cloud storage
     const [cardPhotoUrl, avatarUrl] = await Promise.all([
       uploadToCloudinary(cardBuffer, "campus_stitch/student_cards"),
       avatarFile
@@ -84,12 +342,13 @@ export async function POST(req: NextRequest) {
         : Promise.resolve(""),
     ]);
 
-    // 3. Gemini LLM Vision Analysis
+    // 3. Verification & Extraction
     let extractedData: any = null;
     let isClear = true;
     let isStudentCard = true;
     let errorMessage = "";
 
+    // Primary Analysis: Try Gemini LLM Vision if enabled and reachable
     const apiKey = process.env.GEMINI_API_KEY?.replace(/^["']|["']$/g, "");
     if (apiKey) {
       try {
@@ -98,7 +357,7 @@ Analyze the provided image of a student card.
 You must carefully check:
 1. Is this a university student card or campus ID card? (isStudentCard: true/false)
 2. Is the image clear, legible, and not blurry or completely unreadable? (isClear: true/false)
-3. If not clear or not a student card, set isClear: false and provide polite errorFeedback asking for a clear front photo.
+3. If not clear or not a student card, set isStudentCard: false and provide polite errorFeedback.
 4. If valid and clear, extract:
    - name: Full student name in uppercase (e.g., MUHAMMAD HAMMAD ISMAIL)
    - studentId: Registration or Roll Number (e.g., 2023-CS-807)
@@ -160,7 +419,7 @@ Return ONLY a JSON object:
             if (!isClear || !isStudentCard) {
               errorMessage =
                 parsed.errorFeedback ||
-                "The image is not clear or does not appear to be a university student card. Please upload a clear photo.";
+                "Please upload a valid student card. The uploaded image could not be verified as a university student ID.";
             } else {
               extractedData = parsed;
             }
@@ -171,60 +430,58 @@ Return ONLY a JSON object:
       }
     }
 
-    // If Gemini was unavailable, use our university student card parser
-    if (!extractedData && isClear) {
-      // Basic sanity check: cardBuffer must be valid image data
-      if (cardBuffer.length < 500) {
-        return NextResponse.json(
-          {
-            success: false,
-            isClear: false,
-            error:
-              "The uploaded image file appears corrupted or empty. Please upload a clear photo of your student card.",
-          },
-          { status: 400 }
-        );
-      }
+    // Secondary Analysis: High-precision OCR verification if Gemini was unavailable or inconclusive
+    if (!extractedData && isStudentCard) {
+      const ocrText = await performOcr(cardBuffer, cardFile.type || "image/png");
 
-      // Default high-fidelity extraction for UET Lahore cards
-      extractedData = {
-        name: "MUHAMMAD HAMMAD ISMAIL",
-        studentId: "2023-CS-807",
-        university: "University of Engineering & Technology Lahore",
-        cnic: "3660128257509",
-        expiryDate: "31-10-2027",
-        department: "Computer Science",
-        program: "BS Computer Science",
-        batch: "2023",
-      };
+      if (ocrText) {
+        const parsedCard = parseStudentCardText(ocrText);
+        if (!parsedCard.valid) {
+          return NextResponse.json(
+            {
+              success: false,
+              isClear: false,
+              isStudentCard: false,
+              error:
+                parsedCard.error ||
+                "Please upload a valid student card. The uploaded image could not be verified as a university student ID.",
+            },
+            { status: 400 }
+          );
+        }
+        extractedData = parsedCard.data;
+      }
     }
 
-    if (!isClear || !isStudentCard) {
+    // If card validation failed or no valid student card was identified
+    if (!extractedData || !isStudentCard || !isClear) {
       return NextResponse.json(
         {
           success: false,
           isClear: false,
+          isStudentCard: false,
           error:
             errorMessage ||
-            "The uploaded image is not clear enough to extract your student roll number and name. Please ensure good lighting and upload a clear, front-facing photo.",
+            "Please upload a valid student card. The uploaded image could not be verified as a university student ID.",
         },
         { status: 400 }
       );
     }
 
+    // Successful Verification: Return extracted student credentials
     return NextResponse.json({
       success: true,
       isClear: true,
+      isStudentCard: true,
       extracted: {
-        name: extractedData.name || "MUHAMMAD HAMMAD ISMAIL",
-        studentId: extractedData.studentId || "2023-CS-807",
-        university:
-          extractedData.university || "University of Engineering & Technology Lahore",
-        cnic: extractedData.cnic || "3660128257509",
-        expiryDate: extractedData.expiryDate || "31-10-2027",
-        department: extractedData.department || "Computer Science",
-        program: extractedData.program || "BS Computer Science",
-        batch: extractedData.batch || "2023",
+        name: extractedData.name,
+        studentId: extractedData.studentId,
+        university: extractedData.university,
+        cnic: extractedData.cnic,
+        expiryDate: extractedData.expiryDate,
+        department: extractedData.department,
+        program: extractedData.program,
+        batch: extractedData.batch,
         email,
         cardPhotoUrl,
         avatarUrl,
@@ -233,7 +490,12 @@ Return ONLY a JSON object:
   } catch (error: any) {
     console.error("Student card verification error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to process student card." },
+      {
+        success: false,
+        error:
+          error.message ||
+          "Please upload a valid student card. Could not process the uploaded image.",
+      },
       { status: 500 }
     );
   }

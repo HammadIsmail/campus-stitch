@@ -65,6 +65,14 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/auth");
 
   if (isAuthPage) {
+    // If logout parameter is present, clear cookie and allow viewing sign-in
+    if (request.nextUrl.searchParams.has("logout")) {
+      const response = NextResponse.next();
+      response.cookies.delete(JWT_COOKIE_NAME);
+      response.cookies.set(JWT_COOKIE_NAME, "", { path: "/", maxAge: 0 });
+      return response;
+    }
+
     // If user is already authenticated with a valid JWT and visits login/signup, redirect to home
     if (token) {
       const payload = await verifyJwtToken(token);

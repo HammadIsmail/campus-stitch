@@ -245,7 +245,7 @@ export default function SignUpPage() {
       if (!res.ok || !data.success) {
         setErrorMsg(
           data.error ||
-            "The image is not clear or could not be recognized as a university student card. Please upload a clear photo."
+            "Please upload a valid student card. The uploaded image could not be verified as a university student ID."
         );
         return;
       }
@@ -518,14 +518,22 @@ export default function SignUpPage() {
                   <div
                     onClick={() => cardInputRef.current?.click()}
                     className={`p-3.5 border-2 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
-                      cardPreview
+                      errorMsg && errorMsg.toLowerCase().includes("student card")
+                        ? "border-red-400 bg-red-50/20"
+                        : cardPreview
                         ? "border-zinc-300 bg-white"
                         : "border-dashed border-zinc-300 hover:border-black bg-zinc-50/50"
                     }`}
                   >
                     {cardPreview ? (
                       <div className="w-full space-y-2">
-                        <div className="w-full h-40 rounded-lg overflow-hidden border border-zinc-200 relative bg-zinc-100 flex items-center justify-center">
+                        <div
+                          className={`w-full h-40 rounded-lg overflow-hidden border relative flex items-center justify-center ${
+                            errorMsg && errorMsg.toLowerCase().includes("student card")
+                              ? "border-red-300 bg-red-50/30"
+                              : "border-zinc-200 bg-zinc-100"
+                          }`}
+                        >
                           <img
                             src={cardPreview}
                             alt="Card preview"
@@ -533,26 +541,37 @@ export default function SignUpPage() {
                           />
                         </div>
 
-                        {/* Clean File Status Banner (No long messy filenames) */}
+                        {/* Clean File Status Banner */}
                         <div className="flex items-center justify-between px-1 py-1">
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-black min-w-0">
-                            <CheckCircle2 size={14} className="text-black shrink-0" />
-                            <span className="truncate">Student Card attached ✓</span>
-                            {cardFile && (
-                              <span className="text-[10px] text-zinc-400 font-mono font-normal shrink-0">
-                                ({(cardFile.size / (1024 * 1024)).toFixed(1)}MB)
-                              </span>
-                            )}
-                          </div>
+                          {errorMsg && errorMsg.toLowerCase().includes("student card") ? (
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-red-600 min-w-0">
+                              <AlertCircle size={14} className="shrink-0" />
+                              <span className="truncate">Invalid student card image</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-black min-w-0">
+                              <CheckCircle2 size={14} className="text-black shrink-0" />
+                              <span className="truncate">Student Card attached ✓</span>
+                              {cardFile && (
+                                <span className="text-[10px] text-zinc-400 font-mono font-normal shrink-0">
+                                  ({(cardFile.size / (1024 * 1024)).toFixed(1)}MB)
+                                </span>
+                              )}
+                            </div>
+                          )}
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               cardInputRef.current?.click();
                             }}
-                            className="text-xs font-semibold text-zinc-600 hover:text-black underline shrink-0 ml-2"
+                            className={`text-xs font-semibold underline shrink-0 ml-2 ${
+                              errorMsg && errorMsg.toLowerCase().includes("student card")
+                                ? "text-red-700 hover:text-red-900"
+                                : "text-zinc-600 hover:text-black"
+                            }`}
                           >
-                            Replace Photo
+                            Upload Valid Card
                           </button>
                         </div>
                       </div>
