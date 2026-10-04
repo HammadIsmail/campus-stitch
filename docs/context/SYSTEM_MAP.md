@@ -83,7 +83,7 @@ campus-stitch/
 
 ## 2. Supabase Database Schema
 The platform connects to Supabase PostgreSQL with the following tables:
-1. `profiles`: `id`, `email`, `fullName`, `studentId`, `role`, `program`, `isVerified`, `hostelBlock`, `avatar_url`, `card_photo_url`, `rating`.
+1. `profiles`: `id (uuid pk)`, `user_id (uuid fk)`, `email (unique)`, `password_hash`, `full_name`, `student_id (unique)`, `university`, `program`, `department`, `is_verified`, `verification_status`, `avatar_url`, `card_photo_url`, `cnic`, `expiry_date`, `phone`, `rating_avg`, `rating_count`, `created_at`.
 2. `rides`: `id`, `organizer_name`, `from_location`, `to_location`, `departure_time`, `vehicle_type`, `total_cost`, `price_per_seat`, `total_seats`, `available_seats`, `status`.
 3. `marketplace_listings`: `id`, `seller_name`, `title`, `description`, `price`, `condition`, `category`, `location`, `image_url`, `status`.
 4. `bike_rentals`: `id`, `owner_name`, `bike_model`, `bike_type`, `hourly_rate`, `daily_rate`, `pickup_location`, `is_available`.

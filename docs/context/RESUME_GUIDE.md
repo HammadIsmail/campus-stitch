@@ -97,7 +97,10 @@ node -e "fetch('http://localhost:3000/api/auth/otp/send', { method: 'OPTIONS' })
 ## 5. Summary of Authentication Architecture
 - Sign-In uses **NextAuth.js v5** (`src/auth.ts`) with a Credentials provider.
 - 6-digit OTP codes are delivered to student emails via **Nodemailer Gmail SMTP** (`src/lib/mailer.ts`).
-- Route protection is strictly enforced in **`src/proxy.ts`**; unauthenticated visits to `/` redirect to `/sign-in`.
-- `jose` is **not installed**; NextAuth's native `encode` and `decode` in `src/lib/jwt.ts` manage all token handling.
+- Account creation persists student profiles to Supabase PostgreSQL (`public.profiles`) using standard UUIDs (`crypto.randomUUID()`) and `scrypt` password hashing (`src/lib/password.ts`).
+- Sign-In queries `profiles` by `email` and verifies `password_hash`, issuing an authenticated JWT session (`campus_stitch_token`).
+- Route protection is strictly enforced in **`src/proxy.ts`** using `getJwtFromRequest(request)`; unauthenticated visits to `/` redirect to `/sign-in`.
+- Client auth navigation upon sign-up and sign-in uses `window.location.href` to ensure HTTP cookies are cleanly attached by the browser during full-document navigation.
+- `jose` is **not installed**; NextAuth's native `encode` and `decode` in `src/lib/jwt.ts` manage all token handling with multi-salt fallbacks.
 - Student ID card verification rejects cropped/incomplete photos missing University Name, Full Name, or Roll Number with zero hardcoded fallbacks.
 

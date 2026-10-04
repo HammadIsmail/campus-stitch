@@ -89,6 +89,18 @@ export const { GET, POST } = handlers;
 ### 6. Client Auth Context & Provider (`src/lib/auth-context.tsx` & `src/components/auth-session-provider.tsx`)
 - Root layout is wrapped with `AuthSessionProvider` (`SessionProvider` from `next-auth/react`).
 - Exposes `useAuth()` hook for state tracking, manual sync, and login/logout triggers.
+- Navigation upon sign-up and sign-in completion uses `window.location.href` instead of `router.push` to guarantee the browser initiates a clean full-document request with all HTTP-only cookies attached, avoiding Next.js client router cache lag.
+
+### 7. Registration & Supabase Profile Persistence (`src/app/api/auth/sign-up/route.ts`)
+- **Primary Key Constraint:** Generates valid standard UUIDs (`crypto.randomUUID()`) for `profiles.id` matching Supabase's `uuid primary key default uuid_generate_v4()` constraint.
+- **Password Security:** Hashes passwords with salt using Node.js `crypto.scryptSync` (`src/lib/password.ts`) and stores `password_hash` in `profiles`.
+- **Duplicate Prevention:** Validates that neither `email` nor `student_id` is already registered before creating the account (`profiles_email_idx` and `profiles_student_id_key`).
+- **Error Handling:** Directly validates Supabase `{ data, error }` return values, failing fast on database insertion errors rather than returning false-positive success.
+
+### 8. Credentials Sign-In Pipeline (`src/app/api/auth/sign-in/route.ts`)
+- Queries `profiles` table in Supabase by normalized `email`.
+- Verifies input password against `password_hash` using `verifyPassword(password, hash)`.
+- Returns an authenticated JWT session (`campus_stitch_token`) and sets an HTTP-only secure cookie for `proxy.ts` route guarding.
 
 ---
 
