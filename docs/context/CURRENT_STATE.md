@@ -45,14 +45,47 @@
 - Any unauthenticated visit to `/` or any internal route returns `307 Redirect` to `/sign-in`.
 - Role-based authorization: Non-admin users attempting to open `/admin` are redirected to `/?error=admin_access_required`.
 
+### E. Multi-Step AI Student Verification & Onboarding (`/sign-up`)
+- **Step 1 (Upload & WebP Conversion):**
+  - Accepts any email address, profile avatar image, and university student card photo.
+  - Automatically converts both images to **WebP format** via canvas in browser before upload.
+  - Enforces strict **2MB file size limits** on both client and server (`/api/auth/verify-student-card`).
+  - Calls Gemini Vision AI (`gemini-3.8-flash`) to verify card legitimacy, check clarity, and extract: Full Name, Roll No (e.g. `2023-CS-807`), University (`UET Lahore`), CNIC, Expiry Date, Department, and Program.
+  - Returns clear feedback error if image is blurry or not a valid student card.
+- **Step 2 (Read-Only Confirmation):**
+  - Displays extracted data in read-only / disabled fields that the student cannot modify.
+  - Clicking "Continue to Dashboard" creates account, sets authenticated session, and routes to `/`.
+
+### F. Reddit-Style Communities (`/community`)
+- **Sub-communities:** Support for subreddits (`r/cs-uet`, `r/hostel-life`, `r/commute-splits`, `r/uet-admissions`) with custom titles, rules, and live member counts.
+- **Join / Leave Community:** Instant membership toggle updating subscriber stats.
+- **Post Upvote / Downvote:** Classic vertical Reddit vote widget (▲ score ▼) with duplicate vote prevention and instant score updates.
+- **Threaded Comments & Nested Replies:** Full multi-level nested discussion threads with visual connector guides.
+- **Sorting & Search:** Feed sorting by **Hot**, **New**, and **Top**, plus live post search.
+- **Creation Flow:** Modals for creating new posts (with flair tags: Discussion, Question, Notice, Resource, Carpool) and creating new sub-communities.
+
+### G. Profile Ratings & Reputation System (`/profile`)
+- Display of star rating (`★ 5.0`) with review counts and visual 5-star breakdown bar on student profiles.
+- Verified Peer Reviews feed detailing reviewer name, student roll number, interaction context (Commute, Marketplace, Hostel, Community), and feedback comment.
+- "Rate Student Peer" modal allowing batchmates to submit ratings directly.
+
+### H. LLM Voice & Text Search Tool Calling (`/voice` & Floating Mic)
+- Enhanced `/api/assistant/chat` with tool definitions for `searchCommunities` and `searchProfiles` alongside existing commute rides, bikes, and marketplace listings.
+- Floating mic button in bottom-right corner of mobile and desktop view connects students directly to `/voice`.
+- Supports voice queries in Urdu and English with real-time speech recognition, LLM tool execution, audio playback via Uplift AI TTS, and interactive visual cards.
+
 ---
 
 ## 3. Verified System Status
 | Component | Status | Notes |
 | :--- | :--- | :--- |
-| **Dev Server** | 🟢 Running | `http://localhost:3000` |
+| **Dev Server** | 🟢 User Managed | Tested and run by user |
 | **TypeScript Compilation** | 🟢 Passing | `npx tsc --noEmit` exits with code 0 |
+| **Account Creation & OCR** | 🟢 Ready | WebP conversion + 2MB limit + Gemini student card extraction |
+| **Reddit Communities** | 🟢 Ready | Subreddits, voting, nested replies, Hot/New/Top sort |
+| **Profile Ratings** | 🟢 Ready | Star ratings, breakdown, reviews, rating modal |
+| **Voice Search Assistant** | 🟢 Ready | LLM tool calling + floating mic button in bottom right |
 | **NextAuth.js v5** | 🟢 Active | Configured in `src/auth.ts` |
 | **Nodemailer SMTP** | 🟢 Verified | Tested live email sending to Gmail |
-| **Route Protection** | 🟢 Active | Tested with curl/fetch: `GET /` returns `307 Location: /sign-in` |
-| **Remote Git** | 🟢 Up to date | Branch `main` on GitHub |
+| **Route Protection** | 🟢 Active | Next.js 16 `src/proxy.ts` guarding platform routes |
+| **Remote Git** | 🟢 Ready | All changes ready to commit or test |

@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Sparkles,
   Loader2,
+  ArrowRight,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
@@ -33,20 +34,7 @@ interface Message {
 export default function StudentAssistantPage() {
   const [inputText, setInputText] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
-  const [messages, setMessages] = React.useState<Message[]>([
-    {
-      role: "user",
-      content: "I need a bike tomorrow from 8 to 4 under Rs. 400.",
-    },
-    {
-      role: "assistant",
-      content:
-        "2 campus-verified bikes are available tomorrow between 8 AM and 4 PM under Rs. 400.",
-      chips: ["Bike", "Tomorrow", "8 AM – 4 PM", "Under Rs. 400"],
-      optionsType: "bike",
-      selectedOptionId: "b1",
-    },
-  ]);
+  const [messages, setMessages] = React.useState<Message[]>([]);
   const [availableBikes, setAvailableBikes] = React.useState<BikeItem[]>([]);
   const [availableRides, setAvailableRides] = React.useState<Ride[]>([]);
 
@@ -141,7 +129,7 @@ export default function StudentAssistantPage() {
           </Link>
           <div className="flex-1 font-bold text-base tracking-tight text-black flex items-center gap-1.5">
             <Sparkles size={16} className="text-black" />
-            Student AI Assistant
+            Student Assistant
           </div>
           <span className="text-[11px] text-zinc-600 font-semibold bg-zinc-100 border border-zinc-200 px-2.5 py-0.5 rounded-md flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-black" />
@@ -151,7 +139,46 @@ export default function StudentAssistantPage() {
 
         {/* Scrollable Conversation */}
         <main className="flex-1 min-h-0 overflow-y-auto px-4 py-5 space-y-4">
-          {messages.map((msg, idx) => (
+          {messages.length === 0 ? (
+            <div className="h-full min-h-[360px] flex flex-col items-center justify-center text-center p-6 space-y-4 max-w-md mx-auto my-auto">
+              <div className="w-12 h-12 rounded-2xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-black">
+                <Sparkles size={22} />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-base font-extrabold text-black tracking-tight">
+                  Campus Search Assistant
+                </h2>
+                <p className="text-xs text-zinc-500 leading-relaxed max-w-xs mx-auto">
+                  Search across campus carpools, bike rentals, student marketplace, and UET discussion communities.
+                </p>
+              </div>
+
+              <div className="w-full pt-2 space-y-2">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider text-left pl-1">
+                  Quick searches
+                </div>
+                <div className="flex flex-col gap-2">
+                  {[
+                    "Any rides available to Khurrialwala?",
+                    "Can I rent a bicycle tomorrow?",
+                    "Check room coolers and study desks in marketplace",
+                    "Show discussions in r/cs-uet community",
+                  ].map((suggestion, sIdx) => (
+                    <button
+                      key={sIdx}
+                      type="button"
+                      onClick={() => handleSendMessage(suggestion)}
+                      className="w-full p-2.5 rounded-xl border border-zinc-200 bg-white hover:border-black text-left text-xs font-semibold text-zinc-800 transition-all shadow-2xs hover:shadow-xs flex items-center justify-between group cursor-pointer"
+                    >
+                      <span className="truncate">{suggestion}</span>
+                      <ArrowRight size={13} className="text-zinc-400 group-hover:text-black group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            messages.map((msg, idx) => (
             <div key={idx} className="space-y-2.5">
               {msg.role === "user" ? (
                 <div className="self-end ml-auto max-w-[300px] p-3.5 rounded-2xl rounded-tr-xs bg-black text-white text-[13.5px] leading-relaxed shadow-xs font-medium">
@@ -298,7 +325,7 @@ export default function StudentAssistantPage() {
                 </div>
               )}
             </div>
-          ))}
+          )))}
 
           {isLoading && (
             <div className="flex items-center gap-2 p-3 bg-white border border-zinc-200 rounded-2xl w-fit text-xs font-medium text-zinc-600 shadow-2xs">
@@ -327,7 +354,7 @@ export default function StudentAssistantPage() {
           <Link
             href="/voice"
             aria-label="Ask by Urdu voice"
-            className="w-10 h-10 shrink-0 border border-zinc-300 rounded-lg bg-white text-zinc-800 hover:bg-zinc-100 flex items-center justify-center transition-colors"
+            className="md:hidden w-10 h-10 shrink-0 border border-zinc-300 rounded-lg bg-white text-zinc-800 hover:bg-zinc-100 flex items-center justify-center transition-colors"
           >
             <Mic size={18} className="stroke-[2px]" />
           </Link>

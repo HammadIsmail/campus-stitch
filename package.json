@@ -29,8 +29,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.2",
-    "@postgres-language-server/cli": "^0.26.0",
-    "@postgres-language-server/cli-x86_64-windows-msvc": "^0.26.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.2",

@@ -10,7 +10,20 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (data: { email: string; password?: string; name?: string; studentId?: string; isDemo?: boolean }) => Promise<boolean>;
-  signup: (data: { name: string; studentId: string; email: string; password?: string; program?: string; hostel?: string }) => Promise<boolean>;
+  signup: (data: {
+    name: string;
+    studentId: string;
+    email: string;
+    password?: string;
+    program?: string;
+    hostel?: string;
+    university?: string;
+    department?: string;
+    cnic?: string;
+    expiryDate?: string;
+    cardPhotoUrl?: string;
+    avatarUrl?: string;
+  }) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
 }
@@ -80,8 +93,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(data),
       });
 
-      if (!res.ok) throw new Error("Sign in failed");
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Sign in failed");
+      }
 
       if (result.success && result.user) {
         setUser(result.user);
@@ -89,9 +105,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("campus_stitch_current_user", JSON.stringify(result.user));
         return true;
       }
-      return false;
-    } catch (err) {
-      console.error("Login error:", err);
       return false;
     } finally {
       setIsLoading(false);
@@ -105,6 +118,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password?: string;
     program?: string;
     hostel?: string;
+    university?: string;
+    department?: string;
+    cnic?: string;
+    expiryDate?: string;
+    cardPhotoUrl?: string;
+    avatarUrl?: string;
   }) => {
     setIsLoading(true);
     try {
@@ -114,8 +133,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(data),
       });
 
-      if (!res.ok) throw new Error("Registration failed");
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Registration failed");
+      }
 
       if (result.success && result.user) {
         setUser(result.user);
@@ -123,9 +145,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("campus_stitch_current_user", JSON.stringify(result.user));
         return true;
       }
-      return false;
-    } catch (err) {
-      console.error("Signup error:", err);
       return false;
     } finally {
       setIsLoading(false);

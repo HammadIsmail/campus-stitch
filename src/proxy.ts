@@ -8,6 +8,7 @@ const PUBLIC_PREFIXES = [
   "/login",
   "/api/auth",
   "/auth",
+  "/api/upload",
 ];
 
 // Routes that require admin role authorization

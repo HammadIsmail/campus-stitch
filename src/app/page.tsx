@@ -51,18 +51,18 @@ export default function HomePage() {
               >
                 <Search size={16} className="text-black shrink-0" />
                 <span className="truncate font-medium">
-                  Ask AI: &quot;Find rickshaw split from Khurrialwala to UET
+                  Search: &quot;Find rickshaw split from Khurrialwala to UET
                   tomorrow 8 AM&quot;
                 </span>
               </Link>
               <div className="flex items-center gap-1.5 shrink-0 pr-1">
                 <Link
                   href="/voice"
-                  aria-label="Ask by Urdu voice"
+                  aria-label="Search by Urdu voice"
                   className="h-9 px-3 bg-black text-white hover:bg-zinc-800 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
                 >
                   <Mic size={14} className="stroke-[2.2px]" />
-                  <span className="hidden sm:inline">Urdu Voice AI</span>
+                  <span className="hidden sm:inline">Urdu Voice Search</span>
                 </Link>
               </div>
             </div>
@@ -71,8 +71,8 @@ export default function HomePage() {
 
         {/* Main Feed Content */}
         <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-8 py-7 space-y-8">
-          {/* For You Today (4-Card Grid on Desktop) */}
-          <section className="space-y-3">
+          {/* Campus Services (4-Card Grid on Desktop, Hidden on Mobile Screen) */}
+          <section className="hidden md:block space-y-3">
             <div className="text-[11px] font-bold text-zinc-500 tracking-wider uppercase">
               Campus Services · UET Lahore
             </div>

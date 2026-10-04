@@ -13,6 +13,9 @@ import {
   RotateCcw,
   Bike,
   Package,
+  Users,
+  Star,
+  ShieldCheck,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Ride } from "@/lib/data-service";
@@ -38,6 +41,26 @@ interface ListingResult {
   condition?: string;
 }
 
+interface CommunityResult {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  member_count: number;
+}
+
+interface ProfileResult {
+  id: string;
+  full_name: string;
+  student_id: string;
+  university: string;
+  program: string;
+  department: string;
+  rating_avg: number;
+  rating_count: number;
+  is_verified: boolean;
+}
+
 const QUICK_SUGGESTIONS = [
   {
     urdu: "کیا کوئی کھڑیاںوالہ جا رہا ہے؟",
@@ -45,20 +68,19 @@ const QUICK_SUGGESTIONS = [
     query: "کیا کوئی کھڑیاںوالہ جا رہا ہے؟",
   },
   {
-    urdu: "کل کے لیے بائیک کرایہ پر چاہیے",
-    label: "Campus bike rental",
-    query: "کل صبح کے لیے بائیک کرایہ پر چاہیے",
+    urdu: "r/cs-uet کمیونٹی اور ڈسکشن دکھائیں",
+    label: "Reddit Community: r/cs-uet",
+    query: "Show me r/cs-uet community discussions and lab tips",
+  },
+  {
+    urdu: "طالبعلم محمد حماد کی ریٹنگ اور پروفائل کیا ہے؟",
+    label: "Student Profile & Rating: Hammad",
+    query: "Check rating and verified profile for student Hammad",
   },
   {
     urdu: "ہاسٹل کے لیے فون کولر یا ٹیبل چاہیے",
     label: "Hostel marketplace items",
     query: "ہاسٹل کے لیے فون کولر یا ٹیبل چاہیے",
-  },
-  {
-    urdu: "Morning commute from Khurrialwala",
-    label: "English: Carpool split",
-    query:
-      "Are there rides leaving from Khurrialwala to campus tomorrow morning?",
   },
 ];
 
@@ -75,13 +97,19 @@ export default function VoiceAskPage() {
   // AI & Tool results
   const [aiResponse, setAiResponse] = React.useState<string | null>(null);
   const [optionsType, setOptionsType] = React.useState<
-    "ride" | "bike" | "listing" | undefined
+    "ride" | "bike" | "listing" | "community" | "profile" | undefined
   >(undefined);
   const [matchedRides, setMatchedRides] = React.useState<Ride[]>([]);
   const [matchedBikes, setMatchedBikes] = React.useState<BikeResult[]>([]);
   const [matchedListings, setMatchedListings] = React.useState<ListingResult[]>(
     [],
   );
+  const [matchedCommunities, setMatchedCommunities] = React.useState<
+    CommunityResult[]
+  >([]);
+  const [matchedProfiles, setMatchedProfiles] = React.useState<
+    ProfileResult[]
+  >([]);
 
   // Uplift AI Audio state
   const [isPlayingAudio, setIsPlayingAudio] = React.useState(false);
@@ -156,6 +184,8 @@ export default function VoiceAskPage() {
     setMatchedRides([]);
     setMatchedBikes([]);
     setMatchedListings([]);
+    setMatchedCommunities([]);
+    setMatchedProfiles([]);
     setOptionsType(undefined);
 
     try {
@@ -175,6 +205,8 @@ export default function VoiceAskPage() {
       if (data.rides) setMatchedRides(data.rides);
       if (data.bikes) setMatchedBikes(data.bikes);
       if (data.listings) setMatchedListings(data.listings);
+      if (data.communities) setMatchedCommunities(data.communities);
+      if (data.profiles) setMatchedProfiles(data.profiles);
 
       // Speak response automatically using Uplift AI Urdu TTS
       if (data.reply) {
@@ -258,6 +290,8 @@ export default function VoiceAskPage() {
     setMatchedRides([]);
     setMatchedBikes([]);
     setMatchedListings([]);
+    setMatchedCommunities([]);
+    setMatchedProfiles([]);
     setOptionsType(undefined);
   };
 
@@ -523,6 +557,76 @@ export default function VoiceAskPage() {
                       </div>
                       <div className="text-sm font-extrabold text-black">
                         Rs. {item.price}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {/* Tool Results: Matching Reddit Communities */}
+              {!isLoading && matchedCommunities.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 px-1">
+                    Matching Reddit Communities
+                  </div>
+                  {matchedCommunities.map((comm) => (
+                    <Link
+                      key={comm.id}
+                      href="/community"
+                      className="flex items-center gap-3 p-3.5 bg-white border border-zinc-200 hover:border-black rounded-xl shadow-2xs transition-all block"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center font-bold text-xs shrink-0">
+                        r/
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13.5px] font-bold text-black flex items-center gap-1.5">
+                          <span>{comm.name}</span>
+                          <ShieldCheck size={13} className="text-black" />
+                        </div>
+                        <div className="text-xs text-zinc-500 truncate">
+                          {comm.title || comm.description}
+                        </div>
+                      </div>
+                      <div className="text-xs font-bold text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-lg shrink-0">
+                        {comm.member_count} members
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {/* Tool Results: Matching Student Profiles & Ratings */}
+              {!isLoading && matchedProfiles.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 px-1">
+                    Matching Student Profiles & Reputation
+                  </div>
+                  {matchedProfiles.map((prof) => (
+                    <Link
+                      key={prof.id}
+                      href="/profile"
+                      className="flex items-center gap-3 p-3.5 bg-white border border-zinc-200 hover:border-black rounded-xl shadow-2xs transition-all block"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-zinc-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                        {prof.full_name?.charAt(0) || "S"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13.5px] font-bold text-black flex items-center gap-1.5">
+                          <span>{prof.full_name}</span>
+                          {prof.is_verified && (
+                            <ShieldCheck size={13} className="text-black" />
+                          )}
+                        </div>
+                        <div className="text-xs text-zinc-500 font-mono">
+                          {prof.student_id} &bull;{" "}
+                          {prof.program || prof.department || "UET Lahore"}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 bg-zinc-100 border border-zinc-200 px-2 py-1 rounded-lg shrink-0">
+                        <Star size={12} className="fill-black text-black" />
+                        <span className="text-xs font-black text-black">
+                          {(prof.rating_avg || 5.0).toFixed(1)}
+                        </span>
                       </div>
                     </Link>
                   ))}

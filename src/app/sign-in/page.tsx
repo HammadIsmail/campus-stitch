@@ -5,241 +5,138 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Mail,
-  KeyRound,
-  ShieldCheck,
+  Lock,
   ArrowRight,
   Loader2,
-  CheckCircle2,
-  RefreshCw,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  ShieldCheck,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
-import { signIn } from "next-auth/react";
 import { useAuth } from "@/lib/auth-context";
 
 export default function SignInPage() {
   const router = useRouter();
   const [email, setEmail] = React.useState("");
-  const [otp, setOtp] = React.useState("");
-  const [step, setStep] = React.useState<"email" | "otp">("email");
+  const [password, setPassword] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
-  const { refreshAuth } = useAuth();
+  const { login } = useAuth();
 
-  const handleSendOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!email.trim()) return;
-
-    setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    try {
-      const res = await fetch("/api/auth/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setErrorMsg(data.message || "Failed to send verification code. Please try again.");
-        return;
-      }
-
-      setSuccessMsg(`6-digit verification code sent to ${email.trim()}!`);
-      setStep("otp");
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to connect to email service. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otp.trim()) return;
+    if (!email.trim() || !password.trim()) return;
 
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      // 1. Verify with NextAuth credentials provider
-      const nextAuthResult = await signIn("credentials", {
-        email: email.trim(),
-        code: otp.trim(),
-        redirect: false,
+      await login({
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
       });
-
-      if (nextAuthResult?.error) {
-        setErrorMsg("Invalid or expired 6-digit code. Please check your inbox and try again.");
-        return;
-      }
-
-      // 2. Also ensure local session and JWT cookie are synced
-      await fetch("/api/auth/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), code: otp.trim() }),
-      });
-
-      await refreshAuth();
 
       const params = new URLSearchParams(window.location.search);
       const redirectTarget = params.get("redirect") || "/";
       router.push(redirectTarget);
     } catch (err: any) {
-      setErrorMsg(err.message || "Verification failed. Please try again.");
+      setErrorMsg(
+        err.message || "Failed to sign in. Please check your credentials."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <MobileShell>
+    <MobileShell hideNav={true}>
       <div className="w-full h-full flex flex-col bg-[#F9F9FB] text-zinc-900 select-none">
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4 max-w-sm mx-auto w-full">
-          {/* Logo & Headline */}
-          <div className="text-center space-y-2 mb-6">
-            <div className="w-12 h-12 bg-black text-white rounded-2xl mx-auto flex items-center justify-center font-black text-lg shadow-md">
-              CS
-            </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-4 max-w-sm mx-auto w-full py-8">
+          {/* Headline (No black CS box and no buzzwords) */}
+          <div className="text-center space-y-1.5 mb-6">
             <h1 className="text-xl font-extrabold text-black tracking-tight">
               Sign In to CampuStitch
             </h1>
-            <p className="text-xs text-zinc-500 max-w-xs">
-              UET Lahore Student Life Platform. Enter your email to receive your 6-digit OTP code.
+            <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">
+              UET Lahore Student Platform. Enter your email and password to access your account.
             </p>
           </div>
 
-          {/* Messages */}
+          {/* Error Message */}
           {errorMsg && (
-            <div className="w-full mb-4 p-3 bg-zinc-100 border border-zinc-300 rounded-xl text-xs text-black font-semibold">
-              {errorMsg}
-            </div>
-          )}
-          {successMsg && (
-            <div className="w-full mb-4 p-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-black font-medium flex items-start gap-2">
-              <CheckCircle2 size={16} className="text-black shrink-0 mt-0.5" />
-              <span>{successMsg}</span>
+            <div className="w-full mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 font-medium flex items-start gap-2.5">
+              <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
+              <div className="flex-1 leading-relaxed">{errorMsg}</div>
             </div>
           )}
 
-          {/* Form */}
+          {/* Sign In Form */}
           <div className="w-full bg-white border border-zinc-200 rounded-2xl p-5 shadow-2xs space-y-4">
-            {step === "email" ? (
-              <form onSubmit={handleSendOtp} className="space-y-3.5">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-black flex items-center gap-1.5">
-                    <Mail size={13} />
-                    <span>Student Email</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    aria-label="Student email"
-                    placeholder="e.g. 2021-cs-104@uet.edu.pk"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-11 px-3 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black"
-                  />
-                  <span className="text-[11px] text-zinc-400">
-                    We will send a 6-digit OTP code directly to your email.
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-black flex items-center gap-1.5 mb-1.5">
+                  <Mail size={13} />
+                  <span>Email Address</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. yourname@gmail.com or @uet.edu.pk"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-11 px-3.5 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-black flex items-center justify-between mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <Lock size={13} />
+                    <span>Password</span>
                   </span>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={loading || !email.trim()}
-                  className="w-full h-11 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Sending OTP code...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Continue with Email</span>
-                      <ArrowRight size={14} />
-                    </>
-                  )}
-                </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-3.5">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-black flex items-center gap-1.5">
-                      <KeyRound size={13} />
-                      <span>6-Digit Passcode</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStep("email");
-                        setOtp("");
-                        setErrorMsg(null);
-                        setSuccessMsg(null);
-                      }}
-                      className="text-[11px] text-zinc-500 hover:text-black font-semibold underline cursor-pointer"
-                    >
-                      Change email
-                    </button>
-                  </div>
-
+                </label>
+                <div className="relative">
                   <input
-                    type="text"
+                    type={showPassword ? "text" : "password"}
                     required
-                    maxLength={6}
-                    aria-label="Verification code"
-                    placeholder="------"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.trim())}
-                    className="w-full h-11 px-3 border border-zinc-300 rounded-xl text-center text-base tracking-widest font-mono font-bold text-black focus:outline-none focus:border-black"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-11 px-3.5 pr-10 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black transition-colors"
                   />
-                  <span className="text-[11px] text-zinc-400 text-center block">
-                    Enter the code sent to {email}
-                  </span>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={loading || otp.length < 6}
-                  className="w-full h-11 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Verifying...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Sign In</span>
-                      <ArrowRight size={14} />
-                    </>
-                  )}
-                </Button>
-
-                <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px]">
                   <button
                     type="button"
-                    onClick={() => handleSendOtp()}
-                    disabled={loading}
-                    className="text-zinc-500 hover:text-black font-semibold flex items-center gap-1 cursor-pointer"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black cursor-pointer"
                   >
-                    <RefreshCw size={11} />
-                    <span>Resend code</span>
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
-                  <span className="text-zinc-400">Expires in 10 mins</span>
                 </div>
-              </form>
-            )}
+              </div>
 
-            <div className="pt-2 border-t border-zinc-100 text-center">
+              <Button
+                type="submit"
+                disabled={loading || !email.trim() || !password.trim()}
+                className="w-full h-11 bg-black hover:bg-zinc-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight size={14} />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <div className="pt-3 border-t border-zinc-100 text-center">
               <span className="text-xs text-zinc-500">
                 Don&apos;t have an account?{" "}
                 <Link
@@ -252,10 +149,10 @@ export default function SignInPage() {
             </div>
           </div>
 
-          {/* Verification info note */}
-          <div className="mt-5 text-center text-[11px] text-zinc-500 flex items-center justify-center gap-1">
-            <ShieldCheck size={13} className="text-black" />
-            <span>Student card verification required after first sign-in.</span>
+          {/* Trust Footnote */}
+          <div className="mt-5 text-center text-[11px] text-zinc-500 flex items-center justify-center gap-1.5">
+            <ShieldCheck size={14} className="text-black" />
+            <span>Campus card verification required for all students.</span>
           </div>
         </div>
       </div>
