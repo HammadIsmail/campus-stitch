@@ -63,6 +63,48 @@ export default function SignUpPage() {
   const [extractedData, setExtractedData] =
     React.useState<ExtractedStudentData | null>(null);
 
+  // Email Verification OTP State
+  const [otpCode, setOtpCode] = React.useState("");
+  const [resendCooldown, setResendCooldown] = React.useState(60);
+  const [isResending, setIsResending] = React.useState(false);
+  const [resendFeedback, setResendFeedback] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleResendOtp = async () => {
+    const targetEmail = (extractedData?.email || email).trim().toLowerCase();
+    if (resendCooldown > 0 || isResending || !targetEmail) return;
+
+    setIsResending(true);
+    setErrorMsg(null);
+    setResendFeedback(null);
+
+    try {
+      const res = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.message || "Failed to resend verification code.");
+      } else {
+        setResendCooldown(60);
+        setResendFeedback("A new 6-digit code has been sent to your email.");
+      }
+    } catch {
+      setErrorMsg("Failed to send verification code. Please check your connection.");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   // Loading & Error States
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [isFinalizing, setIsFinalizing] = React.useState(false);
@@ -210,6 +252,18 @@ export default function SignUpPage() {
 
       setExtractedData(data.extracted);
       setStep(2);
+
+      // 3. Dispatch 6-digit verification code to user's email
+      try {
+        await fetch("/api/auth/otp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail }),
+        });
+        setResendCooldown(60);
+      } catch (otpErr) {
+        console.warn("OTP dispatch notice:", otpErr);
+      }
     } catch (err: any) {
       console.error("Verification error:", err);
       setErrorMsg(
@@ -224,6 +278,11 @@ export default function SignUpPage() {
   const handleFinalizeRegistration = async () => {
     if (!extractedData) return;
 
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setErrorMsg("Please enter the 6-digit verification code sent to your email.");
+      return;
+    }
+
     setIsFinalizing(true);
     setErrorMsg(null);
 
@@ -233,6 +292,7 @@ export default function SignUpPage() {
         studentId: extractedData.studentId,
         email: extractedData.email,
         password: password,
+        code: otpCode.trim(),
         program: extractedData.program,
         university: extractedData.university,
         department: extractedData.department,
@@ -728,6 +788,47 @@ export default function SignUpPage() {
                     className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-semibold cursor-not-allowed select-text"
                   />
                 </div>
+
+                {/* Email Verification OTP Section */}
+                <div className="pt-3 border-t border-zinc-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-black flex items-center gap-1.5">
+                      <Mail size={12} />
+                      <span>Email Verification Code (OTP)</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={resendCooldown > 0 || isResending}
+                      onClick={handleResendOtp}
+                      className="text-[11px] font-bold text-black hover:underline disabled:text-zinc-400 disabled:no-underline cursor-pointer"
+                    >
+                      {isResending
+                        ? "Sending..."
+                        : resendCooldown > 0
+                        ? `Resend in ${resendCooldown}s`
+                        : "Resend Code"}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="Enter 6-digit code"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ""))}
+                    className="w-full h-11 px-3.5 border border-zinc-300 rounded-xl text-center text-sm font-mono font-bold tracking-[8px] text-black placeholder:tracking-normal placeholder:font-normal placeholder:text-zinc-400 focus:outline-none focus:border-black"
+                  />
+                  {resendFeedback && (
+                    <p className="text-[11px] text-emerald-600 font-medium">
+                      {resendFeedback}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    A 6-digit verification code has been sent to{" "}
+                    <span className="font-bold text-black">{extractedData.email}</span>. Please enter it to verify email ownership.
+                  </p>
+                </div>
               </div>
 
               {/* Action Buttons */}
@@ -746,17 +847,17 @@ export default function SignUpPage() {
                 <Button
                   type="button"
                   onClick={handleFinalizeRegistration}
-                  disabled={isFinalizing}
-                  className="flex-1 h-11 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isFinalizing || otpCode.trim().length !== 6}
+                  className="flex-1 h-11 bg-black hover:bg-zinc-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   {isFinalizing ? (
                     <>
                       <Loader2 size={15} className="animate-spin" />
-                      <span>Creating Account...</span>
+                      <span>Verifying & Creating Account...</span>
                     </>
                   ) : (
                     <>
-                      <span>Continue to Dashboard</span>
+                      <span>Verify Email & Create Account</span>
                       <ArrowRight size={14} />
                     </>
                   )}

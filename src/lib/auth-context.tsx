@@ -15,6 +15,7 @@ interface AuthContextType {
     studentId: string;
     email: string;
     password?: string;
+    code?: string;
     program?: string;
     hostel?: string;
     university?: string;
@@ -43,10 +44,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
-        const data = await res.json();
-        if (data.authenticated && data.user) {
-          setUser(data.user);
-          return;
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setUser(data.user);
+            return;
+          }
         }
       }
 
@@ -116,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     studentId: string;
     email: string;
     password?: string;
+    code?: string;
     program?: string;
     hostel?: string;
     university?: string;

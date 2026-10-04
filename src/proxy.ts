@@ -17,18 +17,54 @@ const ADMIN_PREFIXES = ["/admin"];
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check if current path is a public auth route
-  const isPublicRoute = PUBLIC_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/") || pathname.startsWith(prefix + "?")
-  );
-
   // Retrieve JWT from HTTP-only cookie or Authorization header
   const token =
     request.cookies.get(JWT_COOKIE_NAME)?.value ||
     request.headers.get("authorization")?.replace("Bearer ", "")?.trim();
 
-  // If path is public:
-  if (isPublicRoute) {
+  // 1. Handle API Routes: Never redirect API requests to HTML pages!
+  if (pathname.startsWith("/api/")) {
+    // Public API endpoints (auth, upload, webhooks)
+    if (
+      pathname.startsWith("/api/auth") ||
+      pathname.startsWith("/api/upload")
+    ) {
+      return NextResponse.next();
+    }
+
+    // Protected API endpoints require token
+    if (!token) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
+    const payload = await verifyJwtToken(token);
+    if (!payload) {
+      return NextResponse.json({ error: "Invalid or expired session" }, { status: 401 });
+    }
+
+    if (pathname.startsWith("/api/admin") && payload.role !== "admin") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-user-id", payload.userId);
+    requestHeaders.set("x-user-email", payload.email);
+    requestHeaders.set("x-user-role", payload.role);
+    requestHeaders.set("x-user-name", payload.name);
+
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+  }
+
+  // 2. Handle Public Auth Pages (/sign-in, /sign-up, /login)
+  const isAuthPage =
+    pathname === "/sign-in" ||
+    pathname === "/sign-up" ||
+    pathname === "/login" ||
+    pathname.startsWith("/auth");
+
+  if (isAuthPage) {
     // If user is already authenticated with a valid JWT and visits login/signup, redirect to home
     if (token) {
       const payload = await verifyJwtToken(token);

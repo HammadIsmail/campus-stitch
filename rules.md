@@ -17,6 +17,7 @@
     > *"No account found with this email. Please create an account first."*
   - **Invalid Password:** If the password does not match, show:
     > *"Incorrect password. Please try again."*
+- **Email OTP Verification on Sign-Up:** When creating an account, a 6-digit OTP code is dispatched to the student's email. Account creation is finalized only upon entering the valid OTP code on Step 2.
 
 ---
 

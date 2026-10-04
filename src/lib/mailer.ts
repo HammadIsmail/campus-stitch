@@ -12,15 +12,25 @@ const user = process.env.MAIL_USERNAME || "ranahammadismail@gmail.com";
 const pass = process.env.MAIL_PASSWORD || "rxrv vzjx ljqg bvwt";
 const from = process.env.MAIL_FROM || "ranahammadismail@gmail.com";
 
-export const transporter = nodemailer.createTransport({
-  host,
-  port,
-  secure,
-  auth: {
-    user,
-    pass,
-  },
-});
+export const transporter = nodemailer.createTransport(
+  host.includes("gmail")
+    ? {
+        service: "gmail",
+        auth: {
+          user,
+          pass,
+        },
+      }
+    : {
+        host,
+        port,
+        secure,
+        auth: {
+          user,
+          pass,
+        },
+      }
+);
 
 /**
  * Send a 6-digit OTP verification email via Gmail SMTP

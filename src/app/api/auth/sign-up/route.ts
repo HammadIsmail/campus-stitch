@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { signJwtToken, setJwtCookie, JwtUserPayload } from "@/lib/jwt";
 import { createClient } from "@/lib/supabase/server";
 import { hashPassword } from "@/lib/password";
+import { verifyOtp } from "@/lib/otp-store";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,7 @@ export async function POST(request: NextRequest) {
       studentId,
       email,
       password,
+      code,
       program,
       university,
       department,
@@ -47,6 +49,30 @@ export async function POST(request: NextRequest) {
           message: "An account with this email already exists. Please sign in instead.",
         },
         { status: 409 }
+      );
+    }
+
+    // 2. Strict check: Verify 6-digit email OTP
+    if (!code || !String(code).trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please enter the 6-digit verification code sent to your email.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const verification = verifyOtp(cleanEmail, String(code).trim());
+    if (!verification.valid) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            verification.error ||
+            "Incorrect 6-digit verification code. Please check your email and try again.",
+        },
+        { status: 400 }
       );
     }
 
