@@ -185,11 +185,13 @@ function parseStudentCardText(text: string): ParsedCardResult {
     batch = batchMatch[1];
   }
 
-  // 8. University Identification
-  let university = "University of Engineering & Technology Lahore";
-  if (/FAST|NUCES/i.test(text)) {
+  // 8. University Identification - ONLY if clearly present in recognized card text
+  let university = "";
+  if (/UNIVERSITY\s+OF\s+ENGINEERING\s+(?:&|AND)\s+TECHNOLOGY|UET\s+LAHORE/i.test(text)) {
+    university = "University of Engineering & Technology Lahore";
+  } else if (/FAST\b|NUCES/i.test(text)) {
     university = "FAST National University of Computer and Emerging Sciences";
-  } else if (/NUST/i.test(text)) {
+  } else if (/NUST\b/i.test(text)) {
     university = "National University of Sciences and Technology (NUST)";
   } else if (/COMSATS/i.test(text)) {
     university = "COMSATS University Islamabad";
@@ -197,16 +199,41 @@ function parseStudentCardText(text: string): ParsedCardResult {
     university = "Lahore University of Management Sciences (LUMS)";
   } else if (/PUNJAB|PU\b/i.test(text)) {
     university = "University of the Punjab";
-  } else if (/NED/i.test(text)) {
+  } else if (/NED\s+UNIVERSITY/i.test(text)) {
     university = "NED University of Engineering and Technology";
-  } else if (/GIKI/i.test(text)) {
+  } else if (/GIKI\b/i.test(text)) {
     university = "Ghulam Ishaq Khan Institute (GIKI)";
+  } else {
+    // Check for explicit university/college title in card text
+    const uniMatch = text.match(/\b([A-Za-z\s]{3,40}(?:UNIVERSITY|COLLEGE|INSTITUTE)[A-Za-z\s]{0,25})\b/i);
+    if (uniMatch) {
+      university = uniMatch[1].trim();
+    }
+  }
+
+  // 9. Strict check: verify that all essential fields are present on the card photo
+  const missingInCard: string[] = [];
+  if (!university || university.trim() === "") {
+    missingInCard.push("University Name");
+  }
+  if (!name || name.trim() === "" || name === "VERIFIED STUDENT") {
+    missingInCard.push("Student Full Name");
+  }
+  if (!rawStudentId || rawStudentId.trim() === "") {
+    missingInCard.push("Roll Number / Student ID");
+  }
+
+  if (missingInCard.length > 0) {
+    return {
+      valid: false,
+      error: `Please upload a complete student card photo. The following fields are missing in the picture: ${missingInCard.join(", ")}.`,
+    };
   }
 
   return {
     valid: true,
     data: {
-      name: name || "VERIFIED STUDENT",
+      name,
       studentId: rawStudentId,
       university,
       cnic,
@@ -352,26 +379,35 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY?.replace(/^["']|["']$/g, "");
     if (apiKey) {
       try {
-        const systemPrompt = `You are an expert AI student verification system for Pakistani universities, specifically UET Lahore (University of Engineering & Technology, Lahore).
+        const systemPrompt = `You are a strict, expert AI student ID verification system.
 Analyze the provided image of a student card.
-You must carefully check:
-1. Is this a university student card or campus ID card? (isStudentCard: true/false)
-2. Is the image clear, legible, and not blurry or completely unreadable? (isClear: true/false)
-3. If not clear or not a student card, set isStudentCard: false and provide polite errorFeedback.
-4. If valid and clear, extract:
-   - name: Full student name in uppercase (e.g., MUHAMMAD HAMMAD ISMAIL)
-   - studentId: Registration or Roll Number (e.g., 2023-CS-807)
-   - university: Full university name (e.g., University of Engineering & Technology Lahore)
-   - cnic: CNIC number if printed on card (e.g., 3660128257509)
-   - expiryDate: Expiry date if printed on card (e.g., 31-10-2027)
-   - department: Academic department (e.g., Computer Science for CS, Electrical Engineering for EE, Mechanical for ME, Civil for CE)
-   - program: Degree program (e.g., BS Computer Science)
-   - batch: Starting year or session (e.g., 2023)
+You must perform the following critical checks strictly:
+1. COMPLETE CARD PHOTO: Is the student card complete and fully shown in the picture, or is it cropped / partially cut off?
+   If the university name, institution header, student name, or registration/roll number is cropped or missing, set:
+   "isComplete": false,
+   "isStudentCard": false,
+   "errorFeedback": "Please upload a complete student card photo. The following fields are missing in the picture: [list the missing fields, e.g. University Name]."
+2. UNIVERSITY NAME VISIBILITY: Is the university/college name or official institutional header clearly printed and visible in the image?
+   DO NOT guess, assume, or auto-fill the university name if it is not clearly readable in the picture!
+   If the university name is cropped out, missing, or unreadable, set:
+   "university": "",
+   "isStudentCard": false,
+   "isComplete": false,
+   "errorFeedback": "Please upload a complete student card photo. The following fields are missing in the picture: University Name."
+3. REQUIRED FIELDS: The image MUST contain all three:
+   - University/Institution name (clearly visible in the photo)
+   - Student Full Name
+   - Student ID / Registration / Roll Number
+   If ANY of these required fields are missing or cropped out in the image:
+   set isStudentCard: false, isComplete: false, and specify which fields are missing in errorFeedback.
+4. If valid, complete, and clear, extract the fields directly from the card.
 
 Return ONLY a JSON object:
 {
   "isStudentCard": boolean,
   "isClear": boolean,
+  "isComplete": boolean,
+  "missingFields": string[],
   "errorFeedback": string,
   "name": string,
   "studentId": string,
@@ -414,12 +450,13 @@ Return ONLY a JSON object:
           const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
           if (rawText) {
             const parsed = JSON.parse(rawText);
-            isStudentCard = parsed.isStudentCard !== false;
+            isStudentCard = parsed.isStudentCard !== false && parsed.isComplete !== false;
             isClear = parsed.isClear !== false;
-            if (!isClear || !isStudentCard) {
+            if (!isClear || !isStudentCard || !parsed.university || parsed.university.trim() === "") {
+              isStudentCard = false;
               errorMessage =
                 parsed.errorFeedback ||
-                "Please upload a valid student card. The uploaded image could not be verified as a university student ID.";
+                "Please upload a complete student card photo. The university name is missing in the picture.";
             } else {
               extractedData = parsed;
             }
@@ -463,6 +500,46 @@ Return ONLY a JSON object:
           error:
             errorMessage ||
             "Please upload a valid student card. The uploaded image could not be verified as a university student ID.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Strict verification: Ensure no required fields are missing or cropped in the picture
+    const missingFields: string[] = [];
+    if (
+      !extractedData?.university ||
+      extractedData.university.trim() === "" ||
+      extractedData.university.toLowerCase() === "unknown" ||
+      extractedData.university.toLowerCase().includes("not specified")
+    ) {
+      missingFields.push("University Name");
+    }
+    if (
+      !extractedData?.name ||
+      extractedData.name.trim() === "" ||
+      extractedData.name.toUpperCase() === "VERIFIED STUDENT" ||
+      extractedData.name.toLowerCase() === "unknown"
+    ) {
+      missingFields.push("Student Full Name");
+    }
+    if (
+      !extractedData?.studentId ||
+      extractedData.studentId.trim() === "" ||
+      extractedData.studentId.toLowerCase() === "unknown"
+    ) {
+      missingFields.push("Roll Number / Student ID");
+    }
+
+    if (missingFields.length > 0 || extractedData?.isComplete === false) {
+      return NextResponse.json(
+        {
+          success: false,
+          isClear: false,
+          isStudentCard: false,
+          error:
+            extractedData?.errorFeedback ||
+            `Please upload a complete student card photo. The following fields are missing in the picture: ${missingFields.join(", ")}.`,
         },
         { status: 400 }
       );
