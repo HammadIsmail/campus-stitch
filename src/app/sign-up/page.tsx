@@ -772,7 +772,7 @@ export default function SignUpPage() {
                       type="text"
                       readOnly
                       disabled
-                      value={extractedData.cnic || "3660128257509"}
+                      value={extractedData.cnic || "Not specified"}
                       className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-mono font-semibold cursor-not-allowed select-text"
                     />
                   </div>
@@ -784,7 +784,7 @@ export default function SignUpPage() {
                       type="text"
                       readOnly
                       disabled
-                      value={extractedData.expiryDate || "31-10-2027"}
+                      value={extractedData.expiryDate || "Valid"}
                       className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-semibold cursor-not-allowed select-text"
                     />
                   </div>
