@@ -44,8 +44,16 @@ export function MobileShell({
     Boolean(pathname?.startsWith("/sign-up")) ||
     Boolean(pathname?.startsWith("/login"));
 
+  const isMessagesPage =
+    pathname === "/messages" || Boolean(pathname?.startsWith("/messages"));
+
   return (
-    <div className="min-h-screen bg-[#F7F7F8] text-[#09090B] flex flex-col antialiased selection:bg-black selection:text-white">
+    <div
+      className={cn(
+        "bg-[#F7F7F8] text-[#09090B] flex flex-col antialiased selection:bg-black selection:text-white",
+        isMessagesPage ? "h-screen max-h-screen overflow-hidden" : "min-h-screen"
+      )}
+    >
       {/* ======================================================== */}
       {/* TOP GLOBAL WEB APP NAVIGATION HEADER */}
       {/* ======================================================== */}
@@ -168,11 +176,22 @@ export function MobileShell({
       {/* ======================================================== */}
       {/* MAIN APPLICATION CONTENT AREA */}
       {/* ======================================================== */}
-      <main className="w-full flex-1 flex flex-col items-center">
-        <div className="w-full max-w-6xl xl:max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-6 flex-1 flex flex-col">
+      <main
+        className={cn(
+          "w-full flex-1 flex flex-col items-center",
+          isMessagesPage && "h-[calc(100dvh-64px)] min-h-0 overflow-hidden"
+        )}
+      >
+        <div
+          className={cn(
+            "w-full max-w-6xl xl:max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-6 flex-1 flex flex-col",
+            isMessagesPage && "h-full py-0 sm:py-4 min-h-0 overflow-hidden"
+          )}
+        >
           <div
             className={cn(
               "w-full bg-white sm:rounded-2xl sm:border border-[#E4E4E7] sm:shadow-[0_2px_8px_rgba(0,0,0,0.04)] sm:overflow-hidden flex flex-col flex-1",
+              isMessagesPage && "h-full min-h-0 overflow-hidden",
               className,
             )}
           >
@@ -182,9 +201,9 @@ export function MobileShell({
       </main>
 
       {/* ======================================================== */}
-      {/* FLOATING URDU VOICE SEARCH (MOBILE ONLY, HIDDEN ON DESKTOP & AUTH) */}
+      {/* FLOATING URDU VOICE SEARCH (MOBILE ONLY, HIDDEN ON DESKTOP, AUTH & MESSAGES) */}
       {/* ======================================================== */}
-      {!isAuthPage && pathname !== "/voice" && (
+      {!isAuthPage && !isMessagesPage && pathname !== "/voice" && (
         <Link
           href="/voice"
           aria-label="Campus Voice Search Assistant"
@@ -201,9 +220,9 @@ export function MobileShell({
       )}
 
       {/* ======================================================== */}
-      {/* CLASSIC MONOCHROME WEB APP FOOTER (HIDDEN ON AUTH PAGES) */}
+      {/* CLASSIC MONOCHROME WEB APP FOOTER (HIDDEN ON AUTH & MESSAGES PAGES) */}
       {/* ======================================================== */}
-      {!isAuthPage && (
+      {!isAuthPage && !isMessagesPage && (
         <footer className="hidden md:block w-full bg-white border-t border-[#E4E4E7] py-6 px-4 sm:px-6 lg:px-8 text-xs text-zinc-500">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
