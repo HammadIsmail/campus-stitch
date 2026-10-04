@@ -290,7 +290,7 @@ export default function DynamicPostPage({
 
   return (
     <MobileShell>
-      <div className="w-full h-full flex flex-col bg-[#F8F9FA] text-zinc-900 select-none">
+      <div className="w-full h-full flex flex-col bg-[#F8F9FA] text-zinc-900 select-none overflow-hidden">
         {/* Toast copy notification */}
         {copyFeedback && (
           <div className="fixed top-20 right-6 z-50 bg-black text-white text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
@@ -302,13 +302,13 @@ export default function DynamicPostPage({
         {/* ======================================================== */}
         {/* REDDIT 3-COLUMN LAYOUT                                   */}
         {/* ======================================================== */}
-        <div className="flex-1 min-h-0 flex overflow-hidden">
+        <div className="flex-1 min-h-0 flex overflow-hidden h-full">
           {/* ======================================================== */}
           {/* COLUMN 1: LEFT SUBREDDIT DIRECTORY                       */}
           {/* ======================================================== */}
           <aside
             className={cn(
-              "w-64 lg:w-72 border-r border-zinc-200 bg-white flex flex-col shrink-0 overflow-y-auto transition-transform z-30",
+              "w-64 lg:w-72 border-r border-zinc-200 bg-white flex flex-col shrink-0 overflow-y-auto transition-transform z-30 h-full",
               mobileSidebarOpen
                 ? "fixed inset-y-0 left-0 shadow-2xl z-50 w-72 flex"
                 : "hidden md:flex"
@@ -454,7 +454,7 @@ export default function DynamicPostPage({
           {/* ======================================================== */}
           {/* COLUMN 2: CENTER POST DETAIL & THREADED COMMENTS        */}
           {/* ======================================================== */}
-          <main className="flex-1 min-w-0 overflow-y-auto p-3 sm:p-5 space-y-4">
+          <main className="flex-1 min-w-0 h-full overflow-y-auto p-3 sm:p-5 space-y-4">
             {/* Mobile Header Button */}
             <div className="flex items-center justify-between md:hidden bg-white p-2.5 rounded-2xl border border-zinc-200">
               <button
@@ -790,7 +790,7 @@ export default function DynamicPostPage({
           {/* ======================================================== */}
           {/* COLUMN 3: RIGHT ABOUT COMMUNITY SIDEBAR                  */}
           {/* ======================================================== */}
-          <aside className="w-72 xl:w-80 border-l border-zinc-200 bg-white p-4 space-y-4 overflow-y-auto hidden lg:block shrink-0">
+          <aside className="w-72 xl:w-80 border-l border-zinc-200 bg-white p-4 space-y-4 overflow-y-auto hidden lg:block shrink-0 h-full">
             {currentCommunity ? (
               <div className="space-y-4">
                 <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 space-y-3">

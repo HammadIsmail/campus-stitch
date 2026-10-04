@@ -408,7 +408,7 @@ export default function RedditCommunitiesPage() {
 
   return (
     <MobileShell>
-      <div className="w-full h-full flex flex-col bg-[#F8F9FA] text-zinc-900 select-none">
+      <div className="w-full h-full flex flex-col bg-[#F8F9FA] text-zinc-900 select-none overflow-hidden">
         {/* Copy link feedback banner */}
         {copyFeedback && (
           <div className="fixed top-20 right-6 z-50 bg-black text-white text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
@@ -420,13 +420,13 @@ export default function RedditCommunitiesPage() {
         {/* ======================================================== */}
         {/* REDDIT 3-COLUMN MAIN LAYOUT                              */}
         {/* ======================================================== */}
-        <div className="flex-1 min-h-0 flex overflow-hidden">
+        <div className="flex-1 min-h-0 flex overflow-hidden h-full">
           {/* ======================================================== */}
           {/* COLUMN 1: LEFT COMMUNITIES SIDEBAR                       */}
           {/* ======================================================== */}
           <aside
             className={cn(
-              "w-64 lg:w-72 border-r border-zinc-200 bg-white flex flex-col shrink-0 overflow-y-auto transition-transform z-30",
+              "w-64 lg:w-72 border-r border-zinc-200 bg-white flex flex-col shrink-0 overflow-y-auto transition-transform z-30 h-full",
               mobileSidebarOpen
                 ? "fixed inset-y-0 left-0 shadow-2xl z-50 w-72 flex"
                 : "hidden md:flex"
@@ -627,7 +627,7 @@ export default function RedditCommunitiesPage() {
           {/* ======================================================== */}
           {/* COLUMN 2: CENTER FEED                                    */}
           {/* ======================================================== */}
-          <main className="flex-1 min-w-0 overflow-y-auto p-3 sm:p-5 space-y-4">
+          <main className="flex-1 min-w-0 h-full overflow-y-auto p-3 sm:p-5 space-y-4">
             {/* Top Bar for Mobile to open drawer & Subreddit Info */}
             <div className="flex items-center justify-between gap-3 md:hidden bg-white p-3 rounded-2xl border border-zinc-200 shadow-2xs">
               <button
@@ -1076,7 +1076,7 @@ export default function RedditCommunitiesPage() {
           {/* ======================================================== */}
           {/* COLUMN 3: RIGHT SIDEBAR ("ABOUT COMMUNITY" WIDGET)       */}
           {/* ======================================================== */}
-          <aside className="w-72 xl:w-80 border-l border-zinc-200 bg-white p-4 space-y-4 overflow-y-auto hidden lg:block shrink-0">
+          <aside className="w-72 xl:w-80 border-l border-zinc-200 bg-white p-4 space-y-4 overflow-y-auto hidden lg:block shrink-0 h-full">
             {selectedCommunity !== "all" && currentCommunityData ? (
               /* Specific Subreddit About Card */
               <div className="space-y-4">

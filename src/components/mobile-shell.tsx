@@ -46,18 +46,21 @@ export function MobileShell({
 
   const isMessagesPage =
     pathname === "/messages" || Boolean(pathname?.startsWith("/messages"));
+  const isCommunityPage =
+    pathname === "/community" || Boolean(pathname?.startsWith("/community"));
+  const isAppLayoutPage = isMessagesPage || isCommunityPage;
 
   return (
     <div
       className={cn(
         "bg-[#F7F7F8] text-[#09090B] flex flex-col antialiased selection:bg-black selection:text-white",
-        isMessagesPage ? "h-screen max-h-screen overflow-hidden" : "min-h-screen"
+        isAppLayoutPage ? "h-screen max-h-screen overflow-hidden" : "min-h-screen"
       )}
     >
       {/* ======================================================== */}
       {/* TOP GLOBAL WEB APP NAVIGATION HEADER */}
       {/* ======================================================== */}
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.03)] shrink-0">
         <div
           className={cn(
             "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4",
@@ -178,20 +181,21 @@ export function MobileShell({
       {/* ======================================================== */}
       <main
         className={cn(
-          "w-full flex-1 flex flex-col items-center",
-          isMessagesPage && "h-[calc(100dvh-64px)] min-h-0 overflow-hidden"
+          "w-full flex-1 flex flex-col items-center min-h-0",
+          isAppLayoutPage && "h-[calc(100dvh-64px)] max-h-[calc(100dvh-64px)] overflow-hidden"
         )}
       >
         <div
           className={cn(
             "w-full max-w-6xl xl:max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-6 flex-1 flex flex-col",
-            isMessagesPage && "h-full py-0 sm:py-4 min-h-0 overflow-hidden"
+            isMessagesPage && "h-full py-0 sm:py-4 min-h-0 overflow-hidden",
+            isCommunityPage && "h-full py-0 sm:py-2 min-h-0 overflow-hidden max-w-7xl xl:max-w-[1536px]"
           )}
         >
           <div
             className={cn(
               "w-full bg-white sm:rounded-2xl sm:border border-[#E4E4E7] sm:shadow-[0_2px_8px_rgba(0,0,0,0.04)] sm:overflow-hidden flex flex-col flex-1",
-              isMessagesPage && "h-full min-h-0 overflow-hidden",
+              isAppLayoutPage && "h-full min-h-0 overflow-hidden",
               className,
             )}
           >
@@ -201,9 +205,9 @@ export function MobileShell({
       </main>
 
       {/* ======================================================== */}
-      {/* FLOATING URDU VOICE SEARCH (MOBILE ONLY, HIDDEN ON DESKTOP, AUTH & MESSAGES) */}
+      {/* FLOATING URDU VOICE SEARCH (MOBILE ONLY, HIDDEN ON DESKTOP, AUTH, MESSAGES & COMMUNITY) */}
       {/* ======================================================== */}
-      {!isAuthPage && !isMessagesPage && pathname !== "/voice" && (
+      {!isAuthPage && !isAppLayoutPage && pathname !== "/voice" && (
         <Link
           href="/voice"
           aria-label="Campus Voice Search Assistant"
@@ -220,9 +224,9 @@ export function MobileShell({
       )}
 
       {/* ======================================================== */}
-      {/* CLASSIC MONOCHROME WEB APP FOOTER (HIDDEN ON AUTH & MESSAGES PAGES) */}
+      {/* CLASSIC MONOCHROME WEB APP FOOTER (HIDDEN ON AUTH, MESSAGES & COMMUNITY PAGES) */}
       {/* ======================================================== */}
-      {!isAuthPage && !isMessagesPage && (
+      {!isAuthPage && !isAppLayoutPage && (
         <footer className="hidden md:block w-full bg-white border-t border-[#E4E4E7] py-6 px-4 sm:px-6 lg:px-8 text-xs text-zinc-500">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
