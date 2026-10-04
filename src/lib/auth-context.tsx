@@ -59,14 +59,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (localStored) {
         const parsed = JSON.parse(localStored);
         setUser({
-          userId: "u_" + (parsed.student_id || "demo").toLowerCase().replace(/[^a-z0-9]/g, "_"),
+          userId: parsed.userId || parsed.id || ("u_" + (parsed.studentId || parsed.student_id || "demo").toLowerCase().replace(/[^a-z0-9]/g, "_")),
           email: parsed.email || "student@uet.edu.pk",
-          name: parsed.name || "Muhammad Hammad",
-          studentId: parsed.student_id || "2021-CS-104",
-          role: parsed.email?.includes("admin") ? "admin" : "student",
+          name: parsed.name || parsed.full_name || "CampuStitch Student",
+          studentId: parsed.studentId || parsed.student_id || "2023-CS-807",
+          role: parsed.role || (parsed.email?.includes("admin") ? "admin" : "student"),
           program: parsed.program || "BS Computer Science",
-          isVerified: true,
-          hostelBlock: parsed.hostel_block || "Hostel Block A",
+          isVerified: parsed.isVerified ?? parsed.is_verified ?? true,
+          hostelBlock: parsed.hostelBlock || parsed.hostel_block || "",
         });
       } else {
         setUser(null);

@@ -58,11 +58,28 @@ export async function verifyJwtToken(
   token: string,
 ): Promise<JwtUserPayload | null> {
   try {
-    const payload = await decode({
+    let payload = await decode({
       token,
       secret: AUTH_SECRET,
       salt: SALT,
     });
+
+    if (!payload) {
+      payload = await decode({
+        token,
+        secret: AUTH_SECRET,
+        salt: "authjs.session-token",
+      });
+    }
+
+    if (!payload) {
+      payload = await decode({
+        token,
+        secret: AUTH_SECRET,
+        salt: "__Secure-authjs.session-token",
+      });
+    }
+
     if (!payload || !payload.email) return null;
     return payload as unknown as JwtUserPayload;
   } catch (err) {

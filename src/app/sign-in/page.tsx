@@ -41,7 +41,7 @@ export default function SignInPage() {
 
       const params = new URLSearchParams(window.location.search);
       const redirectTarget = params.get("redirect") || "/";
-      router.push(redirectTarget);
+      window.location.href = redirectTarget;
     } catch (err: any) {
       setErrorMsg(
         err.message || "Failed to sign in. Please check your credentials."

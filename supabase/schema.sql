@@ -10,6 +10,8 @@ create extension if not exists "uuid-ossp";
 create table if not exists public.profiles (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references auth.users(id) on delete cascade,
+  email text,
+  password_hash text,
   full_name text not null,
   student_id text unique,
   university text not null default 'UET Lahore',
@@ -18,9 +20,17 @@ create table if not exists public.profiles (
   is_verified boolean not null default false,
   verification_status text check (verification_status in ('unverified', 'pending', 'verified', 'rejected')) default 'unverified',
   avatar_url text,
+  card_photo_url text,
+  cnic text,
+  expiry_date text,
   phone text,
+  rating_avg numeric default 5.0,
+  rating_count integer default 0,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+create unique index if not exists profiles_email_idx on public.profiles (email);
+
 
 -- 2. RIDES (COMMUTE) TABLE
 create table if not exists public.rides (

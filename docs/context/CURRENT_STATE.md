@@ -69,6 +69,11 @@
   `To https://github.com/HammadIsmail/campus-stitch.git on branch main`
 - Triggered automated Vercel production rebuild with strict verification and dynamic post routes.
 
+### H. Resolved Profile Persistence & "Account Does Not Exist" Error
+- **Root Cause Identified:** In `src/app/api/auth/sign-up/route.ts`, the profile was being upserted with a string `id: "u_..."` into PostgreSQL's `uuid` column `profiles.id`, causing Postgres error `22P02 (invalid input syntax for type uuid)`. Because Supabase errors are returned in `{ error }` and not thrown, this failure was silently ignored, preventing any row from being created in Supabase. When students later tried to sign in, `/api/auth/sign-in` found 0 matching rows and returned `"No account found with this email"`.
+- **UUID Generation Fix:** Updated sign-up to generate valid standard UUIDs (`crypto.randomUUID()`) for `profiles.id`, added database error checking to reject failed inserts, and added duplicate student ID protection.
+- **Database Unique Index:** Added `profiles_email_idx` (`CREATE UNIQUE INDEX ON public.profiles(email)`) in Supabase to guarantee 1-to-1 account mapping.
+- **Robust Session Redirection:** Replaced `router.push` with `window.location.href` on sign-up and sign-in completion to ensure browsers immediately attach newly set authentication cookies during full page loads without client router cache lag.
 
 ---
 
@@ -77,10 +82,11 @@
 | :--- | :--- | :--- |
 | **Dev Server** | 🟢 Running | `npm run dev` running locally on port 3000 |
 | **TypeScript Compilation** | 🟢 Passing | `npx tsc --noEmit` exits with code 0 |
+| **Account Creation & DB** | 🟢 Fixed | Valid UUID profile persistence; verified in remote Supabase PostgreSQL |
 | **Student Card Verification** | 🟢 Strict & Fixed | Cropped photos rejected; required fields enforced; zero mock fallbacks |
 | **Reddit Communities** | 🟢 Dynamic Routes | Dedicated `/community/post/[id]` pages + 3-column independent scroll |
 | **Messaging & Voice** | 🟢 Ready | Base64 audio playback + fixed auto-scroll message container |
 | **NextAuth.js v5** | 🟢 Active | Configured in `src/auth.ts` |
 | **Nodemailer SMTP** | 🟢 Verified | Tested live email sending to Gmail (< 2s delivery) |
 | **Route Protection** | 🟢 Active | Next.js 16 `src/proxy.ts` guarding platform routes |
-| **Remote Git** | 🟢 Synced | All commits pushed to `origin/main` |
+| **Remote Git** | 🟢 Synced | Ready to push |

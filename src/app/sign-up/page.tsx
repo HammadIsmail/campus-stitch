@@ -302,8 +302,8 @@ export default function SignUpPage() {
         avatarUrl: extractedData.avatarUrl,
       });
 
-      // Move directly to dashboard
-      router.push("/");
+      // Move directly to dashboard with full session reload
+      window.location.href = "/";
     } catch (err: any) {
       console.error("Sign-up error:", err);
       setErrorMsg(

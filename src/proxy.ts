@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJwtToken, JWT_COOKIE_NAME } from "@/lib/jwt";
+import { verifyJwtToken, getJwtFromRequest, JWT_COOKIE_NAME } from "@/lib/jwt";
 
 // Public routes that unauthenticated users can access
 const PUBLIC_PREFIXES = [
@@ -18,9 +18,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Retrieve JWT from HTTP-only cookie or Authorization header
-  const token =
-    request.cookies.get(JWT_COOKIE_NAME)?.value ||
-    request.headers.get("authorization")?.replace("Bearer ", "")?.trim();
+  const token = getJwtFromRequest(request);
 
   // 1. Handle API Routes: Never redirect API requests to HTML pages!
   if (pathname.startsWith("/api/")) {

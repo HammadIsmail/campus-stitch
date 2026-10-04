@@ -3,6 +3,7 @@ import { signJwtToken, setJwtCookie, JwtUserPayload } from "@/lib/jwt";
 import { createClient } from "@/lib/supabase/server";
 import { hashPassword } from "@/lib/password";
 import { verifyOtp } from "@/lib/otp-store";
+import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +53,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Strict check: Verify 6-digit email OTP
+    // 2. Strict check: If student ID is already registered to another account
+    const { data: existingStudent } = await supabase
+      .from("profiles")
+      .select("id, student_id")
+      .eq("student_id", cleanStudentId)
+      .maybeSingle();
+
+    if (existingStudent) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "An account with this Student ID is already registered. Please sign in instead.",
+        },
+        { status: 409 }
+      );
+    }
+
+    // 3. Strict check: Verify 6-digit email OTP
     if (!code || !String(code).trim()) {
       return NextResponse.json(
         {
@@ -81,45 +99,61 @@ export async function POST(request: NextRequest) {
       cleanEmail === "admin@uet.edu.pk" ||
       cleanEmail === "ranahammadismail@gmail.com";
 
+    // 4. Hash password if provided
+    const passwordHash = password ? hashPassword(password) : null;
+
+    // 5. Generate valid UUID for database primary key
+    const profileId = crypto.randomUUID();
+
+    const profileData = {
+      id: profileId,
+      email: cleanEmail,
+      password_hash: passwordHash,
+      full_name: cleanName,
+      student_id: cleanStudentId,
+      university: university || "UET Lahore",
+      program: program || "BS Computer Science",
+      department: department || "Computer Science",
+      is_verified: true,
+      verification_status: "verified",
+      avatar_url: avatarUrl || null,
+      card_photo_url: cardPhotoUrl || null,
+      cnic: cnic || null,
+      expiry_date: expiryDate || null,
+      rating_avg: 5.0,
+      rating_count: 0,
+    };
+
+    // 6. Persist profile to Supabase database
+    const { data: savedProfile, error: dbErr } = await supabase
+      .from("profiles")
+      .insert([profileData])
+      .select()
+      .single();
+
+    if (dbErr) {
+      console.error("DB profile insert error:", dbErr);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Failed to create student account: " + dbErr.message,
+        },
+        { status: 500 }
+      );
+    }
+
     const userPayload: JwtUserPayload = {
-      userId: "u_" + cleanStudentId.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+      userId: savedProfile?.id || profileId,
       email: cleanEmail,
       name: cleanName,
       studentId: cleanStudentId,
       role: isAdmin ? "admin" : "student",
-      program: program || "BS Computer Science",
+      program: profileData.program,
       isVerified: true,
       hostelBlock: "",
     };
 
-    // 2. Hash password if provided
-    const passwordHash = password ? hashPassword(password) : null;
-
-    // 3. Persist profile to Supabase database
-    try {
-      await supabase.from("profiles").upsert([
-        {
-          id: userPayload.userId,
-          email: cleanEmail,
-          password_hash: passwordHash,
-          full_name: cleanName,
-          student_id: cleanStudentId,
-          university: university || "UET Lahore",
-          program: userPayload.program,
-          department: department || "Computer Science",
-          is_verified: true,
-          verification_status: "verified",
-          avatar_url: avatarUrl || null,
-          card_photo_url: cardPhotoUrl || null,
-          cnic: cnic || null,
-          expiry_date: expiryDate || null,
-        },
-      ]);
-    } catch (dbErr) {
-      console.warn("DB profile upsert notice:", dbErr);
-    }
-
-    // 4. Sign JWT token
+    // 7. Sign JWT token
     const token = await signJwtToken(userPayload, "7d");
 
     const response = NextResponse.json({
@@ -129,7 +163,7 @@ export async function POST(request: NextRequest) {
       user: userPayload,
     });
 
-    // 5. Set secure HTTP-only cookie
+    // 8. Set secure HTTP-only cookie
     setJwtCookie(response, token);
 
     return response;
@@ -141,3 +175,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
