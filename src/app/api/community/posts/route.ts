@@ -153,9 +153,34 @@ const FALLBACK_POSTS = [
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
     const community = searchParams.get("community"); // 'all' or 'r/cs-uet'
     const sort = searchParams.get("sort") || "hot"; // 'hot' | 'new' | 'top'
     const query = searchParams.get("query")?.toLowerCase();
+
+    // 1. Single Post by ID request
+    if (id) {
+      try {
+        const supabase = await createClient();
+        const { data, error } = await supabase
+          .from("community_posts")
+          .select("*")
+          .eq("id", id)
+          .maybeSingle();
+
+        if (data && !error) {
+          return NextResponse.json({ success: true, post: data });
+        }
+      } catch (err) {
+        console.warn("DB single post query notice:", err);
+      }
+
+      const fallback = FALLBACK_POSTS.find((p) => p.id === id);
+      if (fallback) {
+        return NextResponse.json({ success: true, post: fallback });
+      }
+      return NextResponse.json({ success: false, error: "Post not found" }, { status: 404 });
+    }
 
     try {
       const supabase = await createClient();

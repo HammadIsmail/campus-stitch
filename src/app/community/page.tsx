@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Flame,
   Sparkles,
@@ -18,7 +19,6 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  Send,
   Loader2,
   X,
   Image as ImageIcon,
@@ -73,21 +73,6 @@ interface Post {
   userVote?: number; // 1, -1, 0
 }
 
-interface Comment {
-  id: string;
-  post_id: string;
-  parent_comment_id: string | null;
-  author_id: string;
-  author_name: string;
-  author_student_id: string;
-  author_verified: boolean;
-  content: string;
-  upvotes: number;
-  score: number;
-  created_at: string;
-  userVote?: number;
-}
-
 const FLAIR_COLORS: Record<string, string> = {
   Resource: "bg-emerald-50 text-emerald-800 border-emerald-200",
   Question: "bg-blue-50 text-blue-800 border-blue-200",
@@ -99,6 +84,7 @@ const FLAIR_COLORS: Record<string, string> = {
 };
 
 export default function RedditCommunitiesPage() {
+  const router = useRouter();
   const { user } = useAuth();
 
   // Navigation & Filtering
@@ -128,11 +114,6 @@ export default function RedditCommunitiesPage() {
   // Modals & Panels
   const [showCreatePost, setShowCreatePost] = React.useState(false);
   const [showCreateCommunity, setShowCreateCommunity] = React.useState(false);
-  const [activePostForComments, setActivePostForComments] = React.useState<Post | null>(null);
-  const [comments, setComments] = React.useState<Comment[]>([]);
-  const [isLoadingComments, setIsLoadingComments] = React.useState(false);
-  const [newCommentText, setNewCommentText] = React.useState("");
-  const [replyingToCommentId, setReplyingToCommentId] = React.useState<string | null>(null);
 
   // Create Post Form State
   const [postTab, setPostTab] = React.useState<"text" | "image" | "link">("text");
@@ -316,82 +297,9 @@ export default function RedditCommunitiesPage() {
   const handleSharePost = (postId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (typeof window !== "undefined") {
-      navigator.clipboard?.writeText(`${window.location.origin}/community?post=${postId}`);
+      navigator.clipboard?.writeText(`${window.location.origin}/community/post/${postId}`);
       setCopyFeedback("Link copied to clipboard!");
       setTimeout(() => setCopyFeedback(null), 2500);
-    }
-  };
-
-  // Open Post & Load Comments
-  const handleOpenComments = async (post: Post) => {
-    setActivePostForComments(post);
-    setIsLoadingComments(true);
-    setReplyingToCommentId(null);
-    setNewCommentText("");
-
-    try {
-      const res = await fetch(`/api/community/comments?postId=${post.id}`);
-      const data = await res.json();
-      if (data.success && data.comments) {
-        setComments(data.comments);
-      }
-    } catch (err) {
-      console.warn("Failed to load comments:", err);
-    } finally {
-      setIsLoadingComments(false);
-    }
-  };
-
-  // Submit Comment or Nested Reply
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCommentText.trim() || !activePostForComments) return;
-
-    const parentId = replyingToCommentId;
-    const authorName = user?.name || "Muhammad Hammad Ismail";
-    const authorStudentId = user?.studentId || "2023-CS-807";
-
-    const optimisticComment: Comment = {
-      id: "cm_" + Date.now(),
-      post_id: activePostForComments.id,
-      parent_comment_id: parentId,
-      author_id: user?.userId || "u_student",
-      author_name: authorName,
-      author_student_id: authorStudentId,
-      author_verified: true,
-      content: newCommentText.trim(),
-      upvotes: 1,
-      score: 1,
-      created_at: new Date().toISOString(),
-    };
-
-    setComments((prev) => [...prev, optimisticComment]);
-    setNewCommentText("");
-    setReplyingToCommentId(null);
-
-    // Update comment count on post
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === activePostForComments.id
-          ? { ...p, comments_count: (p.comments_count || 0) + 1 }
-          : p
-      )
-    );
-
-    try {
-      await fetch("/api/community/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          postId: activePostForComments.id,
-          parentCommentId: parentId,
-          content: optimisticComment.content,
-          authorName,
-          authorStudentId,
-        }),
-      });
-    } catch (err) {
-      console.warn("Comment submit notice:", err);
     }
   };
 
@@ -979,7 +887,7 @@ export default function RedditCommunitiesPage() {
                   return (
                     <article
                       key={post.id}
-                      onClick={() => handleOpenComments(post)}
+                      onClick={() => router.push(`/community/post/${post.id}`)}
                       className="bg-white border border-zinc-200 hover:border-zinc-400 rounded-2xl p-3.5 sm:p-4 shadow-2xs transition-all cursor-pointer flex gap-3 sm:gap-3.5 group"
                     >
                       {/* Reddit Left Vote Pillar */}
@@ -1125,7 +1033,7 @@ export default function RedditCommunitiesPage() {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleOpenComments(post);
+                              router.push(`/community/post/${post.id}`);
                             }}
                             className="flex items-center gap-1.5 hover:text-black hover:bg-zinc-100 px-2 py-1 -ml-2 rounded-lg transition-colors cursor-pointer"
                           >
@@ -1371,174 +1279,7 @@ export default function RedditCommunitiesPage() {
           </aside>
         </div>
 
-        {/* ======================================================== */}
-        {/* MODAL 1: THREADED COMMENTS & DISCUSSION DRAWER           */}
-        {/* ======================================================== */}
-        {activePostForComments && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-            <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-zinc-200 overflow-hidden">
-              {/* Header */}
-              <div className="p-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/50 flex-none">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs bg-black text-white px-2.5 py-1 rounded-lg">
-                    {activePostForComments.community_name}
-                  </span>
-                  <span className="text-xs text-zinc-500">
-                    Discussion &bull; {comments.length} comments
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActivePostForComments(null)}
-                  className="w-8 h-8 rounded-full hover:bg-zinc-200 flex items-center justify-center text-zinc-500 hover:text-black cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
 
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-                {/* Full Original Post */}
-                <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-200 space-y-2">
-                  <div className="flex items-center gap-2 text-xs text-zinc-500">
-                    <span className="font-bold text-black">{activePostForComments.author_name}</span>
-                    {activePostForComments.author_verified && (
-                      <ShieldCheck size={13} className="text-black" />
-                    )}
-                    <span>({activePostForComments.author_student_id})</span>
-                    <span>&bull;</span>
-                    <span>
-                      {new Date(activePostForComments.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <h2 className="text-base font-extrabold text-black">
-                    {activePostForComments.title}
-                  </h2>
-                  <p className="text-xs text-zinc-700 leading-relaxed whitespace-pre-line">
-                    {activePostForComments.content}
-                  </p>
-
-                  {activePostForComments.image_url && (
-                    <div className="mt-2 rounded-xl overflow-hidden border border-zinc-200">
-                      <img
-                        src={activePostForComments.image_url}
-                        alt="Attached media"
-                        className="w-full object-cover max-h-72"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Comment Composer */}
-                <form onSubmit={handleAddComment} className="space-y-2">
-                  <div className="text-xs font-bold text-black flex items-center justify-between">
-                    <span>
-                      Comment as{" "}
-                      <span className="text-zinc-600 font-medium">
-                        {user?.name || "Muhammad Hammad Ismail"} ({user?.studentId || "2023-CS-807"})
-                      </span>
-                    </span>
-                    {replyingToCommentId && (
-                      <button
-                        type="button"
-                        onClick={() => setReplyingToCommentId(null)}
-                        className="text-[11px] text-red-600 hover:underline cursor-pointer"
-                      >
-                        Cancel Reply
-                      </button>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <textarea
-                      rows={3}
-                      value={newCommentText}
-                      onChange={(e) => setNewCommentText(e.target.value)}
-                      placeholder={
-                        replyingToCommentId
-                          ? "Write your reply to this student..."
-                          : "What are your thoughts on this?"
-                      }
-                      className="w-full p-3 border border-zinc-300 rounded-2xl text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-black leading-relaxed"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newCommentText.trim()}
-                      className="absolute right-3 bottom-3 px-3 py-1.5 bg-black hover:bg-zinc-800 disabled:opacity-40 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      <span>Comment</span>
-                      <Send size={12} />
-                    </button>
-                  </div>
-                </form>
-
-                {/* Threaded Comments List */}
-                <div className="space-y-3 pt-2">
-                  <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                    Comments ({comments.length})
-                  </div>
-
-                  {isLoadingComments ? (
-                    <div className="p-8 text-center text-xs text-zinc-400 flex items-center justify-center gap-2">
-                      <Loader2 size={16} className="animate-spin text-black" />
-                      <span>Loading discussion thread...</span>
-                    </div>
-                  ) : comments.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-zinc-400 bg-zinc-50 rounded-2xl">
-                      No comments yet. Start the conversation!
-                    </div>
-                  ) : (
-                    comments.map((comm) => (
-                      <div
-                        key={comm.id}
-                        className={cn(
-                          "p-3 rounded-2xl border text-xs space-y-1.5 transition-colors",
-                          comm.parent_comment_id
-                            ? "ml-6 bg-zinc-50/70 border-l-4 border-l-black border-zinc-200"
-                            : "bg-white border-zinc-200"
-                        )}
-                      >
-                        <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                          <div className="flex items-center gap-1.5 font-bold text-black">
-                            <span>{comm.author_name}</span>
-                            {comm.author_verified && (
-                              <ShieldCheck size={12} className="text-black" />
-                            )}
-                            <span className="font-mono text-zinc-400 font-normal">
-                              ({comm.author_student_id})
-                            </span>
-                          </div>
-                          <span>
-                            {new Date(comm.created_at).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-zinc-800 leading-relaxed">{comm.content}</p>
-
-                        <div className="flex items-center gap-3 pt-1 text-[11px] font-semibold text-zinc-500">
-                          <span className="font-mono">{comm.score || 1} upvotes</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReplyingToCommentId(comm.id);
-                              setNewCommentText(`@${comm.author_name} `);
-                            }}
-                            className="hover:text-black cursor-pointer"
-                          >
-                            Reply
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ======================================================== */}
         {/* MODAL 2: CREATE POST MODAL (REDDIT STYLE)                */}
