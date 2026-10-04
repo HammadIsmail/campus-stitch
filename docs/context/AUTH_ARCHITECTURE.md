@@ -89,3 +89,58 @@ export const { GET, POST } = handlers;
 ### 6. Client Auth Context & Provider (`src/lib/auth-context.tsx` & `src/components/auth-session-provider.tsx`)
 - Root layout is wrapped with `AuthSessionProvider` (`SessionProvider` from `next-auth/react`).
 - Exposes `useAuth()` hook for state tracking, manual sync, and login/logout triggers.
+
+---
+
+## 3. Student Card Verification Pipeline (`/api/auth/verify-student-card`)
+
+```
+                 ┌──────────────────────────────────────┐
+                 │ Student Uploads ID Card Image        │
+                 │ (/sign-up or /verify page)           │
+                 └──────────────────┬───────────────────┘
+                                    │
+                                    ▼
+                 ┌──────────────────────────────────────┐
+                 │ POST /api/auth/verify-student-card   │
+                 │ Multipart form-data (image + email)  │
+                 └──────────────────┬───────────────────┘
+                                    │
+                                    ▼
+                 ┌──────────────────────────────────────┐
+                 │ Cloudinary Upload (WebP optimization)│
+                 └──────────────────┬───────────────────┘
+                                    │
+                                    ▼
+                 ┌──────────────────────────────────────┐
+                 │ AI Vision & Local OCR Analysis       │
+                 │ (Gemini 2.5 Flash / Tesseract OCR)   │
+                 └──────────────────┬───────────────────┘
+                                    │
+                                    ▼
+                 ┌──────────────────────────────────────┐
+                 │ Completeness & Anti-Cropping Check   │
+                 │ 1. University / Institution Name?    │
+                 │ 2. Student Full Name?                │
+                 │ 3. Roll Number / Student ID?         │
+                 └──────────────────┬───────────────────┘
+                                    │
+                     ┌──────────────┴──────────────┐
+                     │                             │
+              [Missing Fields]             [All 3 Visible]
+                     │                             │
+                     ▼                             ▼
+       HTTP 400 Bad Request               HTTP 200 Success
+       "Please upload a complete          Returns extracted profile
+       student card photo. Missing:       Updates Supabase `profiles`
+       University Name."                  with card URL & `isVerified`
+```
+
+### Verification Rules & Protections
+1. **Three Mandatory Fields:**
+   - **University Name / Institutional Header:** Must detect an authentic university name (e.g., *University of Engineering & Technology Lahore*, *FAST-NUCES*, *COMSATS*, *LUMS*, *NUST*, *Punjab University*). No defaults are assumed.
+   - **Student Full Name:** Extracted from card text without fallback placeholders.
+   - **Roll Number / Student ID:** RegEx and AI pattern matched against standard formats (e.g., `2023-CS-807`, `2022-EE-114`).
+2. **Cropping Rejection:** If any of the 3 fields cannot be identified (e.g., header was cut off when snapping the photo), verification halts immediately and returns HTTP 400 with a detailed error listing what was cut off.
+3. **Anti-Mock Policy:** All test profile defaults (`MUHAMMAD HAMMAD ISMAIL`, `2023-CS-807`, `3660128257509`, `31-10-2027`) have been completely deleted from both the backend route and frontend sign-up defaults.
+

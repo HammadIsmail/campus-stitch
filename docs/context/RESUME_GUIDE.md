@@ -17,11 +17,33 @@ When this repository is loaded into an AI agent session after closing Antigravit
    - We use `src/proxy.ts` (exporting `export async function proxy(request)` or `export const proxy = auth(...)`).
    - Do **NOT** revert to `middleware.ts`.
 
-3. **Design Aesthetic:**
+3. **Next.js 16 Dynamic Route Parameters (`params` Promise):**
+   - In Next.js 16 App Router, `params` passed into page components is a Promise.
+   - Client components must unwrap it using React 19's `React.use(params)`:
+     ```tsx
+     export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
+       const resolvedParams = React.use(params);
+       const postId = resolvedParams.id;
+       ...
+     }
+     ```
+
+4. **Community Independent Section Scrolling (No Body Scroll):**
+   - On `/community` and `/community/post/[id]`, full body scrolling is prohibited.
+   - Handled in `src/components/mobile-shell.tsx` via `isCommunityPage`, locking the main container to `h-screen max-h-screen overflow-hidden` and `h-[calc(100dvh-64px)] min-h-0`.
+   - Desktop footer is hidden on community routes.
+   - Each column (`<aside>` left, `<main>` center, `<aside>` right) manages its own `h-full overflow-y-auto` scroll container.
+
+5. **AI Assistant & Tool Calling Architecture:**
+   - `src/app/api/assistant/chat/route.ts` is built on the **Vercel AI SDK** (`ai` + `@ai-sdk/google`).
+   - Uses `generateText()` with `stepCountIs(5)` and tools: `searchCampusInfo`, `getCommuteRides`, `getMarketplaceItems`, `getBikeRentals`, `getHostelServices`, `createTicket`.
+   - `src/app/api/auth/verify-student-card/route.ts` uses raw Gemini Vision REST calls and regex/OCR parsing (not Vercel AI SDK).
+
+6. **Design Aesthetic:**
    - Unified classic black & white monochrome aesthetic (`#000000`, `#FFFFFF`, `#18181B`, `#F4F4F5`, `#ECEEF2`).
    - No flashy or unharmonious primary colors.
 
-4. **Secrets & Git Security:**
+7. **Secrets & Git Security:**
    - `.env.local` contains live credentials (Gmail App Password, Supabase Key, Gemini Key, Uplift Key, Cloudinary).
    - `.env.local` is in `.gitignore`. **NEVER commit sensitive credentials to GitHub.**
 
@@ -77,3 +99,5 @@ node -e "fetch('http://localhost:3000/api/auth/otp/send', { method: 'OPTIONS' })
 - 6-digit OTP codes are delivered to student emails via **Nodemailer Gmail SMTP** (`src/lib/mailer.ts`).
 - Route protection is strictly enforced in **`src/proxy.ts`**; unauthenticated visits to `/` redirect to `/sign-in`.
 - `jose` is **not installed**; NextAuth's native `encode` and `decode` in `src/lib/jwt.ts` manage all token handling.
+- Student ID card verification rejects cropped/incomplete photos missing University Name, Full Name, or Roll Number with zero hardcoded fallbacks.
+

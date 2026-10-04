@@ -27,18 +27,30 @@ It unifies daily campus mobility, student-to-student commerce, hostel living ser
 - Community-driven services within student hostels (Hostel Block A, Block B, Zubair Hall, Girls Hostels).
 - Laundry requests, room sharing listings, and peer maintenance assistance.
 
-### 👥 5. Verified Campus Network (`/community`)
-- Official campus societies, study groups, department circles, and hobby clubs.
-- Moderated announcements and student group discovery.
+### 👥 5. Reddit-Style Campus Communities (`/community`)
+- **Subreddit Architecture:** Organized by campus spaces (e.g., `r/cs-uet`, `r/commute-splits`, `r/hostel-life`, `r/exam-pastpapers`, `r/lost-and-found`).
+- **Dynamic Post Pages (`/community/post/[id]`):** Dedicated discussion pages with vertical voting pillars (▲ score ▼), verified student badges, image attachments, comment composer, and threaded nested discussions.
+- **Independent 3-Column Scroll:** Left subreddit directory, center discussion feed, and right "About Community" widget each scroll independently with zero full-webpage body scroll.
+- **Join/Leave Management:** Instant community membership toggling.
 
-### 🎙️ 6. AI Student Assistant (`/assistant`)
+### 🎙️ 6. AI Student Assistant (`/assistant`) & Voice Messaging (`/messages`)
 - **Multilingual Support:** English and Urdu voice query support.
-- **Urdu Speech-to-Speech:** Integrated with Uplift AI (Urdu TTS) and Google Gemini via the Vercel AI SDK.
+- **Urdu Speech-to-Speech:** Integrated with Uplift AI (Urdu TTS) and Google Gemini with tool calls via the Vercel AI SDK.
+- **Voice Notes in Chat:** Resilient HTML5 base64 audio voice note recording and playback with format fallbacks and auto-scrolling message streams.
 - **Voice Interactions:** Floating microphone trigger in bottom-right corner for hands-free campus inquiries.
 
 ---
 
-## 3. Design Philosophy & User Experience
+## 3. Strict Student Identity & Trust Framework
+- **Mandatory Student ID Card Verification:** New sign-ups must submit a complete, uncropped photo of their university student card.
+- **Enforced Card Fields:** University Name / Institutional Header, Student Full Name, and Roll Number / Student ID must all be clearly visible.
+- **Cropped Photo Rejection:** Cropped or partially obscured photos are immediately rejected with specific guidance on which field was cut off.
+- **Zero Mock Fallbacks:** No hardcoded mock profiles or default names; verification strictly reflects the actual uploaded card.
+
+---
+
+## 4. Design Philosophy & User Experience
 - **Monochrome Elegance:** Strictly curated black, zinc, and white palette (`#000000`, `#18181B`, `#FFFFFF`, `#F4F4F5`, `#ECEEF2`). No generic or conflicting bright colors.
-- **Mobile-First Responsive Shell:** Optimized for both mobile devices (bottom navigation bar) and desktop screens (top navigation bar + centered mobile preview container).
-- **Zero Dummy Data in Production:** All listings, rides, and services connect directly to persistent database tables.
+- **Mobile-First Responsive Shell:** Optimized for both mobile devices (bottom navigation bar) and desktop screens (top navigation bar + independent section scroll containers).
+- **Zero Dummy Data in Production:** All listings, rides, posts, and services connect directly to persistent Supabase database tables.
+
