@@ -13,7 +13,7 @@ const FALLBACK_COMMUNITIES = [
     rules: [
       "Be respectful and collaborative",
       "No plagiarism or honor-code violations",
-      "Tag posts with appropriate flair",
+      "Tag posts with appropriate flair (Resource, Question, Discussion)",
     ],
   },
   {
@@ -25,9 +25,9 @@ const FALLBACK_COMMUNITIES = [
     category: "Hostel",
     member_count: 890,
     rules: [
-      "Keep hostel drama out of general feeds",
-      "Verify room availability details",
-      "Respect room privacy",
+      "Keep hostel room drama civil",
+      "Verify room availability details before agreeing",
+      "Respect room privacy and curfew timings",
     ],
   },
   {
@@ -35,27 +35,111 @@ const FALLBACK_COMMUNITIES = [
     name: "r/commute-splits",
     title: "Daily Rides & Rickshaw Splits",
     description:
-      "Coordinate daily commute between Khurrialwala, Gulberg, Wapda Town, Johar Town, and UET campus.",
+      "Coordinate daily commute between Khurrianwala, Gulberg, Wapda Town, Johar Town, and UET campus.",
     category: "Commute",
     member_count: 1150,
     rules: [
       "State exact pickup and dropoff points",
-      "Always adhere to agreed fuel/cost share",
-      "Only verified students",
+      "Always adhere to agreed fuel/cost share per seat",
+      "Only verified students for carpools",
     ],
   },
   {
     id: "c_4",
-    name: "r/uet-admissions",
-    title: "Admissions, ECAT & Guidance",
+    name: "r/electrical-eng",
+    title: "Electrical, Telecom & Electronics Hub",
     description:
-      "Freshman guidance, department selection, merit lists, documents verification, and campus life FAQs.",
-    category: "General",
-    member_count: 640,
+      "Discussions on circuit analysis, MATLAB projects, power engineering, and semester projects.",
+    category: "Academic",
+    member_count: 980,
     rules: [
-      "Be helpful to juniors and applicants",
-      "Provide authentic UET prospectus information",
-      "No fake rumors",
+      "Share lab schematics responsibly",
+      "Tag questions with subject course codes",
+      "Help juniors with hardware debugging",
+    ],
+  },
+  {
+    id: "c_5",
+    name: "r/exam-pastpapers",
+    title: "Midterm & Final Exam Archives",
+    description:
+      "Past papers, professor hints, solved quizzes, and study drives for all engineering departments.",
+    category: "Academic",
+    member_count: 1850,
+    rules: [
+      "Verify subject code and session year on files",
+      "No unauthorized leakage of live exams",
+      "Keep Drive links public for campus students",
+    ],
+  },
+  {
+    id: "c_6",
+    name: "r/career-internships",
+    title: "Junior Jobs, GSoC & Internships",
+    description:
+      "Referrals, interview experiences, CV reviews, and remote tech job leads for Pakistani students.",
+    category: "Careers",
+    member_count: 1280,
+    rules: [
+      "Include company name, stipend, and deadline in listings",
+      "No unpaid exploitation roles",
+      "Share constructive resume feedback",
+    ],
+  },
+  {
+    id: "c_7",
+    name: "r/campus-memes",
+    title: "UET Memes & Relatable Campus Life",
+    description:
+      "8:00 AM lectures, GPA struggles, cafeteria chai, and campus culture memes.",
+    category: "Campus Life",
+    member_count: 2450,
+    rules: [
+      "Keep banter friendly and lighthearted",
+      "No personal attacks or targeted harassment",
+      "OC (Original Content) appreciated",
+    ],
+  },
+  {
+    id: "c_8",
+    name: "r/sports-uet",
+    title: "Cricket, Futsal, Gym & Badminton",
+    description:
+      "Organize evening matches on UET grounds, find gym workout partners, and inter-department sports fixtures.",
+    category: "Campus Life",
+    member_count: 760,
+    rules: [
+      "Specify ground location and match timing",
+      "Bring your own kit or mention shared equipment",
+      "Maintain sportsman spirit",
+    ],
+  },
+  {
+    id: "c_9",
+    name: "r/acm-uet",
+    title: "ACM UET Student Chapter & Hackathons",
+    description:
+      "Competitive programming, ICPC prep, campus hackathons, and software workshops.",
+    category: "Societies",
+    member_count: 670,
+    rules: [
+      "Keep coding challenges clear with test cases",
+      "Share hackathon registration deadlines early",
+      "Support beginner programmers",
+    ],
+  },
+  {
+    id: "c_10",
+    name: "r/lost-and-found",
+    title: "Campus Lost & Found Bulletin",
+    description:
+      "Report or recover misplaced student IDs, keys, calculators, bags, and items across campus.",
+    category: "General",
+    member_count: 530,
+    rules: [
+      "Hand over found official student cards to Department Admin or post here",
+      "Require proof of ownership before returning valuables",
+      "Update flair to [RESOLVED] once claimed",
     ],
   },
 ];
