@@ -1,12 +1,14 @@
-# CampuStitch — Authentication Architecture
+# CampuStitch — Authentication & Identity Architecture
 
 ## 1. Architecture Overview
-CampuStitch employs a unified **NextAuth.js v5 (Auth.js)** authentication system combined with a custom **Nodemailer Gmail SMTP 6-digit OTP delivery pipeline** and **Next.js 16 `src/proxy.ts`** route guarding.
+CampuStitch employs a clean, two-phase student identity model:
+1. **Phase 1: Instant Account Registration (`/sign-up`)**: Standard manual registration with password hashing, university, campus city, department, and 6-digit email OTP verification. Any valid email (Gmail, Outlook, Yahoo, edu) is accepted. Newly created accounts default to **Unverified**.
+2. **Phase 2: Binance-Style KYC Verification (`/verify`)**: Students verify their account by snapping a live face selfie using their webcam (with an oval frame guide) and uploading the front of their student ID card. An administrator reviews the application via `/admin` and awards the verified badge.
 
 ```
                     ┌─────────────────────────┐
-                    │ Student Enters Email    │
-                    │   (/sign-in page)       │
+                    │ Student Signs Up        │
+                    │ (/sign-up page)         │
                     └────────────┬────────────┘
                                  │
                      POST /api/auth/otp/send
@@ -23,26 +25,32 @@ CampuStitch employs a unified **NextAuth.js v5 (Auth.js)** authentication system
                                  │
                     ┌────────────▼────────────┐
                     │ Student Receives OTP    │
-                    │ in Gmail Inbox (< 2s)   │
+                    │ in Email Inbox (< 2s)   │
                     └────────────┬────────────┘
                                  │
                      Student Enters 6-Digit Code
                                  │
-                     signIn("credentials")
+                     POST /api/auth/sign-up
                                  │
                     ┌────────────▼────────────┐
-                    │       src/auth.ts       │
-                    │ (NextAuth.js v5 Engine) │
+                    │ Profile Created with    │
+                    │ is_verified = false     │
+                    │ Sets JWT Cookie         │
                     └────────────┬────────────┘
                                  │
                     ┌────────────▼────────────┐
-                    │ Issues Session Token    │
-                    │ Sets HTTP-Only Cookies  │
+                    │ UnverifiedDialog on /   │
+                    │ Options: Verify / Skip  │
+                    └────────────┬────────────┘
+                                 │ (Clicks Verify)
+                    ┌────────────▼────────────┐
+                    │ /verify (Binance KYC)   │
+                    │ Live Face + ID Card     │
                     └────────────┬────────────┘
                                  │
                     ┌────────────▼────────────┐
-                    │  src/proxy.ts allows    │
-                    │ access to Home (/)      │
+                    │ /admin (Manual Review)  │
+                    │ Approve -> Verified     │
                     └─────────────────────────┘
 ```
 
@@ -50,162 +58,59 @@ CampuStitch employs a unified **NextAuth.js v5 (Auth.js)** authentication system
 
 ## 2. Key Components
 
-### 1. NextAuth.js v5 Core (`src/auth.ts`)
-- **Credentials Provider:** Accepts `email` and `code` (6-digit OTP).
-- **Verification Hook:** Calls `verifyOtp(email, code)` from `src/lib/otp-store.ts`.
-- **Role Assignment:** Automatically tags admin emails (e.g., `ranahammadismail@gmail.com` or addresses containing `admin`) with `role: "admin"`; all other students receive `role: "student"`.
-- **Session Strategy:** Stateless JWT session strategy (`maxAge: 7 days`).
-- **Callbacks:** Enriches session and JWT token with `studentId`, `role`, `program`, `isVerified`, and `hostelBlock`.
+### 1. Registration & Supabase Profile Persistence (`src/app/api/auth/sign-up/route.ts`)
+- **No Roll Number Field:** Roll number / student ID is **not** requested or saved. The `profiles` table in Supabase does not store `student_id`.
+- **No Profile Picture Required:** Avatar upload is skipped during onboarding.
+- **Dynamic University & City:** Supports 16 major Pakistani universities with city-only campus dropdowns.
+- **System-Fed Department:** Populated from the curated 18-department list via `/api/departments`.
+- **Default Status:** Sets `is_verified: false` and `verification_status: "unverified"`.
+- **Primary Key Generation:** Generates valid standard UUIDs (`crypto.randomUUID()`) for `profiles.id`.
+- **Password Security:** Hashes passwords with salt using Node.js `crypto.scryptSync` (`src/lib/password.ts`) and stores `password_hash` in `profiles`.
+- **Error Handling:** Directly validates Supabase `{ data, error }` return values, failing fast on database errors.
 
-### 2. NextAuth App Router Handler (`src/app/api/auth/[...nextauth]/route.ts`)
-```typescript
-import { handlers } from "@/auth";
-export const { GET, POST } = handlers;
-```
-
-### 3. Nodemailer Gmail Transporter (`src/lib/mailer.ts`)
+### 2. Nodemailer Gmail Transporter (`src/lib/mailer.ts`)
 - Configured with Gmail SMTP:
   - `host: "smtp.gmail.com"`
-  - `port: 465` (SSL/TLS)
+  - `port: 465` (SSL/TLS) or `port: 587` (STARTTLS)
   - `auth: { user: process.env.MAIL_USERNAME, pass: process.env.MAIL_PASSWORD }`
-- **Critical Fix:** Uses `dns.setDefaultResultOrder("ipv4first")` to ensure seamless SMTP socket connectivity on Windows environments where IPv6 lookups can stall.
+- **IPv4 Fallback:** Uses `dns.setDefaultResultOrder("ipv4first")` to ensure reliable SMTP socket connectivity on Windows environments.
 - Sends a mobile-optimized, branded black & white HTML email displaying the 6-digit passcode.
 
-### 4. OTP Store (`src/lib/otp-store.ts`)
-- In-memory store holding active codes with timestamps:
+### 3. In-Memory OTP Store (`src/lib/otp-store.ts`)
+- Holds active OTP codes with timestamps:
   - Expiration: **10 minutes**.
   - Rate limiting: Maximum **5 attempts** per OTP before invalidation.
   - One-time consumption: The code is deleted immediately upon successful verification.
 
-### 5. Next.js 16 Proxy Convention (`src/proxy.ts`)
+### 4. Next.js 16 Proxy Convention (`src/proxy.ts`)
 - Replaces the deprecated `middleware.ts` convention.
 - **Public Routes Whitelist:**
   ```typescript
-  const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/login", "/api/auth", "/auth"];
+  const PUBLIC_PREFIXES = [
+    "/sign-in",
+    "/sign-up",
+    "/login",
+    "/forgot-password",
+    "/api/auth",
+    "/auth",
+    "/api/upload",
+    "/api/departments",
+    "/api/universities",
+  ];
   ```
 - **Protected Routes:** Every other route (including root `/`) requires an active authenticated session. Unauthenticated requests receive `307 Redirect` to `/sign-in`.
-- **Admin Protection:** Checks `req.auth?.user?.role === "admin"`. Non-admin students accessing `/admin` are bounced to `/?error=admin_access_required`.
+- **Admin Protection:** Checks `payload.role === "admin"`. Non-admin students attempting to access `/admin` receive `403 Forbidden` or redirect.
 
-### 6. Client Auth Context & Provider (`src/lib/auth-context.tsx` & `src/components/auth-session-provider.tsx`)
-- Root layout is wrapped with `AuthSessionProvider` (`SessionProvider` from `next-auth/react`).
-- Exposes `useAuth()` hook for state tracking, manual sync, and login/logout triggers.
-- Navigation upon sign-up and sign-in completion uses `window.location.href` instead of `router.push` to guarantee the browser initiates a clean full-document request with all HTTP-only cookies attached, avoiding Next.js client router cache lag.
+### 5. Client Auth Context & Provider (`src/lib/auth-context.tsx`)
+- Provides `useAuth()` hook for state tracking, manual sync, and login/logout triggers.
+- Navigation upon sign-up and sign-in completion uses full-page transitions to guarantee clean cookie attachment.
 
-### 7. Registration & Supabase Profile Persistence (`src/app/api/auth/sign-up/route.ts`)
-- **Primary Key Constraint:** Generates valid standard UUIDs (`crypto.randomUUID()`) for `profiles.id` matching Supabase's `uuid primary key default uuid_generate_v4()` constraint.
-- **Password Security:** Hashes passwords with salt using Node.js `crypto.scryptSync` (`src/lib/password.ts`) and stores `password_hash` in `profiles`.
-- **Duplicate Prevention:** Validates that neither `email` nor `student_id` is already registered before creating the account (`profiles_email_idx` and `profiles_student_id_key`).
-- **Error Handling:** Directly validates Supabase `{ data, error }` return values, failing fast on database insertion errors rather than returning false-positive success.
+### 6. Binance-Style KYC Verification (`src/app/verify/page.tsx` & `/api/verifications`)
+- **Live Face Camera:** Prompts the student to center their face in an oval viewfinder and captures a live webcam snapshot blob.
+- **Student ID Front Photo:** Attaches an image file of the student ID card.
+- **Submission:** Submits both images to `POST /api/verifications`, updating `profiles.verification_status` to `"pending"`.
 
-### 8. Credentials Sign-In Pipeline (`src/app/api/auth/sign-in/route.ts`)
-- Queries `profiles` table in Supabase by normalized `email`.
-- Verifies input password against `password_hash` using `verifyPassword(password, hash)`.
-- Returns an authenticated JWT session (`campus_stitch_token`) and sets an HTTP-only secure cookie for `proxy.ts` route guarding.
-
----
-
-## 3. Student Card Verification Pipeline (`/api/auth/verify-student-card`)
-
-```
-                 ┌──────────────────────────────────────┐
-                 │ Student Uploads ID Card Image        │
-                 │ (/sign-up or /verify page)           │
-                 └──────────────────┬───────────────────┘
-                                    │
-                                    ▼
-                 ┌──────────────────────────────────────┐
-                 │ POST /api/auth/verify-student-card   │
-                 │ Multipart form-data (image + email)  │
-                 └──────────────────┬───────────────────┘
-                                    │
-                                    ▼
-                 ┌──────────────────────────────────────┐
-                 │ Cloudinary Upload (WebP optimization)│
-                 └──────────────────┬───────────────────┘
-                                    │
-                                    ▼
-                 ┌──────────────────────────────────────┐
-                 │ AI Vision & Local OCR Analysis       │
-                 │ (Gemini 2.5 Flash / Tesseract OCR)   │
-                 └──────────────────┬───────────────────┘
-                                    │
-                                    ▼
-                 ┌──────────────────────────────────────┐
-                 │ Completeness & Anti-Cropping Check   │
-                 │ 1. University / Institution Name?    │
-                 │ 2. Student Full Name?                │
-                 │ 3. Roll Number / Student ID?         │
-                 └──────────────────┬───────────────────┘
-                                    │
-                     ┌──────────────┴──────────────┐
-                     │                             │
-              [Missing Fields]             [All 3 Visible]
-                     │                             │
-                     ▼                             ▼
-       HTTP 400 Bad Request               HTTP 200 Success
-       "Please upload a complete          Returns extracted profile
-       student card photo. Missing:       Updates Supabase `profiles`
-       University Name."                  with card URL & `isVerified`
-```
-
-### Verification Rules & Protections
-1. **Three Mandatory Fields:**
-   - **University Name / Institutional Header:** Must detect an authentic university name (e.g., *University of Engineering & Technology Lahore*, *FAST-NUCES*, *COMSATS*, *LUMS*, *NUST*, *Punjab University*). No defaults are assumed.
-   - **Student Full Name:** Extracted from card text without fallback placeholders.
-   - **Roll Number / Student ID:** RegEx and AI pattern matched against standard formats (e.g., `2023-CS-807`, `2022-EE-114`).
-2. **Cropping Rejection:** If any of the 3 fields cannot be identified (e.g., header was cut off when snapping the photo), verification halts immediately and returns HTTP 400 with a detailed error listing what was cut off.
-3. **Anti-Mock Policy:** All test profile defaults (`MUHAMMAD HAMMAD ISMAIL`, `2023-CS-807`, `3660128257509`, `31-10-2027`) have been completely deleted from both the backend route and frontend sign-up defaults.
-
----
-
-## 4. Forgot Password & Password Reset Pipeline
-
-```
-┌─────────────────────────────────┐
-│ Student clicks "Forgot password"│
-│       (/forgot-password)        │
-└────────────────┬────────────────┘
-                 │
-   POST /api/auth/forgot-password { email }
-                 │
-┌────────────────▼────────────────┐
-│ Checks Supabase `profiles` table│
-│ Generates 6-Digit Numeric OTP   │
-│ Stores in `password_resets`     │
-│ (expires in 15 minutes)         │
-└────────────────┬────────────────┘
-                 │
-┌────────────────▼────────────────┐
-│ Delivers via Nodemailer SMTP    │
-│ to student's inbox (< 2s)       │
-└────────────────┬────────────────┘
-                 │
-   Student submits OTP + New Password
-                 │
-   POST /api/auth/reset-password { email, otp, newPassword }
-                 │
-┌────────────────▼────────────────┐
-│ Validates OTP & Expiry          │
-│ Hashes password (pbkdf2Sync)    │
-│ Updates `profiles.password_hash`│
-│ Marks OTP used in DB            │
-└────────────────┬────────────────┘
-                 │
-   Redirects to /sign-in with success banner
-```
-
-- **Endpoints:**
-  - `POST /api/auth/forgot-password`: Expects `{ email }`. Inserts into `password_resets (email, otp, expires_at, used: false)`.
-  - `POST /api/auth/reset-password`: Expects `{ email, otp, newPassword }`. Hashes via `crypto.pbkdf2Sync(newPassword, salt, 1000, 64, "sha512")`, updating `profiles.password_hash`.
-- **Database Table (`password_resets`):** `id (uuid pk)`, `email`, `otp`, `expires_at`, `used (boolean)`, `created_at`.
-
----
-
-## 5. Profile Data Fetching & Real Avatar Synchronization
-
-- **Registration Photo Persistence:** When a student uploads their photo or student card during sign-up, the Cloudinary image URL is saved to `profiles.avatar_url`.
-- **Profile Resolution (`GET /api/profile` & `GET /api/auth/me`):**
-  - Authenticated requests resolve the logged-in user via JWT token cookie `campus_stitch_token`.
-  - Queries `profiles` by `email` or `user_id` to retrieve authentic `full_name`, `avatar_url`, `bio`, `student_id`, `university`, `program`, `department`, and `is_verified`.
-  - Populates client `AuthContext` (`user.avatarUrl`, `user.bio`) without any hardcoded mock fallbacks or dummy data leaks.
-
+### 7. Admin Moderation Panel (`src/app/admin/page.tsx`)
+- Lists pending verifications with side-by-side Live Face Selfie & Student ID card preview.
+- **Approve Action:** Calls `PATCH /api/verifications` with `status: "approved"`, updating `profiles.is_verified = true` and `profiles.verification_status = "verified"`.
+- **Reject Action:** Calls `PATCH /api/verifications` with `status: "rejected"`.

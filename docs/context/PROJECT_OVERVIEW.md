@@ -1,18 +1,18 @@
 # CampuStitch — Project Overview
 
 ## 1. Executive Summary
-**CampuStitch** is a dedicated student life platform designed specifically for the students, faculty, and resident community of **UET Lahore** (University of Engineering and Technology, Lahore). 
+**CampuStitch** is a dedicated student life platform designed for university students, faculty, and campus communities across Pakistan (originating at UET Lahore). 
 
-It unifies daily campus mobility, student-to-student commerce, hostel living services, student societies, and an AI campus voice assistant into a unified, mobile-first responsive web application.
+It unifies daily campus mobility, peer-to-peer student marketplace commerce, hostel living services, campus communities, and an AI campus voice assistant into a unified, mobile-first responsive web application.
 
 ---
 
 ## 2. Core Pillars & Features
 
 ### 🚖 1. Student Commute & Ride Sharing (`/commute`)
-- **Carpools & Rickshaw Splits:** Students traveling along common routes (e.g., UET Main Campus to Wapda Town, Gulberg, Johar Town, DHA) can offer empty seats or request splits.
+- **Carpools & Rickshaw Splits:** Students traveling along common routes offer empty seats or request splits.
 - **Fair Fare Splitting:** Built-in cost calculator per seat to eliminate daily campus commuting haggling.
-- **Safety & Verification:** Verified student roll numbers and campus ID verification ensure ride-sharing is restricted to authenticated university peers.
+- **Safety & Verification:** Prominently displays the `Verified Student` trust badge for authenticated peers.
 
 ### 🚲 2. Campus Bike Rentals (`/bikes`)
 - Daily student rentals and bicycle sharing on campus.
@@ -20,7 +20,7 @@ It unifies daily campus mobility, student-to-student commerce, hostel living ser
 
 ### 🛍️ 3. Student Marketplace (`/market`)
 - **Peer-to-Peer Trading:** Buy, sell, or rent textbooks, engineering drawing tools, hostel appliances, coolers, and tech gadgets.
-- **Graduation & Hostel Relocation Deals:** High-discount item clearing when seniors graduate or change hostels.
+- **Graduation & Relocation Clearance:** High-discount item clearing when seniors graduate or change hostels.
 - **Direct Image Uploads:** Cloudinary integration with automatic WebP compression.
 
 ### 🏢 4. Hostel Services & Living (`/hostel`)
@@ -42,22 +42,28 @@ It unifies daily campus mobility, student-to-student commerce, hostel living ser
 - **Multilingual Support:** English and Urdu voice query support.
 - **Urdu Speech-to-Speech:** Integrated with Uplift AI (Urdu TTS) and Google Gemini with tool calls via the Vercel AI SDK.
 - **Voice Notes in Chat:** Resilient HTML5 base64 audio voice note recording and playback with format fallbacks and auto-scrolling message streams.
-- **Voice Interactions:** Floating microphone trigger in bottom-right corner for hands-free campus inquiries.
 
 ---
 
-## 3. Strict Student Identity & Trust Framework
-- **Mandatory Student ID Card Verification:** New sign-ups must submit a complete, uncropped photo of their university student card.
-- **Enforced Card Fields:** University Name / Institutional Header, Student Full Name, and Roll Number / Student ID must all be clearly visible.
-- **Cropped Photo Rejection:** Cropped or partially obscured photos are immediately rejected with specific guidance on which field was cut off.
-- **Zero Mock Fallbacks:** No hardcoded mock profiles or default names; verification strictly reflects the actual uploaded card.
-- **Forgot Password & Account Recovery:** Secure 6-digit email OTP verification pipeline delivering OTPs via Nodemailer Gmail SMTP.
+## 3. Two-Phase Student Identity & Verification Framework
+
+### Phase 1: Streamlined Sign-Up (`/sign-up`)
+- **Standard Registration:** Full Name, University (searchable across 16 major Pakistani universities), Campus City (clean city names only), System-Fed Department dropdown, Email, and Password.
+- **Zero Friction:** No upfront card OCR scanning required, no avatar upload required at sign-up, and no Roll Number or Student ID field requested or stored.
+- **Broad Email Acceptance:** Any standard email address (Gmail, Outlook, Yahoo, edu) is accepted, confirmed via an instantaneous 6-digit email OTP.
+- **Default Unverified Account:** Newly registered students default to `is_verified = false`, `verification_status = 'unverified'`, and are greeted by an interactive `UnverifiedDialog` modal.
+
+### Phase 2: Binance-Style KYC Verification (`/verify` & `/admin`)
+- **Webcam Live Face Capture:** Live video stream with a centered oval face guide frame ensuring an authentic live human selfie.
+- **Student ID Card Front Upload:** High-resolution image capture of the applicant's official student ID card front.
+- **Manual Admin Inspection (`/admin`):** Side-by-side visual comparison of the applicant's live webcam selfie against their student ID card photo. One-click Approve grants the official `Verified Student` badge; Reject marks as rejected.
+- **Universal Trust Badge:** The `<VerificationBadge />` renders across community posts, carpool rides, marketplace listings, and hostel profiles.
 
 ---
 
 ## 4. Design Philosophy & User Experience
-- **Monochrome Elegance & Dark Mode:** Strictly curated black, zinc, and white palette (`#000000`, `#18181B`, `#FFFFFF`, `#F4F4F5`, `#ECEEF2`, `#121215`) with a complete dark mode switch in header and profile settings.
+- **Unified Black & White Aesthetic:** High-contrast monochrome palette (`bg-black dark:bg-white text-white dark:text-black`, `border-zinc-300 dark:border-zinc-700`) across all auth pages, dialogs, badges, and verification controls.
+- **Full Dark Mode Support:** Theme context with anti-flash script, header toggle, and profile settings switch.
 - **No Unnecessary Footers:** The application operates as a clean modern web app without redundant bottom web footers.
 - **Mobile-First Responsive Shell:** Optimized for mobile devices (pinned bottom navigation bar) and desktop screens (top navigation bar + independent section scroll containers).
-- **Persistent Backend:** All listings, rides, posts, and services connect directly to remote Supabase PostgreSQL database tables.
-
+- **Zero Dummy Data Leaks:** Realistic, diverse user data without hardcoded personal names (e.g. `'Muhammad Hammad'`) or fake roll numbers.

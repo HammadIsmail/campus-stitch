@@ -8,7 +8,7 @@ campus-stitch/
 │   ├── context/                        <-- Persistent context for future AI sessions
 │   │   ├── PROJECT_OVERVIEW.md         <-- Goals & product pillars
 │   │   ├── CURRENT_STATE.md            <-- Snapshot of active work & status
-│   │   ├── AUTH_ARCHITECTURE.md        <-- Full NextAuth + Nodemailer blueprint
+│   │   ├── AUTH_ARCHITECTURE.md        <-- Full NextAuth, OTP, and KYC verification blueprint
 │   │   ├── SYSTEM_MAP.md               <-- File & route mapping
 │   │   └── RESUME_GUIDE.md             <-- Instructions when opening Antigravity
 │   ├── AGENTS.md                       <-- Rules & constraints
@@ -20,6 +20,8 @@ campus-stitch/
 │   ├── verify_all_endpoints.mjs        <-- Supabase schema and table count validator
 │   ├── add_bio_column.mjs              <-- Database migration script for profile bio
 │   └── test_api_endpoints.mjs          <-- Automated HTTP API endpoint integration tester
+├── supabase/
+│   └── schema.sql                      <-- Complete Supabase PostgreSQL database schema & migrations
 ├── src/
 │   ├── app/
 │   │   ├── api/
@@ -35,16 +37,18 @@ campus-stitch/
 │   │   │   ├── auth/sign-in/           <-- Credentials login
 │   │   │   ├── auth/sign-out/          <-- Sign out endpoint
 │   │   │   ├── auth/sign-up/           <-- Student registration
-│   │   │   ├── auth/verify-student-card/ <-- Strict OCR/Vision student ID verification
 │   │   │   ├── community/comments/     <-- Threaded comment CRUD & replies
 │   │   │   ├── community/join/         <-- Community membership toggling
 │   │   │   ├── community/list/         <-- Community directory listing
 │   │   │   ├── community/posts/        <-- Community posts feed & single post (?id=)
 │   │   │   ├── community/vote/         <-- Upvote / downvote score handling
+│   │   │   ├── departments/            <-- System-fed departments list endpoint
 │   │   │   ├── profile/                <-- Profile data retrieval & bio/avatar updates
-│   │   │   └── upload/                 <-- Cloudinary image upload route
+│   │   │   ├── universities/           <-- Supported universities and campuses endpoint
+│   │   │   ├── upload/                 <-- Cloudinary image upload route
+│   │   │   └── verifications/          <-- Student KYC submissions and admin approvals (GET, POST, PATCH)
 │   │   ├── auth/callback/              <-- Supabase email link handler
-│   │   ├── admin/                      <-- Admin moderation panel
+│   │   ├── admin/                      <-- Admin KYC moderation panel (Side-by-side face & ID card)
 │   │   ├── assistant/                  <-- AI Student Voice Assistant page
 │   │   ├── bikes/                      <-- Campus bicycle rentals
 │   │   ├── community/                  <-- Reddit communities quad feed (with pinned BottomNav)
@@ -59,19 +63,23 @@ campus-stitch/
 │   │   │   └── sell/                   <-- Create marketplace listing page
 │   │   ├── messages/                   <-- Student chat with audio voice notes
 │   │   ├── notifications/              <-- In-app student notifications fallback page
-│   │   ├── profile/                    <-- Student profile, bio editor, ratings & theme settings
+│   │   ├── profile/                    <-- Student profile, bio editor, ratings & verification status
 │   │   ├── sign-in/                    <-- NextAuth 6-digit OTP sign-in page with Forgot Password link
-│   │   ├── sign-up/                    <-- Multi-step student card onboarding
-│   │   ├── verify/                     <-- Student ID card verification upload
+│   │   ├── sign-up/                    <-- B&W manual registration with city campuses & departments
+│   │   ├── verify/                     <-- Binance-style KYC face camera & student card upload
 │   │   ├── layout.tsx                  <-- Root layout with Session, Theme, & Auth providers
-│   │   └── page.tsx                    <-- CampuStitch Home Dashboard
+│   │   └── page.tsx                    <-- CampuStitch Home Dashboard (mounts UnverifiedDialog)
 │   ├── components/
-│   │   ├── ui/                         <-- Base UI primitives (button, badge)
+│   │   ├── ui/
+│   │   │   ├── button.tsx              <-- Button component
+│   │   │   ├── badge.tsx               <-- Badge component
+│   │   │   └── verification-badge.tsx  <-- Verified Student trust badge (verified, pending, unverified)
 │   │   ├── auth-session-provider.tsx   <-- NextAuth client SessionProvider
 │   │   ├── bottom-nav.tsx              <-- Pinned bottom navigation bar (Mobile)
 │   │   ├── floating-mic.tsx            <-- Persistent AI Assistant floating mic
 │   │   ├── mobile-shell.tsx            <-- App shell without global footer & with notifications slider toggle
-│   │   └── notifications-slider.tsx    <-- Cart-like right slide-over notifications drawer
+│   │   ├── notifications-slider.tsx    <-- Cart-like right slide-over notifications drawer
+│   │   └── unverified-dialog.tsx       <-- Post-registration unverified warning and verify prompt
 │   ├── lib/
 │   │   ├── supabase/
 │   │   │   ├── client.ts               <-- Browser Supabase client (@supabase/ssr)
@@ -80,11 +88,12 @@ campus-stitch/
 │   │   ├── cloudinary.ts               <-- Cloudinary SDK configuration
 │   │   ├── data-service.ts             <-- Supabase data access layer (Rides, Listings, Bikes)
 │   │   ├── image-converter.ts          <-- WebP image compression helper
-│   │   ├── jwt.ts                      <-- NextAuth native JWT encoder/decoder helpers
+│   │   ├── jwt.ts                      <-- JWT encoder/decoder helpers
 │   │   ├── mailer.ts                   <-- Nodemailer Gmail SMTP sender
 │   │   ├── otp-store.ts                <-- In-memory 10-min OTP generator & verifier
 │   │   ├── password.ts                 <-- Password hashing & validation
 │   │   ├── theme-context.tsx           <-- Dark / light mode state provider
+│   │   ├── universities.ts             <-- 16 Pakistani Universities with city-only campuses
 │   │   └── utils.ts                    <-- Tailwind merge & clsx utility
 │   ├── auth.ts                         <-- NextAuth v5 configuration & credentials provider
 │   └── proxy.ts                        <-- Next.js 16 route guarding & access control
@@ -94,18 +103,15 @@ campus-stitch/
 
 ## 2. Supabase Database Schema
 The platform connects to Supabase PostgreSQL with the following tables:
-1. `profiles`: `id (uuid pk)`, `user_id (uuid fk)`, `email (unique)`, `password_hash`, `full_name`, `student_id (unique)`, `university`, `program`, `department`, `is_verified`, `verification_status`, `avatar_url`, `bio`, `card_photo_url`, `cnic`, `expiry_date`, `phone`, `rating_avg`, `rating_count`, `created_at`.
-2. `password_resets`: `id (uuid pk)`, `email`, `otp`, `expires_at`, `used`, `created_at`.
-3. `rides`: `id`, `organizer_name`, `from_location`, `to_location`, `departure_time`, `vehicle_type`, `total_cost`, `price_per_seat`, `total_seats`, `available_seats`, `status`.
-4. `ride_bookings`: `id`, `ride_id`, `passenger_id`, `seats_booked`, `status`, `created_at`.
-5. `listings`: `id`, `seller_name`, `title`, `description`, `price`, `condition`, `category`, `location`, `image_url`, `status`.
-6. `shared_items`: `id`, `name`, `category`, `total_shares`, `available_shares`, `share_price`, `maintenance_fee`, `image_url`.
-7. `shared_item_owners`: `id`, `shared_item_id`, `owner_id`, `shares_owned`.
-8. `bikes`: `id`, `owner_name`, `bike_model`, `bike_type`, `hourly_rate`, `daily_rate`, `pickup_location`, `is_available`.
-9. `bike_rentals`: `id`, `bike_id`, `renter_id`, `start_time`, `end_time`, `status`.
-10. `hostel_roommates`: `id`, `student_id`, `hostel_name`, `room_number`, `sleep_habit`, `study_habit`, `department`, `status`.
-11. `hostel_services`: `id`, `provider_name`, `service_title`, `service_type`, `price`, `hostel_block`, `room_number`.
-12. `communities`: `id`, `name`, `title`, `category`, `description`, `member_count`, `rules`.
-13. `community_posts`: `id`, `community_id`, `community_name`, `author_id`, `author_name`, `author_student_id`, `author_verified`, `title`, `content`, `flair`, `image_url`, `link_url`, `upvotes`, `downvotes`, `score`, `comments_count`.
-14. `community_comments`: `id`, `post_id`, `parent_comment_id`, `author_id`, `author_name`, `author_student_id`, `author_verified`, `content`, `upvotes`, `score`, `created_at`.
-15. `notifications`: `id`, `user_id`, `title`, `message`, `type`, `deeplink`, `is_read`, `created_at`.
+1. `profiles`: `id (uuid pk)`, `user_id (uuid fk)`, `email (unique)`, `password_hash`, `full_name`, `university`, `city`, `program`, `department`, `is_verified (boolean)`, `verification_status ('unverified' | 'pending' | 'verified' | 'rejected')`, `avatar_url`, `live_photo_url`, `bio`, `card_photo_url`, `cnic`, `expiry_date`, `phone`, `rating_avg`, `rating_count`, `created_at`.
+2. `departments`: `id (uuid pk)`, `name (unique)`, `created_at`.
+3. `verifications`: `id (text pk)`, `user_id (uuid fk)`, `email`, `name`, `university`, `city`, `program`, `department`, `confidence_status`, `status ('pending' | 'approved' | 'rejected' | 'reupload')`, `card_photo_url`, `live_photo_url`, `created_at`.
+4. `password_resets`: `id (uuid pk)`, `email`, `otp`, `expires_at`, `used`, `created_at`.
+5. `rides`: `id`, `organizer_name`, `from_location`, `to_location`, `departure_time`, `vehicle_type`, `total_cost`, `price_per_seat`, `total_seats`, `available_seats`, `status`.
+6. `ride_bookings`: `id`, `ride_id`, `passenger_id`, `seats_booked`, `status`, `created_at`.
+7. `listings`: `id`, `seller_name`, `seller_verified`, `title`, `description`, `category`, `price`, `condition`, `location`, `is_graduation_sale`, `status`, `created_at`.
+8. `bikes`: `id`, `owner_name`, `owner_verified`, `model`, `condition`, `location`, `daily_rate`, `deposit_amount`, `available_date`, `available_time`, `rules`, `is_available`, `created_at`.
+9. `bike_rentals`: `id`, `bike_id`, `renter_name`, `rental_day`, `rental_time`, `total_amount`, `status`, `created_at`.
+10. `shared_items` & `shared_item_owners`: fractional ownership items and percentages.
+11. `hostel_roommates` & `hostel_services`: roommate requests and student hostel services.
+12. `community_events`: society workshops and campus events.
