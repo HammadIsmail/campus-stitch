@@ -14,10 +14,11 @@ import {
   Bike,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
+import { createClient } from "@/lib/supabase/client";
 
 interface NotificationItem {
   id: string;
-  type: "ride" | "market" | "bike" | "verification";
+  type: "ride" | "market" | "bike" | "verification" | "community";
   title: string;
   message: string;
   time: string;
@@ -34,19 +35,54 @@ export default function NotificationsPage() {
   const [selectedFilter, setSelectedFilter] = React.useState("All");
 
   React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem("campus_stitch_notifications");
-      if (stored) {
-        setNotifications(JSON.parse(stored));
+    async function loadNotifications() {
+      try {
+        const stored = localStorage.getItem("campus_stitch_notifications");
+        if (stored) {
+          setNotifications(JSON.parse(stored));
+        }
+      } catch {}
+
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("notifications")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (data && data.length > 0 && !error) {
+          const mapped: NotificationItem[] = data.map((n: any) => ({
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            message: n.message,
+            time: n.time || "Just now",
+            deeplink: n.deeplink || "/",
+            read: n.is_read ?? false,
+          }));
+          setNotifications(mapped);
+          try {
+            localStorage.setItem("campus_stitch_notifications", JSON.stringify(mapped));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn("Notifications DB fetch notice:", err);
       }
-    } catch {}
+    }
+
+    loadNotifications();
   }, []);
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     const updated = notifications.map((n) => ({ ...n, read: true }));
     setNotifications(updated);
     try {
       localStorage.setItem("campus_stitch_notifications", JSON.stringify(updated));
+    } catch {}
+
+    try {
+      const supabase = createClient();
+      await supabase.from("notifications").update({ is_read: true }).neq("id", "00000000-0000-0000-0000-000000000000");
     } catch {}
   };
 

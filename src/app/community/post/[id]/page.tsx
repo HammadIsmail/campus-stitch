@@ -24,8 +24,11 @@ import {
   Check,
   Menu,
   X,
+  MoreHorizontal,
+  Repeat,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
+import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
@@ -76,14 +79,35 @@ interface Comment {
 }
 
 const FLAIR_COLORS: Record<string, string> = {
-  Resource: "bg-emerald-50 text-emerald-800 border-emerald-200",
-  Question: "bg-blue-50 text-blue-800 border-blue-200",
-  Discussion: "bg-purple-50 text-purple-800 border-purple-200",
-  Notice: "bg-amber-50 text-amber-800 border-amber-200",
-  Carpool: "bg-teal-50 text-teal-800 border-teal-200",
-  Meme: "bg-pink-50 text-pink-800 border-pink-200",
-  Event: "bg-indigo-50 text-indigo-800 border-indigo-200",
+  Resource: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+  Question: "bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+  Discussion: "bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+  Notice: "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+  Carpool: "bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800",
+  Meme: "bg-pink-50 dark:bg-pink-950/40 text-pink-800 dark:text-pink-300 border-pink-200 dark:border-pink-800",
+  Event: "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
 };
+
+function formatTimeAgo(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (diffSec < 60) return "just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return "1 day ago";
+    if (diffDays < 30) return `${diffDays} days ago`;
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths === 1) return "1 mo ago";
+    return `${diffMonths} mos ago`;
+  } catch {
+    return "recently";
+  }
+}
 
 export default function DynamicPostPage({
   params,
@@ -105,6 +129,7 @@ export default function DynamicPostPage({
   });
   const [isSaved, setIsSaved] = React.useState(false);
   const [copyFeedback, setCopyFeedback] = React.useState<string | null>(null);
+  const [activeMenuOpen, setActiveMenuOpen] = React.useState(false);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [newCommentText, setNewCommentText] = React.useState("");
@@ -157,29 +182,47 @@ export default function DynamicPostPage({
       .finally(() => setIsLoading(false));
   }, [postId]);
 
-  // Voting on post
+  // Voting on post with separate counters
   const handleVote = (direction: 1 | -1) => {
     if (!post) return;
 
     const currentVote = post.userVote || 0;
-    let newVote: number = direction;
-    let delta = 0;
+    let newVote: number = 0;
+    let newUpvotes = post.upvotes ?? 0;
+    let newDownvotes = post.downvotes ?? 0;
 
-    if (currentVote === direction) {
-      newVote = 0;
-      delta = -direction;
-    } else if (currentVote === 0) {
-      newVote = direction;
-      delta = direction;
+    if (direction === 1) {
+      if (currentVote === 1) {
+        newVote = 0;
+        newUpvotes = Math.max(0, newUpvotes - 1);
+      } else if (currentVote === -1) {
+        newVote = 1;
+        newUpvotes += 1;
+        newDownvotes = Math.max(0, newDownvotes - 1);
+      } else {
+        newVote = 1;
+        newUpvotes += 1;
+      }
     } else {
-      newVote = direction;
-      delta = direction * 2;
+      if (currentVote === -1) {
+        newVote = 0;
+        newDownvotes = Math.max(0, newDownvotes - 1);
+      } else if (currentVote === 1) {
+        newVote = -1;
+        newDownvotes += 1;
+        newUpvotes = Math.max(0, newUpvotes - 1);
+      } else {
+        newVote = -1;
+        newDownvotes += 1;
+      }
     }
 
     setPost({
       ...post,
       userVote: newVote,
-      score: post.score + delta,
+      upvotes: newUpvotes,
+      downvotes: newDownvotes,
+      score: newUpvotes - newDownvotes,
     });
 
     fetch("/api/community/vote", {
@@ -228,8 +271,8 @@ export default function DynamicPostPage({
 
     setIsSubmittingComment(true);
     const parentId = replyingToCommentId;
-    const authorName = user?.name || "Muhammad Hammad Ismail";
-    const authorStudentId = user?.studentId || "2023-CS-807";
+    const authorName = user?.name || "Student";
+    const authorStudentId = user?.studentId || "";
 
     const optimistic: Comment = {
       id: "cm_" + Date.now(),
@@ -454,7 +497,7 @@ export default function DynamicPostPage({
           {/* ======================================================== */}
           {/* COLUMN 2: CENTER POST DETAIL & THREADED COMMENTS        */}
           {/* ======================================================== */}
-          <main className="flex-1 min-w-0 h-full overflow-y-auto p-3 sm:p-5 space-y-4">
+          <main className="flex-1 min-w-0 h-full overflow-y-auto p-3 sm:p-5 space-y-4 pb-20 md:pb-5">
             {/* Mobile Header Button */}
             <div className="flex items-center justify-between md:hidden bg-white p-2.5 rounded-2xl border border-zinc-200">
               <button
@@ -505,181 +548,196 @@ export default function DynamicPostPage({
               </div>
             ) : (
               <>
-                {/* Full Reddit Post Card */}
-                <article className="bg-white border border-zinc-200 rounded-3xl p-4 sm:p-6 shadow-2xs flex gap-3.5 sm:gap-4">
-                  {/* Left Upvote / Downvote Pillar */}
-                  <div className="flex flex-col items-center justify-start bg-zinc-50/80 rounded-2xl p-1.5 border border-zinc-200/80 shrink-0 w-10 sm:w-11">
-                    <button
-                      type="button"
-                      onClick={() => handleVote(1)}
-                      className={cn(
-                        "p-1.5 rounded-xl transition-colors cursor-pointer",
-                        post.userVote === 1
-                          ? "bg-orange-600 text-white font-bold"
-                          : "text-zinc-500 hover:text-orange-600 hover:bg-orange-50"
-                      )}
-                      title="Upvote"
-                    >
-                      <ArrowUp size={18} className="stroke-[2.5px]" />
-                    </button>
-
-                    <span
-                      className={cn(
-                        "text-xs sm:text-sm font-extrabold my-1.5 font-mono tracking-tight",
-                        post.userVote === 1
-                          ? "text-orange-600"
-                          : post.userVote === -1
-                            ? "text-blue-600"
-                            : "text-zinc-800"
-                      )}
-                    >
-                      {post.score}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => handleVote(-1)}
-                      className={cn(
-                        "p-1.5 rounded-xl transition-colors cursor-pointer",
-                        post.userVote === -1
-                          ? "bg-blue-600 text-white font-bold"
-                          : "text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
-                      )}
-                      title="Downvote"
-                    >
-                      <ArrowDown size={18} className="stroke-[2.5px]" />
-                    </button>
-                  </div>
-
-                  {/* Main Post Content */}
-                  <div className="flex-1 min-w-0 space-y-3">
-                    {/* Header info */}
-                    <div className="flex items-center flex-wrap gap-1.5 text-xs text-zinc-500">
-                      <Link
-                        href={`/community?community=${encodeURIComponent(post.community_name)}`}
-                        className="font-extrabold text-black hover:underline"
-                      >
-                        {post.community_name}
-                      </Link>
-                      <span>&bull;</span>
-                      <span>Posted by</span>
-                      <span className="font-semibold text-zinc-800 flex items-center gap-1">
-                        {post.author_name}
-                        {post.author_verified && (
-                          <ShieldCheck size={13} className="text-black" />
-                        )}
-                      </span>
-                      {post.author_student_id && (
-                        <span className="font-mono text-zinc-400 text-[11px]">
-                          ({post.author_student_id})
-                        </span>
-                      )}
-                      <span>&bull;</span>
-                      <span className="flex items-center gap-0.5 text-zinc-400">
-                        <Clock size={12} />
-                        <span>
-                          {new Date(post.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </span>
-                      </span>
-                    </div>
-
-                    {/* Title with Flair */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {post.flair && (
-                          <span
-                            className={cn(
-                              "text-xs font-bold px-2.5 py-0.5 rounded-lg border",
-                              FLAIR_COLORS[post.flair] || "bg-zinc-100 text-zinc-800 border-zinc-200"
-                            )}
-                          >
-                            {post.flair}
-                          </span>
-                        )}
-                        <h1 className="text-lg sm:text-xl font-black text-black leading-snug">
-                          {post.title}
-                        </h1>
+                {/* Full Reddit Post Card matching Screenshot */}
+                <article className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-[#242429] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xs flex flex-col space-y-3">
+                  {/* Top Header Row: Badge + r/community • 1 day ago + ••• */}
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white font-black text-[9px] flex items-center justify-center shrink-0 tracking-tighter uppercase shadow-2xs">
+                        {post.community_name.replace("r/", "").substring(0, 3).toUpperCase()}
                       </div>
 
-                      {/* Content Text */}
-                      <p className="text-xs sm:text-sm text-zinc-700 leading-relaxed whitespace-pre-line pt-1">
-                        {post.content}
-                      </p>
+                      <Link
+                        href={`/community?community=${encodeURIComponent(post.community_name)}`}
+                        className="font-bold text-zinc-950 dark:text-zinc-100 hover:underline truncate text-xs sm:text-[13px]"
+                      >
+                        {post.community_name.startsWith("r/") ? post.community_name : `r/${post.community_name}`}
+                      </Link>
 
-                      {/* External Link */}
-                      {post.link_url && (
-                        <a
-                          href={post.link_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline font-medium mt-2 bg-blue-50/60 px-3 py-1.5 rounded-xl border border-blue-100"
+                      <span className="text-zinc-400 dark:text-zinc-500 font-medium">•</span>
+
+                      <span className="text-zinc-500 dark:text-zinc-400 whitespace-nowrap text-[11px] sm:text-xs">
+                        {formatTimeAgo(post.created_at)}
+                      </span>
+
+                      {post.flair && (
+                        <span
+                          className={cn(
+                            "hidden sm:inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full border ml-1",
+                            FLAIR_COLORS[post.flair] || "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700"
+                          )}
                         >
-                          <ExternalLink size={13} />
-                          <span className="truncate max-w-md">{post.link_url}</span>
-                        </a>
+                          {post.flair}
+                        </span>
                       )}
+                    </div>
 
-                      {/* Image Attachment */}
-                      {post.image_url && (
-                        <div className="mt-3 rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100">
-                          <img
-                            src={post.image_url}
-                            alt="Post attachment"
-                            className="w-full object-cover max-h-96"
-                          />
+                    {/* Three dots menu */}
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenuOpen(!activeMenuOpen)}
+                        className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                        title="More options"
+                      >
+                        <MoreHorizontal size={17} />
+                      </button>
+
+                      {activeMenuOpen && (
+                        <div className="absolute right-0 top-8 z-30 w-44 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl py-1 text-xs text-zinc-700 dark:text-zinc-200 animate-in fade-in zoom-in-95">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleShare();
+                              setActiveMenuOpen(false);
+                            }}
+                            className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                          >
+                            <Share2 size={13} />
+                            <span>Copy Link</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsSaved(!isSaved);
+                              setActiveMenuOpen(false);
+                            }}
+                            className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                          >
+                            <Bookmark size={13} />
+                            <span>{isSaved ? "Saved" : "Save Post"}</span>
+                          </button>
                         </div>
                       )}
                     </div>
+                  </div>
 
-                    {/* Actions row */}
-                    <div className="pt-3 border-t border-zinc-100 flex items-center gap-4 text-xs font-semibold text-zinc-500">
-                      <div className="flex items-center gap-1.5 text-black font-bold">
-                        <MessageSquare size={15} />
-                        <span>{comments.length} Comments</span>
-                      </div>
+                  {/* Title */}
+                  <h1 className="text-lg sm:text-[21px] font-bold text-zinc-950 dark:text-white tracking-tight leading-snug">
+                    {post.title}
+                  </h1>
 
+                  {/* Body Content */}
+                  <p className="text-xs sm:text-[14px] text-zinc-600 dark:text-zinc-300 leading-relaxed font-normal whitespace-pre-line">
+                    {post.content}
+                  </p>
+
+                  {/* External Link */}
+                  {post.link_url && (
+                    <a
+                      href={post.link_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium mt-2 bg-blue-50/60 dark:bg-blue-950/30 px-3 py-1.5 rounded-xl border border-blue-100 dark:border-blue-900/40 w-fit"
+                    >
+                      <ExternalLink size={13} />
+                      <span className="truncate max-w-md">{post.link_url}</span>
+                    </a>
+                  )}
+
+                  {/* Image Attachment */}
+                  {post.image_url && (
+                    <div className="mt-3 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900">
+                      <img
+                        src={post.image_url}
+                        alt="Post attachment"
+                        className="w-full object-cover max-h-96"
+                      />
+                    </div>
+                  )}
+
+                  {/* Bottom Action Pills Bar (Exact Reddit Layout) */}
+                  <div className="flex items-center flex-wrap gap-2 pt-2 select-none">
+                    {/* 1. Vote Pill: Keep count of upvotes separate and vote down separate */}
+                    <div className="inline-flex items-center rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-700/50 p-0.5 text-xs font-bold transition-colors">
+                      {/* Upvote side with separate count */}
                       <button
                         type="button"
-                        onClick={handleShare}
-                        className="flex items-center gap-1.5 hover:text-black hover:bg-zinc-100 px-2 py-1 rounded-lg transition-colors cursor-pointer"
-                      >
-                        <Share2 size={14} />
-                        <span>Share</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setIsSaved(!isSaved)}
+                        aria-label="Upvote"
+                        onClick={() => handleVote(1)}
                         className={cn(
-                          "flex items-center gap-1.5 hover:bg-zinc-100 px-2 py-1 rounded-lg transition-colors cursor-pointer",
-                          isSaved ? "text-black font-bold" : "hover:text-black"
+                          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors cursor-pointer",
+                          post.userVote === 1
+                            ? "text-orange-600 dark:text-orange-500 bg-orange-100/90 dark:bg-orange-950/70"
+                            : "text-zinc-700 dark:text-zinc-300 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
                         )}
                       >
-                        <Bookmark size={14} className={isSaved ? "fill-black text-black" : ""} />
-                        <span>{isSaved ? "Saved" : "Save"}</span>
+                        <ArrowUp size={14} className="stroke-[2.5px]" />
+                        <span className="tabular-nums font-mono text-xs">{post.upvotes ?? 0}</span>
+                      </button>
+
+                      <div className="w-[1px] h-3.5 bg-zinc-300 dark:bg-zinc-700 mx-0.5" />
+
+                      {/* Downvote side with separate count */}
+                      <button
+                        type="button"
+                        aria-label="Downvote"
+                        onClick={() => handleVote(-1)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors cursor-pointer",
+                          post.userVote === -1
+                            ? "text-blue-600 dark:text-blue-400 bg-blue-100/90 dark:bg-blue-950/70"
+                            : "text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
+                        )}
+                      >
+                        <ArrowDown size={14} className="stroke-[2.5px]" />
+                        <span className="tabular-nums font-mono text-xs">{post.downvotes ?? 0}</span>
                       </button>
                     </div>
+
+                    {/* 2. Comments Pill: [ 💬 {comments.length} ] */}
+                    <div className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 px-3.5 py-1.5 text-xs font-semibold">
+                      <MessageSquare size={14} className="stroke-[2.2px]" />
+                      <span>{comments.length}</span>
+                    </div>
+
+                    {/* 3. Cycle / Repost Pill: [ 🔁 ] */}
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      title="Repost / Share to network"
+                      className="inline-flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      <Repeat size={14} className="stroke-[2.2px]" />
+                    </button>
+
+                    {/* 4. Share Pill: [ ↗️ {count} ] */}
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      title="Share link"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      <Share2 size={13} className="stroke-[2.2px]" />
+                      <span>{((post.upvotes || 7) % 35) + 14}</span>
+                    </button>
                   </div>
                 </article>
 
                 {/* Comment Composer */}
-                <div className="bg-white border border-zinc-200 rounded-3xl p-4 sm:p-5 shadow-2xs space-y-3">
+                <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-2xs space-y-3">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-black">
+                    <span className="font-bold text-black dark:text-white">
                       Comment as{" "}
-                      <span className="font-normal text-zinc-600">
-                        {user?.name || "Muhammad Hammad Ismail"} ({user?.studentId || "2023-CS-807"})
+                      <span className="font-normal text-zinc-600 dark:text-zinc-400">
+                        {user?.name || "Student"} {user?.studentId ? `(${user.studentId})` : ""}
                       </span>
                     </span>
                     {replyingToCommentId && (
                       <button
                         type="button"
                         onClick={() => setNewCommentText("")}
-                        className="text-red-600 font-semibold hover:underline"
+                        className="text-red-600 font-semibold hover:underline cursor-pointer"
                       >
                         Cancel Reply
                       </button>
@@ -696,14 +754,14 @@ export default function DynamicPostPage({
                           ? "Write your reply to this student..."
                           : "What are your thoughts?"
                       }
-                      className="w-full p-3.5 border border-zinc-300 rounded-2xl text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-black leading-relaxed"
+                      className="w-full p-3.5 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 rounded-2xl text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-black dark:focus:border-white leading-relaxed"
                     />
 
                     <div className="flex justify-end">
                       <Button
                         type="submit"
                         disabled={isSubmittingComment || !newCommentText.trim()}
-                        className="bg-black hover:bg-zinc-800 text-white text-xs font-bold h-9 px-5 rounded-xl cursor-pointer"
+                        className="bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black text-xs font-bold h-9 px-5 rounded-xl cursor-pointer"
                       >
                         {isSubmittingComment ? (
                           <>
@@ -719,8 +777,8 @@ export default function DynamicPostPage({
                 </div>
 
                 {/* Threaded Discussion List */}
-                <div className="bg-white border border-zinc-200 rounded-3xl p-4 sm:p-6 shadow-2xs space-y-4">
-                  <div className="font-black text-sm text-black flex items-center justify-between border-b border-zinc-100 pb-3">
+                <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-6 shadow-2xs space-y-4">
+                  <div className="font-black text-sm text-black dark:text-white flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
                     <span>Discussion ({comments.length})</span>
                     <span className="text-xs text-zinc-400 font-medium">Sorted by: Best</span>
                   </div>
@@ -737,15 +795,15 @@ export default function DynamicPostPage({
                           className={cn(
                             "p-3.5 rounded-2xl border text-xs space-y-2 transition-colors",
                             comm.parent_comment_id
-                              ? "ml-6 sm:ml-8 bg-zinc-50/70 border-l-4 border-l-black border-zinc-200"
-                              : "bg-white border-zinc-200 shadow-2xs"
+                              ? "ml-6 sm:ml-8 bg-zinc-50/70 dark:bg-zinc-900/60 border-l-4 border-l-black dark:border-l-white border-zinc-200 dark:border-zinc-800"
+                              : "bg-white dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-800 shadow-2xs"
                           )}
                         >
-                          <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                            <div className="flex items-center gap-1.5 font-bold text-black">
+                          <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
+                            <div className="flex items-center gap-1.5 font-bold text-black dark:text-white">
                               <span>{comm.author_name}</span>
                               {comm.author_verified && (
-                                <ShieldCheck size={13} className="text-black" />
+                                <ShieldCheck size={13} className="text-black dark:text-white" />
                               )}
                               <span className="font-mono text-zinc-400 font-normal">
                                 ({comm.author_student_id})
@@ -916,6 +974,9 @@ export default function DynamicPostPage({
             )}
           </aside>
         </div>
+
+        {/* Bottom Navigation for Mobile Devices */}
+        <BottomNav />
       </div>
     </MobileShell>
   );

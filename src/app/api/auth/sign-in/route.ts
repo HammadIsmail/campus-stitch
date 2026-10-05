@@ -64,11 +64,13 @@ export async function POST(request: NextRequest) {
       userId: userProfile?.id || ("u_" + (isAdmin ? "admin" : cleanEmail.replace(/[^a-z0-9]/g, "_"))),
       email: cleanEmail,
       name: userProfile?.full_name || (isAdmin ? "Admin Moderator" : cleanEmail.split("@")[0]),
-      studentId: userProfile?.student_id || (isAdmin ? "UET-ADMIN-01" : "2023-CS-807"),
+      studentId: userProfile?.student_id || (isAdmin ? "UET-ADMIN-01" : cleanEmail.split("@")[0].toUpperCase()),
       role: isAdmin ? "admin" : "student",
       program: userProfile?.program || "BS Computer Science",
       isVerified: true,
       hostelBlock: "",
+      avatarUrl: userProfile?.avatar_url || null,
+      bio: userProfile?.bio || null,
     };
 
     // Sign the JWT token

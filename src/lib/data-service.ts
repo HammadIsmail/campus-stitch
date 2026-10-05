@@ -300,6 +300,39 @@ export const DataService = {
 
   // ---- SHARED ITEMS ----
   async getSharedItems(): Promise<SharedItem[]> {
+    try {
+      const supabase = createClient();
+      const { data: items, error: itemsError } = await supabase
+        .from("shared_items")
+        .select("*");
+      const { data: owners, error: ownersError } = await supabase
+        .from("shared_item_owners")
+        .select("*");
+
+      if (items && items.length > 0 && !itemsError) {
+        const mapped: SharedItem[] = items.map((it) => {
+          const itemOwners = (owners || [])
+            .filter((o) => o.item_id === it.id)
+            .map((o) => ({
+              id: o.id,
+              name: o.owner_name,
+              initial: o.owner_initial,
+              contribution_amount: Number(o.contribution_amount),
+              share_percentage: Number(o.share_percentage),
+            }));
+          return {
+            id: it.id,
+            title: it.title,
+            total_cost: Number(it.total_cost),
+            current_valuation: Number(it.current_valuation),
+            status: it.status,
+            owners: itemOwners,
+          };
+        });
+        setStored("shared_items", mapped);
+        return mapped;
+      }
+    } catch {}
     return getStored<SharedItem[]>("shared_items", SEED_SHARED_ITEMS);
   },
 
@@ -308,18 +341,21 @@ export const DataService = {
     ownerName: string,
     amount: number,
   ): Promise<SharedItem | null> {
-    const items = getStored<SharedItem[]>("shared_items", SEED_SHARED_ITEMS);
+    const items = await this.getSharedItems();
     const item = items.find((i) => i.id === itemId);
     if (!item) return null;
 
     const totalContribution =
       item.owners.reduce((sum, o) => sum + o.contribution_amount, 0) + amount;
+    const initial = ownerName.charAt(0).toUpperCase() || "S";
+    const sharePercentage = Math.round((amount / totalContribution) * 100);
+
     const newOwner: SharedOwner = {
       id: "o_" + Math.random().toString(36).slice(2, 7),
       name: ownerName,
-      initial: ownerName.charAt(0).toUpperCase() || "S",
+      initial,
       contribution_amount: amount,
-      share_percentage: Math.round((amount / totalContribution) * 100),
+      share_percentage: sharePercentage,
     };
 
     item.owners.push(newOwner);
@@ -331,6 +367,20 @@ export const DataService = {
     });
 
     setStored("shared_items", items);
+
+    try {
+      const supabase = createClient();
+      await supabase.from("shared_item_owners").insert([
+        {
+          item_id: itemId,
+          owner_name: ownerName,
+          owner_initial: initial,
+          contribution_amount: amount,
+          share_percentage: sharePercentage,
+        },
+      ]);
+    } catch {}
+
     return item;
   },
 

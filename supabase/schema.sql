@@ -20,6 +20,7 @@ create table if not exists public.profiles (
   is_verified boolean not null default false,
   verification_status text check (verification_status in ('unverified', 'pending', 'verified', 'rejected')) default 'unverified',
   avatar_url text,
+  bio text,
   card_photo_url text,
   cnic text,
   expiry_date text,

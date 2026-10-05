@@ -21,6 +21,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Attempt to enrich payload with latest avatar_url and bio from profiles table
+    try {
+      const { createClient } = await import("@/lib/supabase/server");
+      const supabase = await createClient();
+      const cleanEmail = payload.email?.toLowerCase();
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("avatar_url, bio, full_name, student_id")
+        .or(`email.eq.${cleanEmail},student_id.eq.${payload.studentId}`)
+        .maybeSingle();
+
+      if (profile) {
+        if (profile.avatar_url) payload.avatarUrl = profile.avatar_url;
+        if (profile.bio) payload.bio = profile.bio;
+        if (profile.full_name) payload.name = profile.full_name;
+      }
+    } catch {}
+
     return NextResponse.json({
       authenticated: true,
       user: payload,

@@ -151,6 +151,8 @@ export async function POST(request: NextRequest) {
       program: profileData.program,
       isVerified: true,
       hostelBlock: "",
+      avatarUrl: savedProfile?.avatar_url || profileData.avatar_url || null,
+      bio: savedProfile?.bio || null,
     };
 
     // 7. Sign JWT token

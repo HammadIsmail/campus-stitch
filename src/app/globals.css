@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #fafafa;
   --foreground: #09090b;
@@ -15,6 +17,24 @@
   --accent: #27272a;
   --accent-foreground: #fafafa;
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --primary: #ffffff;
+  --primary-foreground: #09090b;
+  --secondary: #18181b;
+  --secondary-foreground: #f4f4f5;
+  --muted: #a1a1aa;
+  --muted-foreground: #71717a;
+  --border: #27272a;
+  --card: #121215;
+  --card-foreground: #fafafa;
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+  color-scheme: dark;
 }
 
 body {

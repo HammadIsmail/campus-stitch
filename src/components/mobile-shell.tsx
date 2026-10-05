@@ -14,8 +14,12 @@ import {
   MessageSquare,
   Bell,
   User,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/lib/theme-context";
+import { NotificationsSlider } from "@/components/notifications-slider";
 
 const NAV_LINKS = [
   { name: "Home", href: "/", icon: null },
@@ -35,6 +39,10 @@ export function MobileShell({
   hideNav?: boolean;
 }) {
   const pathname = usePathname();
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
   const isAuthPage =
     hideNav ||
     pathname === "/sign-in" ||
@@ -53,14 +61,14 @@ export function MobileShell({
   return (
     <div
       className={cn(
-        "bg-[#F7F7F8] text-[#09090B] flex flex-col antialiased selection:bg-black selection:text-white",
+        "bg-[#F7F7F8] dark:bg-[#09090b] text-[#09090B] dark:text-[#fafafa] flex flex-col antialiased selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200",
         isAppLayoutPage ? "h-screen max-h-screen overflow-hidden" : "min-h-screen"
       )}
     >
       {/* ======================================================== */}
       {/* TOP GLOBAL WEB APP NAVIGATION HEADER */}
       {/* ======================================================== */}
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#E4E4E7] shadow-[0_1px_3px_rgba(0,0,0,0.03)] shrink-0">
+      <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-b border-[#E4E4E7] dark:border-zinc-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] shrink-0 transition-colors">
         <div
           className={cn(
             "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4",
@@ -70,14 +78,14 @@ export function MobileShell({
           {/* Classic Monogram Logo */}
           <div className="flex items-center gap-3 shrink-0">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <span className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center font-black text-sm tracking-widest shadow-xs group-hover:bg-zinc-800 transition-colors">
+              <span className="w-8 h-8 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-sm tracking-widest shadow-xs group-hover:bg-zinc-800 dark:group-hover:bg-zinc-200 transition-colors">
                 CS
               </span>
               <div className="flex flex-col">
-                <span className="font-bold text-[18px] tracking-tight text-black leading-none">
+                <span className="font-bold text-[18px] tracking-tight text-black dark:text-white leading-none">
                   CampuStitch
                 </span>
-                <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mt-0.5">
+                <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold mt-0.5">
                   UET Lahore
                 </span>
               </div>
@@ -99,8 +107,8 @@ export function MobileShell({
                     className={cn(
                       "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap",
                       isActive
-                        ? "bg-black text-white shadow-2xs font-bold"
-                        : "text-zinc-600 hover:text-black hover:bg-zinc-100",
+                        ? "bg-black dark:bg-white text-white dark:text-black shadow-2xs font-bold"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800",
                     )}
                   >
                     {link.name}
@@ -110,20 +118,35 @@ export function MobileShell({
             </nav>
           )}
 
-          {/* Quick Actions (Search, Messages, Notifications, Profile) - Hidden on Auth Pages */}
+          {/* Quick Actions (Search, Messages, Notifications, Profile, Theme Toggle) - Hidden on Auth Pages */}
           {!isAuthPage && (
             <div className="flex items-center gap-1.5 sm:gap-2">
               {/* Campus Search (Desktop Only, Hidden on Mobile & Auth Pages) */}
               <Link
                 href="/assistant"
-                className="hidden lg:flex items-center gap-2 h-9 px-3 bg-zinc-100 hover:bg-zinc-200/80 text-zinc-600 hover:text-black rounded-lg text-xs font-medium transition-colors border border-zinc-200"
+                className="hidden lg:flex items-center gap-2 h-9 px-3 bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white rounded-lg text-xs font-medium transition-colors border border-zinc-200 dark:border-zinc-700"
               >
-                <Search size={13} className="text-zinc-500" />
+                <Search size={13} className="text-zinc-500 dark:text-zinc-400" />
                 <span>Search campus...</span>
-                <kbd className="text-[9px] bg-white px-1.5 py-0.5 rounded border border-zinc-300 font-mono text-zinc-500 shadow-2xs">
+                <kbd className="text-[9px] bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 font-mono text-zinc-500 dark:text-zinc-400 shadow-2xs">
                   ⌘K
                 </kbd>
               </Link>
+
+              {/* Theme Toggle Button */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label="Toggle dark mode"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
+              >
+                {resolvedTheme === "dark" ? (
+                  <Sun size={16} className="text-amber-400 animate-in spin-in-180 duration-200" />
+                ) : (
+                  <Moon size={16} className="text-zinc-700 animate-in spin-in-180 duration-200" />
+                )}
+              </button>
 
               {/* Messages */}
               <Link
@@ -133,29 +156,30 @@ export function MobileShell({
                 className={cn(
                   "w-9 h-9 flex items-center justify-center rounded-lg border transition-colors relative",
                   pathname.startsWith("/messages")
-                    ? "bg-black text-white border-black"
-                    : "bg-white border-zinc-200 hover:bg-zinc-100 text-zinc-700 hover:text-black",
+                    ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white",
                 )}
               >
                 <MessageSquare size={16} />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-black ring-1 ring-white" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-black dark:bg-white ring-1 ring-white dark:ring-black" />
               </Link>
 
-              {/* Notifications */}
-              <Link
-                href="/notifications"
+              {/* Notifications Slider Toggle */}
+              <button
+                type="button"
+                onClick={() => setIsNotificationsOpen(true)}
                 title="Notifications"
-                aria-label="Notifications"
+                aria-label="Open notifications slider"
                 className={cn(
-                  "w-9 h-9 flex items-center justify-center rounded-lg border transition-colors relative",
-                  pathname.startsWith("/notifications")
-                    ? "bg-black text-white border-black"
-                    : "bg-white border-zinc-200 hover:bg-zinc-100 text-zinc-700 hover:text-black",
+                  "w-9 h-9 flex items-center justify-center rounded-lg border transition-colors relative cursor-pointer",
+                  isNotificationsOpen
+                    ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white",
                 )}
               >
                 <Bell size={16} />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-black ring-1 ring-white" />
-              </Link>
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-black dark:bg-white ring-1 ring-white dark:ring-black" />
+              </button>
 
               {/* Profile / Account */}
               <Link
@@ -165,8 +189,8 @@ export function MobileShell({
                 className={cn(
                   "w-9 h-9 flex items-center justify-center rounded-lg border transition-colors",
                   pathname.startsWith("/profile")
-                    ? "bg-black text-white border-black"
-                    : "bg-white border-zinc-200 hover:bg-zinc-100 text-zinc-700 hover:text-black",
+                    ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white",
                 )}
               >
                 <User size={16} />
@@ -194,7 +218,7 @@ export function MobileShell({
         >
           <div
             className={cn(
-              "w-full bg-white sm:rounded-2xl sm:border border-[#E4E4E7] sm:shadow-[0_2px_8px_rgba(0,0,0,0.04)] sm:overflow-hidden flex flex-col flex-1",
+              "w-full bg-white dark:bg-[#121215] sm:rounded-2xl sm:border border-[#E4E4E7] dark:border-zinc-800 sm:shadow-[0_2px_8px_rgba(0,0,0,0.04)] sm:overflow-hidden flex flex-col flex-1",
               isAppLayoutPage && "h-full min-h-0 overflow-hidden",
               className,
             )}
@@ -223,43 +247,12 @@ export function MobileShell({
         </Link>
       )}
 
-      {/* ======================================================== */}
-      {/* CLASSIC MONOCHROME WEB APP FOOTER (HIDDEN ON AUTH, MESSAGES & COMMUNITY PAGES) */}
-      {/* ======================================================== */}
-      {!isAuthPage && !isAppLayoutPage && (
-        <footer className="hidden md:block w-full bg-white border-t border-[#E4E4E7] py-6 px-4 sm:px-6 lg:px-8 text-xs text-zinc-500">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-black" />
-              <span className="font-bold text-black">CampuStitch</span>
-              <span>— The Student Commute & Campus Marketplace Platform</span>
-            </div>
-            <div className="flex items-center gap-5 text-xs font-medium text-zinc-600">
-              <Link
-                href="/commute"
-                className="hover:text-black transition-colors"
-              >
-                Commute
-              </Link>
-              <Link href="/market" className="hover:text-black transition-colors">
-                Marketplace
-              </Link>
-              <Link href="/hostel" className="hover:text-black transition-colors">
-                Hostel
-              </Link>
-              <Link
-                href="/community"
-                className="hover:text-black transition-colors"
-              >
-                Community
-              </Link>
-              <Link href="/admin" className="hover:text-black transition-colors">
-                Admin
-              </Link>
-            </div>
-          </div>
-        </footer>
-      )}
+      {/* Cart-style Notifications Slide-Over Drawer */}
+      <NotificationsSlider
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        onUnreadCountChange={setUnreadCount}
+      />
     </div>
   );
 }

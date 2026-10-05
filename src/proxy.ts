@@ -6,6 +6,7 @@ const PUBLIC_PREFIXES = [
   "/sign-in",
   "/sign-up",
   "/login",
+  "/forgot-password",
   "/api/auth",
   "/auth",
   "/api/upload",
@@ -55,11 +56,12 @@ export async function proxy(request: NextRequest) {
     });
   }
 
-  // 2. Handle Public Auth Pages (/sign-in, /sign-up, /login)
+  // 2. Handle Public Auth Pages (/sign-in, /sign-up, /login, /forgot-password)
   const isAuthPage =
     pathname === "/sign-in" ||
     pathname === "/sign-up" ||
     pathname === "/login" ||
+    pathname === "/forgot-password" ||
     pathname.startsWith("/auth");
 
   if (isAuthPage) {

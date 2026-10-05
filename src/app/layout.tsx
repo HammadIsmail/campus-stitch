@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
+import { ThemeProvider } from "@/lib/theme-context";
 
 export default function RootLayout({
   children,
@@ -23,11 +24,34 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${figtree.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans bg-[#ECEEF2]">
-        <AuthSessionProvider>
-          <AuthProvider>{children}</AuthProvider>
-        </AuthSessionProvider>
+    <html lang="en" className={`${figtree.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('campus_stitch_theme');
+                  var isDark = theme === 'dark' || (!theme || theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.style.colorScheme = 'light';
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col font-sans bg-[#ECEEF2] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
+        <ThemeProvider>
+          <AuthSessionProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </AuthSessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

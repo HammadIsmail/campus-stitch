@@ -10,6 +10,8 @@ export interface JwtUserPayload {
   program?: string;
   isVerified: boolean;
   hostelBlock?: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
 }
 
 const AUTH_SECRET =

@@ -24,6 +24,7 @@ import {
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 interface RoommateListing {
   id: string;
@@ -61,19 +62,69 @@ export default function HostelPage() {
   const [newRoomType, setNewRoomType] = React.useState("Shared Room");
 
   React.useEffect(() => {
-    try {
-      const storedRooms = localStorage.getItem("campus_stitch_hostel_roommates");
-      if (storedRooms) {
-        setRoommates(JSON.parse(storedRooms));
+    async function loadHostelData() {
+      // 1. Instant render from local storage if available
+      try {
+        const storedRooms = localStorage.getItem("campus_stitch_hostel_roommates");
+        if (storedRooms) {
+          setRoommates(JSON.parse(storedRooms));
+        }
+        const storedServices = localStorage.getItem("campus_stitch_hostel_services");
+        if (storedServices) {
+          setServices(JSON.parse(storedServices));
+        }
+      } catch {}
+
+      // 2. Fetch fresh data from Supabase
+      try {
+        const supabase = createClient();
+        const [roomsRes, servicesRes] = await Promise.all([
+          supabase.from("hostel_roommates").select("*").order("created_at", { ascending: false }),
+          supabase.from("hostel_services").select("*").order("created_at", { ascending: false }),
+        ]);
+
+        if (roomsRes.data && roomsRes.data.length > 0) {
+          const mappedRooms: RoommateListing[] = roomsRes.data.map((r: any) => ({
+            id: r.id,
+            title: r.title,
+            rent: `Rs. ${r.monthly_rent}`,
+            details: `${r.room_type} in ${r.hostel_block}. Available from ${r.available_from}.`,
+            roomType: r.room_type,
+            owner: r.user_name,
+            program: "UET Lahore",
+            verified: r.is_verified ?? true,
+            amenities: ["WiFi", "Attached Bath"],
+          }));
+          setRoommates(mappedRooms);
+          try {
+            localStorage.setItem("campus_stitch_hostel_roommates", JSON.stringify(mappedRooms));
+          } catch {}
+        }
+
+        if (servicesRes.data && servicesRes.data.length > 0) {
+          const mappedServices: HostelService[] = servicesRes.data.map((s: any) => ({
+            id: s.id,
+            name: s.service_name,
+            location: s.location,
+            schedule: s.turnaround_time,
+            provider: s.provider_name,
+            rate: "Standard rate",
+            verified: s.is_verified ?? true,
+          }));
+          setServices(mappedServices);
+          try {
+            localStorage.setItem("campus_stitch_hostel_services", JSON.stringify(mappedServices));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn("Hostel Supabase fetch notice:", err);
       }
-      const storedServices = localStorage.getItem("campus_stitch_hostel_services");
-      if (storedServices) {
-        setServices(JSON.parse(storedServices));
-      }
-    } catch {}
+    }
+
+    loadHostelData();
   }, []);
 
-  const handlePostRoom = (e: React.FormEvent) => {
+  const handlePostRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newRent.trim()) return;
 
@@ -94,6 +145,24 @@ export default function HostelPage() {
     try {
       localStorage.setItem("campus_stitch_hostel_roommates", JSON.stringify(updated));
     } catch {}
+
+    try {
+      const supabase = createClient();
+      await supabase.from("hostel_roommates").insert([
+        {
+          user_name: "Muhammad Hammad",
+          is_verified: true,
+          title: newTitle.trim(),
+          room_type: newRoomType,
+          monthly_rent: Number(newRent.trim()),
+          available_from: "Immediate",
+          hostel_block: "Hostel Block A",
+          status: "available",
+        },
+      ]);
+    } catch (err) {
+      console.warn("Supabase post roommate notice:", err);
+    }
 
     setNewTitle("");
     setNewRent("");

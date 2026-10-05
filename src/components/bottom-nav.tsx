@@ -31,7 +31,7 @@ export function BottomNav() {
       {/* Fixed Bottom Navigation Bar */}
       <nav
         aria-label="Bottom Navigation"
-        className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-center justify-around border-t border-zinc-200 bg-white/95 backdrop-blur-md pb-2 pt-1.5 px-2 select-none shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
+        className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-center justify-around border-t border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md pb-2 pt-1.5 px-2 select-none shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
       >
         {navItems.map((item) => {
           const isActive = item.matchExact
@@ -46,8 +46,8 @@ export function BottomNav() {
               className={cn(
                 "flex-1 min-h-[50px] flex flex-col items-center justify-center gap-1 text-[11px] transition-colors rounded-lg active:scale-95",
                 isActive
-                  ? "font-bold text-black"
-                  : "font-medium text-zinc-500 hover:text-black",
+                  ? "font-bold text-black dark:text-white"
+                  : "font-medium text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white",
               )}
             >
               <Icon
