@@ -817,12 +817,12 @@ export default function DynamicPostPage({
                             </span>
                           </div>
 
-                          <p className="text-xs text-zinc-800 leading-relaxed whitespace-pre-line">
+                          <p className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-line">
                             {comm.content}
                           </p>
 
-                          <div className="flex items-center gap-3 pt-1 text-[11px] font-semibold text-zinc-500">
-                            <span className="font-mono text-black font-bold">
+                          <div className="flex items-center gap-3 pt-1 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                            <span className="font-mono text-black dark:text-white font-bold">
                               {comm.score || 1} upvotes
                             </span>
                             <button
@@ -831,7 +831,7 @@ export default function DynamicPostPage({
                                 setReplyingToCommentId(comm.id);
                                 setNewCommentText(`@${comm.author_name} `);
                               }}
-                              className="hover:text-black font-bold cursor-pointer"
+                              className="hover:text-black dark:hover:text-white font-bold cursor-pointer"
                             >
                               Reply
                             </button>
@@ -848,47 +848,47 @@ export default function DynamicPostPage({
           {/* ======================================================== */}
           {/* COLUMN 3: RIGHT ABOUT COMMUNITY SIDEBAR                  */}
           {/* ======================================================== */}
-          <aside className="w-72 xl:w-80 border-l border-zinc-200 bg-white p-4 space-y-4 overflow-y-auto hidden lg:block shrink-0 h-full">
+          <aside className="w-72 xl:w-80 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] p-4 space-y-4 overflow-y-auto hidden lg:block shrink-0 h-full">
             {currentCommunity ? (
               <div className="space-y-4">
-                <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 space-y-3">
+                <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3">
                   <div className="font-extrabold text-xs uppercase tracking-wider text-zinc-400">
                     About Community
                   </div>
 
                   <div className="flex items-center gap-2.5">
-                    <span className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold text-sm">
+                    <span className="w-10 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-sm">
                       {currentCommunity.name.replace("r/", "").substring(0, 2).toUpperCase()}
                     </span>
                     <div>
-                      <div className="font-extrabold text-sm text-black">
+                      <div className="font-extrabold text-sm text-black dark:text-white">
                         {currentCommunity.name}
                       </div>
-                      <div className="text-[11px] text-zinc-500 font-medium">
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
                         {currentCommunity.title}
                       </div>
                     </div>
                   </div>
 
-                  <p className="text-xs text-zinc-600 leading-relaxed">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     {currentCommunity.description}
                   </p>
 
-                  <div className="pt-2 border-t border-zinc-200/80 grid grid-cols-2 gap-2 text-center">
-                    <div className="p-2 bg-white rounded-xl border border-zinc-200">
-                      <div className="font-black text-sm text-black">
+                  <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800 grid grid-cols-2 gap-2 text-center">
+                    <div className="p-2 bg-white dark:bg-zinc-850 rounded-xl border border-zinc-200 dark:border-zinc-750">
+                      <div className="font-black text-sm text-black dark:text-white">
                         {(currentCommunity.member_count || 100).toLocaleString()}
                       </div>
-                      <div className="text-[10px] text-zinc-400 uppercase font-semibold">
+                      <div className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-semibold">
                         Members
                       </div>
                     </div>
-                    <div className="p-2 bg-white rounded-xl border border-zinc-200">
-                      <div className="font-black text-sm text-emerald-600 flex items-center justify-center gap-1">
+                    <div className="p-2 bg-white dark:bg-zinc-850 rounded-xl border border-zinc-200 dark:border-zinc-750">
+                      <div className="font-black text-sm text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span>Online</span>
                       </div>
-                      <div className="text-[10px] text-zinc-400 uppercase font-semibold">
+                      <div className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-semibold">
                         Campus Active
                       </div>
                     </div>
@@ -900,8 +900,8 @@ export default function DynamicPostPage({
                     className={cn(
                       "w-full h-9 rounded-xl text-xs font-bold transition-all cursor-pointer",
                       joinedCommunities[currentCommunity.name]
-                        ? "bg-zinc-200 hover:bg-zinc-300 text-zinc-800"
-                        : "bg-black hover:bg-zinc-800 text-white"
+                        ? "bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200"
+                        : "bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black"
                     )}
                   >
                     {joinedCommunities[currentCommunity.name] ? "Joined ✓" : "+ Join Community"}
@@ -910,19 +910,19 @@ export default function DynamicPostPage({
 
                 {/* Subreddit Rules */}
                 {currentCommunity.rules?.length > 0 && (
-                  <div className="bg-white border border-zinc-200 rounded-2xl p-4 space-y-2.5 shadow-2xs">
-                    <div className="font-extrabold text-xs text-black flex items-center gap-1.5">
+                  <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-2.5 shadow-2xs">
+                    <div className="font-extrabold text-xs text-black dark:text-white flex items-center gap-1.5">
                       <BookOpen size={14} />
                       <span>{currentCommunity.name} Rules</span>
                     </div>
 
-                    <div className="divide-y divide-zinc-100 text-xs">
+                    <div className="divide-y divide-zinc-100 dark:divide-zinc-800 text-xs">
                       {currentCommunity.rules.map((rule, idx) => (
                         <div key={idx} className="py-2 first:pt-0 last:pb-0">
                           <button
                             type="button"
                             onClick={() => setExpandedRule(expandedRule === idx ? null : idx)}
-                            className="w-full text-left font-bold text-zinc-800 flex items-center justify-between gap-2"
+                            className="w-full text-left font-bold text-zinc-800 dark:text-zinc-200 flex items-center justify-between gap-2"
                           >
                             <span>
                               {idx + 1}. {rule}
@@ -930,11 +930,11 @@ export default function DynamicPostPage({
                             {expandedRule === idx ? (
                               <ChevronUp size={13} className="shrink-0" />
                             ) : (
-                              <ChevronDown size={13} className="shrink-0 text-zinc-400" />
+                              <ChevronDown size={13} className="shrink-0 text-zinc-400 dark:text-zinc-500" />
                             )}
                           </button>
                           {expandedRule === idx && (
-                            <p className="text-[11px] text-zinc-500 mt-1 pl-4 leading-relaxed">
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 pl-4 leading-relaxed">
                               Posts violating this rule will be flagged and reviewed by student moderators.
                             </p>
                           )}
@@ -945,29 +945,29 @@ export default function DynamicPostPage({
                 )}
 
                 {/* Moderators */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 space-y-2 shadow-2xs text-xs">
-                  <div className="font-extrabold text-black flex items-center gap-1.5 mb-2">
+                <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-2 shadow-2xs text-xs">
+                  <div className="font-extrabold text-black dark:text-white flex items-center gap-1.5 mb-2">
                     <ShieldCheck size={14} />
                     <span>Community Moderators</span>
                   </div>
-                  <div className="space-y-1.5 text-zinc-600">
+                  <div className="space-y-1.5 text-zinc-600 dark:text-zinc-300">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-black">u/hammad_cs</span>
-                      <ShieldCheck size={12} className="text-black" />
-                      <span className="text-[10px] text-zinc-400 font-mono">(Lead Rep)</span>
+                      <span className="font-semibold text-black dark:text-white">u/student_rep</span>
+                      <ShieldCheck size={12} className="text-black dark:text-white" />
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">(Lead Rep)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-black">u/campus_admin</span>
-                      <ShieldCheck size={12} className="text-black" />
-                      <span className="text-[10px] text-zinc-400 font-mono">(Staff)</span>
+                      <span className="font-semibold text-black dark:text-white">u/campus_admin</span>
+                      <ShieldCheck size={12} className="text-black dark:text-white" />
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">(Staff)</span>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 space-y-3">
-                <div className="font-bold text-xs text-black">CampuStitch Reddit</div>
-                <p className="text-xs text-zinc-600 leading-relaxed">
+              <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3">
+                <div className="font-bold text-xs text-black dark:text-white">CampuStitch Reddit</div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                   Join student discussions, share lab tips, organize ride splits, and keep up with campus news.
                 </p>
               </div>

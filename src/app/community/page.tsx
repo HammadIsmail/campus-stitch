@@ -898,18 +898,18 @@ export default function RedditCommunitiesPage() {
             {/* Reddit Posts Feed */}
             <div className="space-y-3">
               {isLoading ? (
-                <div className="p-12 text-center text-zinc-500 flex flex-col items-center justify-center gap-2 bg-white rounded-2xl border border-zinc-200">
-                  <Loader2 size={24} className="animate-spin text-black" />
+                <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 flex flex-col items-center justify-center gap-2 bg-white dark:bg-[#121214] rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                  <Loader2 size={24} className="animate-spin text-black dark:text-white" />
                   <span className="text-xs font-semibold">Loading Reddit posts...</span>
                 </div>
               ) : filteredPosts.length === 0 ? (
-                <div className="p-8 bg-white border border-zinc-200 rounded-2xl text-center space-y-3 shadow-2xs">
-                  <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto text-zinc-500">
+                <div className="p-8 bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl text-center space-y-3 shadow-2xs">
+                  <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto text-zinc-500 dark:text-zinc-400">
                     <MessageSquare size={20} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-black">No posts found</h3>
-                    <p className="text-xs text-zinc-500 mt-1 max-w-xs mx-auto">
+                    <h3 className="text-sm font-bold text-black dark:text-white">No posts found</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
                       {feedFilter === "joined"
                         ? "You haven't joined any communities with posts yet. Browse the left sidebar to discover campus communities!"
                         : `No posts found in ${selectedCommunity}. Be the first student to start the conversation!`}
@@ -917,7 +917,7 @@ export default function RedditCommunitiesPage() {
                   </div>
                   <Button
                     onClick={() => setShowCreatePost(true)}
-                    className="bg-black text-white hover:bg-zinc-800 text-xs font-bold h-9 px-4 rounded-xl cursor-pointer"
+                    className="bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold h-9 px-4 rounded-xl cursor-pointer"
                   >
                     + Create the First Post
                   </Button>
@@ -1137,48 +1137,48 @@ export default function RedditCommunitiesPage() {
           {/* ======================================================== */}
           {/* COLUMN 3: RIGHT SIDEBAR ("ABOUT COMMUNITY" WIDGET)       */}
           {/* ======================================================== */}
-          <aside className="w-72 xl:w-80 border-l border-zinc-200 bg-white p-4 space-y-4 overflow-y-auto hidden lg:block shrink-0 h-full">
+          <aside className="w-72 xl:w-80 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] p-4 space-y-4 overflow-y-auto hidden lg:block shrink-0 h-full">
             {selectedCommunity !== "all" && currentCommunityData ? (
               /* Specific Subreddit About Card */
               <div className="space-y-4">
-                <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 space-y-3">
+                <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3">
                   <div className="font-extrabold text-xs uppercase tracking-wider text-zinc-400">
                     About Community
                   </div>
 
                   <div className="flex items-center gap-2.5">
-                    <span className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold text-sm">
+                    <span className="w-10 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-sm">
                       {currentCommunityData.name.replace("r/", "").substring(0, 2).toUpperCase()}
                     </span>
                     <div>
-                      <div className="font-extrabold text-sm text-black">
+                      <div className="font-extrabold text-sm text-black dark:text-white">
                         {currentCommunityData.name}
                       </div>
-                      <div className="text-[11px] text-zinc-500 font-medium">
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
                         {currentCommunityData.title}
                       </div>
                     </div>
                   </div>
 
-                  <p className="text-xs text-zinc-600 leading-relaxed">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     {currentCommunityData.description}
                   </p>
 
-                  <div className="pt-2 border-t border-zinc-200/80 grid grid-cols-2 gap-2 text-center">
-                    <div className="p-2 bg-white rounded-xl border border-zinc-200">
-                      <div className="font-black text-sm text-black">
+                  <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800 grid grid-cols-2 gap-2 text-center">
+                    <div className="p-2 bg-white dark:bg-zinc-850 rounded-xl border border-zinc-200 dark:border-zinc-750">
+                      <div className="font-black text-sm text-black dark:text-white">
                         {(currentCommunityData.member_count || 100).toLocaleString()}
                       </div>
-                      <div className="text-[10px] text-zinc-400 uppercase font-semibold">
+                      <div className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-semibold">
                         Members
                       </div>
                     </div>
-                    <div className="p-2 bg-white rounded-xl border border-zinc-200">
-                      <div className="font-black text-sm text-emerald-600 flex items-center justify-center gap-1">
+                    <div className="p-2 bg-white dark:bg-zinc-850 rounded-xl border border-zinc-200 dark:border-zinc-750">
+                      <div className="font-black text-sm text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span>Online</span>
                       </div>
-                      <div className="text-[10px] text-zinc-400 uppercase font-semibold">
+                      <div className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-semibold">
                         Campus Active
                       </div>
                     </div>
@@ -1190,8 +1190,8 @@ export default function RedditCommunitiesPage() {
                     className={cn(
                       "w-full h-9 rounded-xl text-xs font-bold transition-all cursor-pointer",
                       joinedCommunities[currentCommunityData.name]
-                        ? "bg-zinc-200 hover:bg-zinc-300 text-zinc-800"
-                        : "bg-black hover:bg-zinc-800 text-white"
+                        ? "bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200"
+                        : "bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black"
                     )}
                   >
                     {joinedCommunities[currentCommunityData.name] ? "Joined ✓" : "+ Join Community"}
@@ -1200,19 +1200,19 @@ export default function RedditCommunitiesPage() {
 
                 {/* Subreddit Rules */}
                 {currentCommunityData.rules?.length > 0 && (
-                  <div className="bg-white border border-zinc-200 rounded-2xl p-4 space-y-2.5 shadow-2xs">
-                    <div className="font-extrabold text-xs text-black flex items-center gap-1.5">
+                  <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-2.5 shadow-2xs">
+                    <div className="font-extrabold text-xs text-black dark:text-white flex items-center gap-1.5">
                       <BookOpen size={14} />
                       <span>{currentCommunityData.name} Rules</span>
                     </div>
 
-                    <div className="divide-y divide-zinc-100 text-xs">
+                    <div className="divide-y divide-zinc-100 dark:divide-zinc-800 text-xs">
                       {currentCommunityData.rules.map((rule, idx) => (
                         <div key={idx} className="py-2 first:pt-0 last:pb-0">
                           <button
                             type="button"
                             onClick={() => setExpandedRule(expandedRule === idx ? null : idx)}
-                            className="w-full text-left font-bold text-zinc-800 flex items-center justify-between gap-2"
+                            className="w-full text-left font-bold text-zinc-800 dark:text-zinc-200 flex items-center justify-between gap-2"
                           >
                             <span>
                               {idx + 1}. {rule}
@@ -1220,11 +1220,11 @@ export default function RedditCommunitiesPage() {
                             {expandedRule === idx ? (
                               <ChevronUp size={13} className="shrink-0" />
                             ) : (
-                              <ChevronDown size={13} className="shrink-0 text-zinc-400" />
+                              <ChevronDown size={13} className="shrink-0 text-zinc-400 dark:text-zinc-500" />
                             )}
                           </button>
                           {expandedRule === idx && (
-                            <p className="text-[11px] text-zinc-500 mt-1 pl-4 leading-relaxed">
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 pl-4 leading-relaxed">
                               Posts violating this rule will be flagged and reviewed by student moderators to maintain quality campus discourse.
                             </p>
                           )}
@@ -1235,21 +1235,21 @@ export default function RedditCommunitiesPage() {
                 )}
 
                 {/* Moderators Card */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 space-y-2 shadow-2xs text-xs">
-                  <div className="font-extrabold text-black flex items-center gap-1.5 mb-2">
+                <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-2 shadow-2xs text-xs">
+                  <div className="font-extrabold text-black dark:text-white flex items-center gap-1.5 mb-2">
                     <ShieldCheck size={14} />
                     <span>Community Moderators</span>
                   </div>
-                  <div className="space-y-1.5 text-zinc-600">
+                  <div className="space-y-1.5 text-zinc-600 dark:text-zinc-300">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-black">u/hammad_cs</span>
-                      <ShieldCheck size={12} className="text-black" />
-                      <span className="text-[10px] text-zinc-400 font-mono">(Lead Rep)</span>
+                      <span className="font-semibold text-black dark:text-white">u/student_rep</span>
+                      <ShieldCheck size={12} className="text-black dark:text-white" />
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">(Lead Rep)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-black">u/campus_admin</span>
-                      <ShieldCheck size={12} className="text-black" />
-                      <span className="text-[10px] text-zinc-400 font-mono">(Staff)</span>
+                      <span className="font-semibold text-black dark:text-white">u/campus_admin</span>
+                      <ShieldCheck size={12} className="text-black dark:text-white" />
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">(Staff)</span>
                     </div>
                   </div>
                 </div>
@@ -1257,7 +1257,7 @@ export default function RedditCommunitiesPage() {
             ) : (
               /* All Communities Overview Sidebar */
               <div className="space-y-4">
-                <div className="bg-zinc-900 text-white rounded-2xl p-4 space-y-3">
+                <div className="bg-zinc-900 border border-zinc-800 text-white rounded-2xl p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center font-black text-xs">
                       CS
@@ -1279,28 +1279,28 @@ export default function RedditCommunitiesPage() {
                 </div>
 
                 {/* Top Campus Communities Leaderboard */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 space-y-3 shadow-2xs">
-                  <div className="font-extrabold text-xs text-black flex items-center gap-1.5">
+                <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3 shadow-2xs">
+                  <div className="font-extrabold text-xs text-black dark:text-white flex items-center gap-1.5">
                     <Trophy size={14} />
                     <span>Top Subreddits</span>
                   </div>
 
-                  <div className="divide-y divide-zinc-100">
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                     {communities.slice(0, 5).map((c, i) => {
                       const isJoined = Boolean(joinedCommunities[c.name]);
                       return (
                         <div
                           key={c.name}
                           onClick={() => setSelectedCommunity(c.name)}
-                          className="py-2.5 flex items-center justify-between cursor-pointer hover:bg-zinc-50 -mx-2 px-2 rounded-lg transition-colors"
+                          className="py-2.5 flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60 -mx-2 px-2 rounded-lg transition-colors"
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs font-bold text-zinc-400 font-mono w-4">
+                            <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 font-mono w-4">
                               {i + 1}
                             </span>
                             <div className="truncate">
-                              <div className="text-xs font-bold text-black truncate">{c.name}</div>
-                              <div className="text-[10px] text-zinc-400">
+                              <div className="text-xs font-bold text-black dark:text-white truncate">{c.name}</div>
+                              <div className="text-[10px] text-zinc-400 dark:text-zinc-500">
                                 {(c.member_count || 100).toLocaleString()} members
                               </div>
                             </div>
@@ -1309,10 +1309,10 @@ export default function RedditCommunitiesPage() {
                             type="button"
                             onClick={(e) => handleToggleJoin(c, e)}
                             className={cn(
-                              "text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors shrink-0",
+                              "text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors shrink-0 cursor-pointer",
                               isJoined
-                                ? "bg-zinc-100 text-zinc-600 border border-zinc-200"
-                                : "bg-black text-white hover:bg-zinc-800"
+                                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700"
+                                : "bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200"
                             )}
                           >
                             {isJoined ? "Joined" : "+ Join"}
@@ -1324,8 +1324,8 @@ export default function RedditCommunitiesPage() {
                 </div>
 
                 {/* Campus Honor Code */}
-                <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-3.5 text-xs space-y-2 text-zinc-600">
-                  <div className="font-bold text-black flex items-center gap-1">
+                <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 text-xs space-y-2 text-zinc-600 dark:text-zinc-300">
+                  <div className="font-bold text-black dark:text-white flex items-center gap-1">
                     <ShieldCheck size={14} />
                     <span>Verified Campus Rules</span>
                   </div>
@@ -1347,16 +1347,16 @@ export default function RedditCommunitiesPage() {
         {/* ======================================================== */}
         {showCreatePost && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-            <div className="bg-white rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl border border-zinc-200 space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                <div className="font-extrabold text-base text-black flex items-center gap-2">
+            <div className="bg-white dark:bg-[#121215] rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="font-extrabold text-base text-black dark:text-white flex items-center gap-2">
                   <MessageSquare size={18} />
                   <span>Create a Post</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowCreatePost(false)}
-                  className="w-8 h-8 rounded-full hover:bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-black"
+                  className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-black dark:hover:text-white cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -1364,16 +1364,16 @@ export default function RedditCommunitiesPage() {
 
               {/* Subreddit Selector */}
               <div>
-                <label className="text-xs font-bold text-black block mb-1">
+                <label className="text-xs font-bold text-black dark:text-white block mb-1">
                   Choose Community
                 </label>
                 <select
                   value={postFormCommunity}
                   onChange={(e) => setPostFormCommunity(e.target.value)}
-                  className="w-full h-10 px-3 bg-zinc-50 border border-zinc-300 rounded-xl text-xs font-bold text-black focus:outline-none focus:border-black"
+                  className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-bold text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                 >
                   {communities.map((c) => (
-                    <option key={c.name} value={c.name}>
+                    <option key={c.name} value={c.name} className="dark:bg-[#121215] dark:text-white">
                       {c.name} &mdash; {c.title}
                     </option>
                   ))}
@@ -1381,15 +1381,15 @@ export default function RedditCommunitiesPage() {
               </div>
 
               {/* Post Type Tabs */}
-              <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl">
+              <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setPostTab("text")}
                   className={cn(
                     "flex-1 py-1.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     postTab === "text"
-                      ? "bg-white text-black shadow-xs"
-                      : "text-zinc-600 hover:text-black"
+                      ? "bg-white dark:bg-zinc-900 text-black dark:text-white shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white"
                   )}
                 >
                   <MessageSquare size={13} />
@@ -1401,8 +1401,8 @@ export default function RedditCommunitiesPage() {
                   className={cn(
                     "flex-1 py-1.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     postTab === "image"
-                      ? "bg-white text-black shadow-xs"
-                      : "text-zinc-600 hover:text-black"
+                      ? "bg-white dark:bg-zinc-900 text-black dark:text-white shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white"
                   )}
                 >
                   <ImageIcon size={13} />
@@ -1414,8 +1414,8 @@ export default function RedditCommunitiesPage() {
                   className={cn(
                     "flex-1 py-1.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     postTab === "link"
-                      ? "bg-white text-black shadow-xs"
-                      : "text-zinc-600 hover:text-black"
+                      ? "bg-white dark:bg-zinc-900 text-black dark:text-white shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white"
                   )}
                 >
                   <Link2 size={13} />
@@ -1426,7 +1426,7 @@ export default function RedditCommunitiesPage() {
               <form onSubmit={handleCreatePost} className="space-y-3.5">
                 {/* Flair Picker */}
                 <div>
-                  <label className="text-xs font-bold text-black block mb-1">
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
                     Select Flair
                   </label>
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -1439,8 +1439,8 @@ export default function RedditCommunitiesPage() {
                           className={cn(
                             "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer",
                             postFormFlair === flair
-                              ? "bg-black text-white border-black"
-                              : "bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-200"
+                              ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
+                              : "bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700"
                           )}
                         >
                           {flair}
@@ -1453,8 +1453,8 @@ export default function RedditCommunitiesPage() {
                 {/* Title */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-black">Title</label>
-                    <span className="text-[10px] text-zinc-400 font-mono">
+                    <label className="text-xs font-bold text-black dark:text-white">Title</label>
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
                       {postFormTitle.length}/300
                     </span>
                   </div>
@@ -1465,14 +1465,14 @@ export default function RedditCommunitiesPage() {
                     placeholder="An interesting, descriptive title..."
                     value={postFormTitle}
                     onChange={(e) => setPostFormTitle(e.target.value)}
-                    className="w-full h-10 px-3 border border-zinc-300 rounded-xl text-xs font-semibold text-black placeholder:text-zinc-400 focus:outline-none focus:border-black"
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-semibold text-black dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-black dark:focus:border-white"
                   />
                 </div>
 
                 {/* Tab Specific Content */}
                 {postTab === "image" && (
                   <div>
-                    <label className="text-xs font-bold text-black block mb-1">
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
                       Image URL
                     </label>
                     <input
@@ -1480,14 +1480,14 @@ export default function RedditCommunitiesPage() {
                       placeholder="https://example.com/image.jpg"
                       value={postFormImageUrl}
                       onChange={(e) => setPostFormImageUrl(e.target.value)}
-                      className="w-full h-10 px-3 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black"
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-black dark:focus:border-white"
                     />
                   </div>
                 )}
 
                 {postTab === "link" && (
                   <div>
-                    <label className="text-xs font-bold text-black block mb-1">
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
                       Web / Drive Link URL
                     </label>
                     <input
@@ -1495,14 +1495,14 @@ export default function RedditCommunitiesPage() {
                       placeholder="https://drive.google.com/... or https://..."
                       value={postFormLinkUrl}
                       onChange={(e) => setPostFormLinkUrl(e.target.value)}
-                      className="w-full h-10 px-3 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black"
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-black dark:focus:border-white"
                     />
                   </div>
                 )}
 
                 {/* Content / Text */}
                 <div>
-                  <label className="text-xs font-bold text-black block mb-1">
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
                     Content (Text / Markdown)
                   </label>
                   <textarea
@@ -1510,23 +1510,23 @@ export default function RedditCommunitiesPage() {
                     placeholder="Share your thoughts, lab tips, event details, or questions..."
                     value={postFormContent}
                     onChange={(e) => setPostFormContent(e.target.value)}
-                    className="w-full p-3 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black leading-relaxed"
+                    className="w-full p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-black dark:focus:border-white leading-relaxed"
                   />
                 </div>
 
-                <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100">
+                <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setShowCreatePost(false)}
-                    className="text-xs h-10 px-4 rounded-xl cursor-pointer"
+                    className="text-xs h-10 px-4 rounded-xl cursor-pointer border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmittingPost || !postFormTitle.trim()}
-                    className="bg-black hover:bg-zinc-800 text-white text-xs font-bold h-10 px-5 rounded-xl cursor-pointer"
+                    className="bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black text-xs font-bold h-10 px-5 rounded-xl cursor-pointer"
                   >
                     {isSubmittingPost ? (
                       <>
@@ -1548,16 +1548,16 @@ export default function RedditCommunitiesPage() {
         {/* ======================================================== */}
         {showCreateCommunity && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl border border-zinc-200 space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                <div className="font-extrabold text-base text-black flex items-center gap-2">
+            <div className="bg-white dark:bg-[#121215] rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="font-extrabold text-base text-black dark:text-white flex items-center gap-2">
                   <Users size={16} />
                   <span>Create Sub-Community</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowCreateCommunity(false)}
-                  className="w-8 h-8 rounded-full hover:bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-black"
+                  className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-black dark:hover:text-white cursor-pointer"
                 >
                   <X size={16} />
                 </button>
@@ -1565,11 +1565,11 @@ export default function RedditCommunitiesPage() {
 
               <form onSubmit={handleCreateCommunity} className="space-y-3.5">
                 <div>
-                  <label className="text-xs font-bold text-black block mb-1">
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
                     Community Handle
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500 dark:text-zinc-400">
                       r/
                     </span>
                     <input
@@ -1580,13 +1580,13 @@ export default function RedditCommunitiesPage() {
                       onChange={(e) =>
                         setCommFormName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
                       }
-                      className="w-full h-10 pl-7 pr-3 border border-zinc-300 rounded-xl text-xs font-mono font-bold text-black focus:outline-none focus:border-black"
+                      className="w-full h-10 pl-7 pr-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-mono font-bold text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-black block mb-1">
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
                     Display Title
                   </label>
                   <input
@@ -1595,29 +1595,29 @@ export default function RedditCommunitiesPage() {
                     placeholder="e.g. UET Artificial Intelligence & Robotics"
                     value={commFormTitle}
                     onChange={(e) => setCommFormTitle(e.target.value)}
-                    className="w-full h-10 px-3 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black"
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-black dark:focus:border-white"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-black block mb-1">
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
                     Category
                   </label>
                   <select
                     value={commFormCategory}
                     onChange={(e) => setCommFormCategory(e.target.value)}
-                    className="w-full h-10 px-3 border border-zinc-300 rounded-xl text-xs text-black bg-white focus:outline-none focus:border-black"
+                    className="w-full h-10 px-3 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:border-black dark:focus:border-white"
                   >
-                    <option value="Academic">Academic / Department</option>
-                    <option value="Campus Life">Campus Life & Hostels</option>
-                    <option value="Careers">Careers & Internships</option>
-                    <option value="Societies">Societies & Chapters</option>
-                    <option value="General">General</option>
+                    <option value="Academic" className="dark:bg-[#121215]">Academic / Department</option>
+                    <option value="Campus Life" className="dark:bg-[#121215]">Campus Life & Hostels</option>
+                    <option value="Careers" className="dark:bg-[#121215]">Careers & Internships</option>
+                    <option value="Societies" className="dark:bg-[#121215]">Societies & Chapters</option>
+                    <option value="General" className="dark:bg-[#121215]">General</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-black block mb-1">
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
                     Description & Topic
                   </label>
                   <textarea
@@ -1625,23 +1625,23 @@ export default function RedditCommunitiesPage() {
                     placeholder="What is this community about? Who is it for?"
                     value={commFormDesc}
                     onChange={(e) => setCommFormDesc(e.target.value)}
-                    className="w-full p-3 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black"
+                    className="w-full p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-black dark:focus:border-white"
                   />
                 </div>
 
-                <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100">
+                <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setShowCreateCommunity(false)}
-                    className="text-xs h-10 px-4 rounded-xl cursor-pointer"
+                    className="text-xs h-10 px-4 rounded-xl cursor-pointer border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmittingComm || !commFormName.trim() || !commFormTitle.trim()}
-                    className="bg-black hover:bg-zinc-800 text-white text-xs font-bold h-10 px-5 rounded-xl cursor-pointer"
+                    className="bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black text-xs font-bold h-10 px-5 rounded-xl cursor-pointer"
                   >
                     {isSubmittingComm ? (
                       <>

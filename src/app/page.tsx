@@ -39,17 +39,17 @@ export default function HomePage() {
 
   return (
     <MobileShell>
-      <div className="w-full min-h-full flex flex-col bg-[#F9F9FB] text-zinc-900">
+      <div className="w-full min-h-full flex flex-col bg-[#F9F9FB] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 transition-colors">
         {/* Hero Search Section */}
-        <div className="bg-white border-b border-zinc-200 px-4 sm:px-8 py-5">
+        <div className="bg-white dark:bg-[#121215] border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-8 py-5 transition-colors">
           <div className="max-w-6xl mx-auto">
             {/* Smart Assistant Search Bar */}
-            <div className="flex items-center bg-zinc-50 border border-zinc-300 rounded-xl shadow-2xs hover:border-black transition-all p-1.5 focus-within:border-black focus-within:ring-2 focus-within:ring-black/5">
+            <div className="flex items-center bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl shadow-2xs hover:border-black dark:hover:border-white transition-all p-1.5 focus-within:border-black dark:focus-within:border-white focus-within:ring-2 focus-within:ring-black/5 dark:focus-within:ring-white/5">
               <Link
                 href="/assistant"
-                className="flex-1 min-w-0 flex items-center gap-3 min-h-[44px] pl-3 text-zinc-500 text-xs sm:text-sm"
+                className="flex-1 min-w-0 flex items-center gap-3 min-h-[44px] pl-3 text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm"
               >
-                <Search size={16} className="text-black shrink-0" />
+                <Search size={16} className="text-black dark:text-white shrink-0" />
                 <span className="truncate font-medium">
                   Search: &quot;Find rickshaw split from Khurrialwala to UET
                   tomorrow 8 AM&quot;
@@ -59,7 +59,7 @@ export default function HomePage() {
                 <Link
                   href="/voice"
                   aria-label="Search by Urdu voice"
-                  className="h-9 px-3 bg-black text-white hover:bg-zinc-800 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
+                  className="h-9 px-3 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold shadow-2xs cursor-pointer"
                 >
                   <Mic size={14} className="stroke-[2.2px]" />
                   <span className="hidden sm:inline">Urdu Voice Search</span>
@@ -73,106 +73,106 @@ export default function HomePage() {
         <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-8 py-7 space-y-8">
           {/* Campus Services (4-Card Grid on Desktop, Hidden on Mobile Screen) */}
           <section className="hidden md:block space-y-3">
-            <div className="text-[11px] font-bold text-zinc-500 tracking-wider uppercase">
+            <div className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 tracking-wider uppercase">
               Campus Services · UET Lahore
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Link
                 href="/commute"
-                className="p-4 bg-white border border-zinc-200 rounded-xl hover:border-black hover:shadow-xs transition-all flex flex-col justify-between gap-3 group"
+                className="p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-zinc-600 hover:shadow-xs transition-all flex flex-col justify-between gap-3 group"
               >
                 <div className="flex items-center justify-between">
-                  <span className="p-2 rounded-lg bg-zinc-100 text-black group-hover:bg-black group-hover:text-white transition-colors">
+                  <span className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-colors">
                     <Compass size={18} />
                   </span>
-                  <span className="text-[10px] font-bold text-black uppercase tracking-wider bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
+                  <span className="text-[10px] font-bold text-black dark:text-white uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                     Commute
                   </span>
                 </div>
                 <div>
-                  <div className="text-base font-bold text-black">
+                  <div className="text-base font-bold text-black dark:text-white">
                     Student Commute
                   </div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     Find and offer daily rides
                   </div>
                 </div>
-                <div className="text-xs font-semibold text-black flex items-center gap-1 pt-2 border-t border-zinc-100">
+                <div className="text-xs font-semibold text-black dark:text-white flex items-center gap-1 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                   View rides <ArrowRight size={12} />
                 </div>
               </Link>
 
               <Link
                 href="/commute/bike"
-                className="p-4 bg-white border border-zinc-200 rounded-xl hover:border-black hover:shadow-xs transition-all flex flex-col justify-between gap-3 group"
+                className="p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-zinc-600 hover:shadow-xs transition-all flex flex-col justify-between gap-3 group"
               >
                 <div className="flex items-center justify-between">
-                  <span className="p-2 rounded-lg bg-zinc-100 text-black group-hover:bg-black group-hover:text-white transition-colors">
+                  <span className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-colors">
                     <Bike size={18} />
                   </span>
-                  <span className="text-[10px] font-bold text-black uppercase tracking-wider bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
+                  <span className="text-[10px] font-bold text-black dark:text-white uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                     Bikes
                   </span>
                 </div>
                 <div>
-                  <div className="text-base font-bold text-black">
+                  <div className="text-base font-bold text-black dark:text-white">
                     Bike Rentals
                   </div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     Daily student rentals on campus
                   </div>
                 </div>
-                <div className="text-xs font-semibold text-black flex items-center gap-1 pt-2 border-t border-zinc-100">
+                <div className="text-xs font-semibold text-black dark:text-white flex items-center gap-1 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                   Rent on campus <ArrowRight size={12} />
                 </div>
               </Link>
 
               <Link
                 href="/market"
-                className="p-4 bg-white border border-zinc-200 rounded-xl hover:border-black hover:shadow-xs transition-all flex flex-col justify-between gap-3 group"
+                className="p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-zinc-600 hover:shadow-xs transition-all flex flex-col justify-between gap-3 group"
               >
                 <div className="flex items-center justify-between">
-                  <span className="p-2 rounded-lg bg-zinc-100 text-black group-hover:bg-black group-hover:text-white transition-colors">
+                  <span className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-colors">
                     <Tag size={18} />
                   </span>
-                  <span className="text-[10px] font-bold text-black uppercase tracking-wider bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
+                  <span className="text-[10px] font-bold text-black dark:text-white uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                     Market
                   </span>
                 </div>
                 <div>
-                  <div className="text-base font-bold text-black">
+                  <div className="text-base font-bold text-black dark:text-white">
                     Student Market
                   </div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     Buy, sell or co-own hostel items
                   </div>
                 </div>
-                <div className="text-xs font-semibold text-black flex items-center gap-1 pt-2 border-t border-zinc-100">
+                <div className="text-xs font-semibold text-black dark:text-white flex items-center gap-1 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                   Browse deals <ArrowRight size={12} />
                 </div>
               </Link>
 
               <Link
                 href="/community"
-                className="p-4 bg-white border border-zinc-200 rounded-xl hover:border-black hover:shadow-xs transition-all flex flex-col justify-between gap-3 group"
+                className="p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-zinc-600 hover:shadow-xs transition-all flex flex-col justify-between gap-3 group"
               >
                 <div className="flex items-center justify-between">
-                  <span className="p-2 rounded-lg bg-zinc-100 text-black group-hover:bg-black group-hover:text-white transition-colors">
+                  <span className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-colors">
                     <Users size={18} />
                   </span>
-                  <span className="text-[10px] font-bold text-black uppercase tracking-wider bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
+                  <span className="text-[10px] font-bold text-black dark:text-white uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                     Community
                   </span>
                 </div>
                 <div>
-                  <div className="text-base font-bold text-black">
+                  <div className="text-base font-bold text-black dark:text-white">
                     Campus Network
                   </div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     Verified UET student groups
                   </div>
                 </div>
-                <div className="text-xs font-semibold text-black flex items-center gap-1 pt-2 border-t border-zinc-100">
+                <div className="text-xs font-semibold text-black dark:text-white flex items-center gap-1 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                   Open community <ArrowRight size={12} />
                 </div>
               </Link>
@@ -184,11 +184,11 @@ export default function HomePage() {
             {/* Section: Your Next Ride */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-[11px] font-bold text-zinc-500 tracking-wider uppercase">
+                <div className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 tracking-wider uppercase">
                   Your next ride
                 </div>
                 {hasBooking && (
-                  <span className="text-[11px] font-bold text-black bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-300">
+                  <span className="text-[11px] font-bold text-black dark:text-white bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-full border border-zinc-300 dark:border-zinc-700">
                     Confirmed · Active
                   </span>
                 )}
@@ -197,41 +197,41 @@ export default function HomePage() {
               {hasBooking ? (
                 <Link
                   href="/commute/ride"
-                  className="p-5 bg-white border border-zinc-200 rounded-xl hover:border-black transition-all shadow-2xs block space-y-3"
+                  className="p-5 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-2xs block space-y-3"
                 >
                   <div className="flex justify-between items-baseline">
-                    <span className="text-lg font-extrabold text-black">
+                    <span className="text-lg font-extrabold text-black dark:text-white">
                       Khurrialwala → University
                     </span>
-                    <span className="text-lg font-extrabold text-black">
+                    <span className="text-lg font-extrabold text-black dark:text-white">
                       Rs. 50
                     </span>
                   </div>
-                  <div className="flex justify-between items-center text-xs text-zinc-500">
+                  <div className="flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
                     <span>Tomorrow, 8:00 AM · Pickup Gate 3</span>
-                    <span className="font-semibold text-black bg-zinc-100 px-2.5 py-0.5 rounded border border-zinc-200">
+                    <span className="font-semibold text-black dark:text-white bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                       Seat confirmed
                     </span>
                   </div>
                 </Link>
               ) : (
-                <div className="p-5 bg-white border border-zinc-200 rounded-xl shadow-2xs space-y-3">
-                  <div className="text-sm font-bold text-black">
+                <div className="p-5 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xs space-y-3">
+                  <div className="text-sm font-bold text-black dark:text-white">
                     No active ride bookings
                   </div>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
                     Search for carpools and rickshaw splits, or offer empty seats to fellow students.
                   </p>
                   <div className="flex gap-2 pt-1">
                     <Link
                       href="/commute"
-                      className="flex-1 h-9 rounded-lg bg-black hover:bg-zinc-800 text-white text-xs font-bold flex items-center justify-center transition-colors"
+                      className="flex-1 h-9 rounded-lg bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black text-xs font-bold flex items-center justify-center transition-colors cursor-pointer"
                     >
                       Browse Rides
                     </Link>
                     <Link
                       href="/commute/offer"
-                      className="h-9 px-3.5 border border-zinc-300 rounded-lg text-xs font-semibold text-black hover:bg-zinc-100 flex items-center justify-center transition-colors gap-1"
+                      className="h-9 px-3.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs font-semibold text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors gap-1 cursor-pointer"
                     >
                       <Plus size={13} />
                       <span>Offer Ride</span>
@@ -244,32 +244,32 @@ export default function HomePage() {
             {/* Section: Coming Up */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-[11px] font-bold text-zinc-500 tracking-wider uppercase">
+                <div className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 tracking-wider uppercase">
                   Coming up on campus
                 </div>
                 <Link
                   href="/community"
-                  className="text-xs font-semibold text-black hover:underline"
+                  className="text-xs font-semibold text-black dark:text-white hover:underline cursor-pointer"
                 >
                   View all
                 </Link>
               </div>
               <Link
                 href="/community"
-                className="flex gap-4 items-center p-5 bg-white border border-zinc-200 rounded-xl hover:border-black transition-all shadow-2xs block"
+                className="flex gap-4 items-center p-5 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-2xs block"
               >
-                <div className="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
-                  <Users size={22} className="text-black" />
+                <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0">
+                  <Users size={22} className="text-black dark:text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-black truncate">
+                  <div className="text-sm font-bold text-black dark:text-white truncate">
                     Campus Societies & Study Groups
                   </div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     Connect with fellow UET students and join activities
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-zinc-400 shrink-0" />
+                <ChevronRight size={18} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
               </Link>
             </section>
           </div>
