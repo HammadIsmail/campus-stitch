@@ -16,7 +16,7 @@
   --card-foreground: #09090b;
   --accent: #27272a;
   --accent-foreground: #fafafa;
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
   color-scheme: light;
 }
 
