@@ -62,17 +62,17 @@ export function UnverifiedDialog() {
         </button>
 
         {/* Shield Icon Header */}
-        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto mb-4">
-          <ShieldAlert className="w-8 h-8" />
+        <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700 flex items-center justify-center mx-auto mb-4 shadow-xs">
+          <ShieldAlert className="w-7 h-7" />
         </div>
 
         <div className="text-center">
-          <h3 className="text-lg font-bold text-foreground">
+          <h3 className="text-lg font-black tracking-tight text-foreground">
             Account Created — You are Unverified
           </h3>
           <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
             Welcome to <strong className="text-foreground">Campus Stitch</strong>! Your student account is active, but currently carries an{" "}
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700">
               Unverified
             </span>{" "}
             badge.
@@ -80,22 +80,22 @@ export function UnverifiedDialog() {
         </div>
 
         {/* Informational Perks / Trust Box */}
-        <div className="mt-4 p-3.5 rounded-xl bg-muted/40 border border-border space-y-2 text-xs">
-          <div className="font-semibold text-foreground flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+        <div className="mt-4 p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs">
+          <div className="font-bold text-foreground flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-black dark:text-white" />
             Why verify your student status?
           </div>
           <ul className="space-y-1.5 text-muted-foreground text-[11px]">
             <li className="flex items-start gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-              <span>Build instant trust when offering/booking carpool rides</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-black dark:text-white shrink-0 mt-0.5" />
+              <span>Build instant trust when offering or booking carpool rides</span>
             </li>
             <li className="flex items-start gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-              <span>Get the official green Verified Student badge on all posts</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-black dark:text-white shrink-0 mt-0.5" />
+              <span>Get the official Verified Student badge on all posts & comments</span>
             </li>
             <li className="flex items-start gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-black dark:text-white shrink-0 mt-0.5" />
               <span>Unlock verified-only roommate listings and safe campus marketplace</span>
             </li>
           </ul>
@@ -105,7 +105,7 @@ export function UnverifiedDialog() {
         <div className="mt-5 space-y-2.5">
           <Button
             onClick={handleVerifyNow}
-            className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
+            className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold text-xs shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
           >
             <ShieldCheck className="w-4 h-4" />
             Verify Yourself Now (Takes ~1 min)

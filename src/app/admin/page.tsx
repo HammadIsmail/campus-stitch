@@ -116,7 +116,7 @@ export default function AdminVerificationPage() {
         <header className="flex items-center justify-between pb-4 border-b border-border mb-6">
           <div>
             <div className="font-extrabold text-lg tracking-tight text-foreground flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <ShieldCheck className="w-5 h-5 text-black dark:text-white" />
               <span>Admin Verification Portal</span>
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
@@ -144,7 +144,7 @@ export default function AdminVerificationPage() {
 
         {/* Feedback Alert */}
         {actionFeedback && (
-          <div className="mb-4 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-2 text-xs font-medium animate-in fade-in">
+          <div className="mb-4 p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-black dark:text-white flex items-center gap-2 text-xs font-medium animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{actionFeedback}</span>
           </div>
@@ -188,7 +188,7 @@ export default function AdminVerificationPage() {
                   {/* Live Selfie (Binance KYC) */}
                   <div className="space-y-1.5">
                     <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                      <Camera className="w-3.5 h-3.5 text-emerald-500" />
+                      <Camera className="w-3.5 h-3.5 text-black dark:text-white" />
                       <span>1. Live Facial Selfie</span>
                     </div>
                     <div className="aspect-square rounded-xl bg-muted/40 border border-border overflow-hidden flex items-center justify-center relative">
@@ -213,7 +213,7 @@ export default function AdminVerificationPage() {
                   {/* Student ID Card */}
                   <div className="space-y-1.5">
                     <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                      <GraduationCap className="w-3.5 h-3.5 text-blue-500" />
+                      <GraduationCap className="w-3.5 h-3.5 text-black dark:text-white" />
                       <span>2. University Student ID</span>
                     </div>
                     <div className="aspect-square rounded-xl bg-muted/40 border border-border overflow-hidden flex items-center justify-center relative">
@@ -243,8 +243,8 @@ export default function AdminVerificationPage() {
                     <span className="font-bold text-foreground">{currentItem.name}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-muted-foreground block">Student Roll ID</span>
-                    <span className="font-bold font-mono text-foreground">{currentItem.student_id}</span>
+                    <span className="text-[10px] text-muted-foreground block">Verification Type</span>
+                    <span className="font-bold text-foreground">KYC Live Face + ID</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-muted-foreground block">University</span>
@@ -274,7 +274,7 @@ export default function AdminVerificationPage() {
                         type="button"
                         onClick={() => handleAction("approved")}
                         disabled={isUpdating}
-                        className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+                        className="flex-1 h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-colors"
                       >
                         {isUpdating ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -290,14 +290,14 @@ export default function AdminVerificationPage() {
                         variant="outline"
                         onClick={() => handleAction("rejected")}
                         disabled={isUpdating}
-                        className="flex-1 h-11 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5"
+                        className="flex-1 h-11 border-zinc-300 dark:border-zinc-700 text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <XCircle className="w-4 h-4" />
                         Reject Application
                       </Button>
                     </>
                   ) : currentItem.status === "approved" ? (
-                    <div className="w-full flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
+                    <div className="w-full flex items-center justify-between p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-black dark:text-white text-xs font-semibold">
                       <span className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4" />
                         Student is currently Approved & Verified.
@@ -362,24 +362,24 @@ export default function AdminVerificationPage() {
                       onClick={() => setSelectedIdx(idx)}
                       className={`w-full text-left p-3 text-xs flex items-center justify-between transition-colors ${
                         isSelected
-                          ? "bg-emerald-500/10 font-bold text-foreground border-l-4 border-emerald-500"
+                          ? "bg-zinc-100 dark:bg-zinc-800 font-bold text-foreground border-l-4 border-black dark:border-white"
                           : "hover:bg-muted/40 text-foreground"
                       }`}
                     >
                       <div className="min-w-0 pr-2">
                         <div className="font-bold truncate">{req.name}</div>
-                        <div className="text-[10px] text-muted-foreground font-mono truncate">
-                          {req.student_id} &bull; {req.university || "UET"}
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {req.program || "Student"} &bull; {req.university || "UET"}
                         </div>
                       </div>
                       <div className="shrink-0 flex items-center gap-1.5">
                         <span
-                          className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                          className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase border ${
                             req.status === "approved"
-                              ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                              ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
                               : req.status === "rejected"
-                              ? "bg-red-500/20 text-red-700 dark:text-red-300"
-                              : "bg-blue-500/20 text-blue-700 dark:text-blue-300"
+                              ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700"
+                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700"
                           }`}
                         >
                           {req.status}

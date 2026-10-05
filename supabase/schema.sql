@@ -13,13 +13,14 @@ create table if not exists public.profiles (
   email text,
   password_hash text,
   full_name text not null,
-  student_id text unique,
   university text not null default 'UET Lahore',
+  city text,
   program text,
   department text,
   is_verified boolean not null default false,
   verification_status text check (verification_status in ('unverified', 'pending', 'verified', 'rejected')) default 'unverified',
   avatar_url text,
+  live_photo_url text,
   bio text,
   card_photo_url text,
   cnic text,
@@ -32,8 +33,19 @@ create table if not exists public.profiles (
 
 create unique index if not exists profiles_email_idx on public.profiles (email);
 
+-- Idempotent column migrations for existing profiles table
+alter table if exists public.profiles drop column if exists student_id;
+alter table if exists public.profiles add column if not exists city text;
+alter table if exists public.profiles add column if not exists live_photo_url text;
 
--- 2. RIDES (COMMUTE) TABLE
+-- 2. DEPARTMENTS & PROGRAMS TABLE (System Fed)
+create table if not exists public.departments (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null unique,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 3. RIDES (COMMUTE) TABLE
 create table if not exists public.rides (
   id uuid primary key default uuid_generate_v4(),
   organizer_id uuid references public.profiles(id) on delete set null,
@@ -54,7 +66,7 @@ create table if not exists public.rides (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 3. RIDE BOOKINGS TABLE
+-- 4. RIDE BOOKINGS TABLE
 create table if not exists public.ride_bookings (
   id uuid primary key default uuid_generate_v4(),
   ride_id uuid references public.rides(id) on delete cascade not null,
@@ -65,7 +77,7 @@ create table if not exists public.ride_bookings (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. MARKETPLACE LISTINGS TABLE
+-- 5. MARKETPLACE LISTINGS TABLE
 create table if not exists public.listings (
   id uuid primary key default uuid_generate_v4(),
   seller_id uuid references public.profiles(id) on delete set null,
@@ -82,7 +94,7 @@ create table if not exists public.listings (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. BIKES FOR RENT TABLE
+-- 6. BIKES FOR RENT TABLE
 create table if not exists public.bikes (
   id uuid primary key default uuid_generate_v4(),
   owner_id uuid references public.profiles(id) on delete set null,
@@ -100,7 +112,7 @@ create table if not exists public.bikes (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 6. BIKE RENTAL REQUESTS TABLE
+-- 7. BIKE RENTAL REQUESTS TABLE
 create table if not exists public.bike_rentals (
   id uuid primary key default uuid_generate_v4(),
   bike_id uuid references public.bikes(id) on delete cascade not null,
@@ -112,7 +124,7 @@ create table if not exists public.bike_rentals (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 7. SHARED CO-OWNED ITEMS TABLE
+-- 8. SHARED CO-OWNED ITEMS TABLE
 create table if not exists public.shared_items (
   id uuid primary key default uuid_generate_v4(),
   title text not null,
@@ -132,7 +144,7 @@ create table if not exists public.shared_item_owners (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. HOSTEL ROOMMATES & SERVICES TABLE
+-- 9. HOSTEL ROOMMATES & SERVICES TABLE
 create table if not exists public.hostel_roommates (
   id uuid primary key default uuid_generate_v4(),
   user_name text not null,
@@ -156,7 +168,7 @@ create table if not exists public.hostel_services (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 9. COMMUNITY EVENTS TABLE
+-- 10. COMMUNITY EVENTS TABLE
 create table if not exists public.community_events (
   id uuid primary key default uuid_generate_v4(),
   title text not null,
@@ -169,26 +181,37 @@ create table if not exists public.community_events (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 10. STUDENT CARD VERIFICATIONS QUEUE (ADMIN)
+-- 11. STUDENT KYC VERIFICATIONS QUEUE (ADMIN)
 create table if not exists public.verifications (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default gen_random_uuid()::text,
+  user_id uuid references public.profiles(id) on delete set null,
   name text not null,
-  student_id text,
+  email text,
+  university text not null default 'UET Lahore',
+  city text,
   program text not null,
   department text,
-  university text not null default 'UET Lahore',
   confidence_status text check (confidence_status in ('matches', 'unreadable', 'unclear', 'expired')) default 'matches',
   status text check (status in ('pending', 'approved', 'rejected', 'reupload')) default 'pending',
   card_photo_url text,
+  live_photo_url text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Idempotent column migrations for existing verifications table
+alter table if exists public.verifications drop column if exists student_id;
+alter table if exists public.verifications add column if not exists user_id uuid references public.profiles(id) on delete set null;
+alter table if exists public.verifications add column if not exists email text;
+alter table if exists public.verifications add column if not exists city text;
+alter table if exists public.verifications add column if not exists live_photo_url text;
+
 -- ========================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
--- Permissive policies for student campus sharing
+-- Permissive policies for verified student campus sharing
 -- ========================================================
 
 alter table public.profiles enable row level security;
+alter table public.departments enable row level security;
 alter table public.rides enable row level security;
 alter table public.ride_bookings enable row level security;
 alter table public.listings enable row level security;
@@ -205,6 +228,9 @@ alter table public.verifications enable row level security;
 create policy "Allow public read profiles" on public.profiles for select using (true);
 create policy "Allow public insert profiles" on public.profiles for insert with check (true);
 create policy "Allow public update profiles" on public.profiles for update using (true);
+
+create policy "Allow public read departments" on public.departments for select using (true);
+create policy "Allow public insert departments" on public.departments for insert with check (true);
 
 create policy "Allow public read rides" on public.rides for select using (true);
 create policy "Allow public insert rides" on public.rides for insert with check (true);
@@ -246,6 +272,28 @@ create policy "Allow public update verifications" on public.verifications for up
 -- SEED DATA - Exact initial state matching design specifications
 -- ========================================================
 
+-- Feed Curated Departments
+insert into public.departments (name) values
+  ('Computer Science'),
+  ('Software Engineering'),
+  ('Information Technology'),
+  ('Data Science & AI'),
+  ('Cyber Security'),
+  ('Electrical Engineering'),
+  ('Mechanical Engineering'),
+  ('Civil Engineering'),
+  ('Chemical Engineering'),
+  ('Mechatronics Engineering'),
+  ('Biomedical Engineering'),
+  ('Business Administration (BBA)'),
+  ('Accounting & Finance'),
+  ('Management Sciences'),
+  ('Architecture & Design'),
+  ('Mathematics & Computing'),
+  ('Physics & Applied Sciences'),
+  ('Social Sciences & Humanities')
+on conflict (name) do nothing;
+
 -- Insert Initial Rides
 insert into public.rides (organizer_name, organizer_verified, from_location, to_location, departure_time, vehicle_type, total_cost, price_per_seat, total_seats, available_seats, pickup_point, notes)
 values
@@ -262,11 +310,11 @@ values
 -- Insert Initial Listings
 insert into public.listings (seller_name, seller_verified, title, category, price, condition, location, is_graduation_sale, status)
 values
-  ('Muhammad Hammad', true, 'Phone cooler', 'Electronics', 1800, 'Like new', 'Hostel Block B', false, 'available'),
-  ('Muhammad Hammad', true, 'Study table', 'Furniture', 2000, 'Good', 'Hostel Block A', true, 'available'),
-  ('Muhammad Hammad', true, 'Chair', 'Furniture', 1000, 'Good', 'Hostel Block A', true, 'sold'),
-  ('Muhammad Hammad', true, '24-inch monitor', 'Electronics', 15000, 'Good', 'Near campus', true, 'reserved'),
-  ('Muhammad Hammad', true, 'Mini fridge', 'Hostel', 8000, 'Fair', 'Hostel Block B', true, 'available');
+  ('Ahmed K.', true, 'Phone cooler', 'Electronics', 1800, 'Like new', 'Hostel Block B', false, 'available'),
+  ('Zainab M.', true, 'Study table', 'Furniture', 2000, 'Good', 'Hostel Block A', true, 'available'),
+  ('Hamza R.', true, 'Chair', 'Furniture', 1000, 'Good', 'Hostel Block A', true, 'sold'),
+  ('Ayesha S.', true, '24-inch monitor', 'Electronics', 15000, 'Good', 'Near campus', true, 'reserved'),
+  ('Bilal T.', true, 'Mini fridge', 'Hostel', 8000, 'Fair', 'Hostel Block B', true, 'available');
 
 -- Insert Initial Shared Item
 do $$
@@ -299,9 +347,9 @@ values
   ('Career talk: internships', 'Placement office', 'OCT', '9', 'Fri, 11:00 AM', 'Seminar', 85);
 
 -- Insert Initial Admin Verification Queue
-insert into public.verifications (name, student_id, program, department, university, confidence_status, status)
+insert into public.verifications (name, program, department, university, confidence_status, status)
 values
-  ('Muhammad Hammad', '2021-CS-104', 'BSCS', 'Computer Science', 'UET Lahore', 'unreadable', 'pending'),
-  ('Sara K.', '2022-CS-045', 'BSCS', 'Computer Science', 'UET Lahore', 'unclear', 'pending'),
-  ('Bilal R.', '2020-EE-089', 'BSEE', 'Electrical Engineering', 'UET Lahore', 'expired', 'pending'),
-  ('Usman T.', '2023-ME-112', 'BSME', 'Mechanical Engineering', 'UET Lahore', 'matches', 'pending');
+  ('Ali Raza', 'BSCS', 'Computer Science', 'UET Lahore', 'matches', 'pending'),
+  ('Sara K.', 'BSCS', 'Computer Science', 'UET Lahore', 'unclear', 'pending'),
+  ('Bilal R.', 'BSEE', 'Electrical Engineering', 'UET Lahore', 'matches', 'pending'),
+  ('Usman T.', 'BSME', 'Mechanical Engineering', 'UET Lahore', 'matches', 'pending');

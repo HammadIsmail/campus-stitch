@@ -23,15 +23,15 @@ export async function POST(request: NextRequest) {
       avatarUrl,
     } = body;
 
-    if (!email || !name || !studentId) {
+    if (!email || !name) {
       return NextResponse.json(
-        { success: false, message: "Name, Student ID, and Email are required" },
+        { success: false, message: "Name and Email are required" },
         { status: 400 }
       );
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
-    const cleanStudentId = String(studentId).trim().toUpperCase();
+    const cleanStudentId = studentId ? String(studentId).trim().toUpperCase() : null;
     const cleanName = String(name).trim();
 
     const supabase = await createClient();
@@ -53,24 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Strict check: If student ID is already registered to another account
-    const { data: existingStudent } = await supabase
-      .from("profiles")
-      .select("id, student_id")
-      .eq("student_id", cleanStudentId)
-      .maybeSingle();
-
-    if (existingStudent) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "An account with this Student ID is already registered. Please sign in instead.",
-        },
-        { status: 409 }
-      );
-    }
-
-    // 3. Strict check: Verify 6-digit email OTP
+    // 2. Strict check: Verify 6-digit email OTP
     if (!code || !String(code).trim()) {
       return NextResponse.json(
         {
@@ -99,10 +82,10 @@ export async function POST(request: NextRequest) {
       cleanEmail === "admin@uet.edu.pk" ||
       cleanEmail === "ranahammadismail@gmail.com";
 
-    // 4. Hash password if provided
+    // 3. Hash password if provided
     const passwordHash = password ? hashPassword(password) : null;
 
-    // 5. Generate valid UUID for database primary key
+    // 4. Generate valid UUID for database primary key
     const profileId = crypto.randomUUID();
 
     const profileData = {
@@ -110,7 +93,6 @@ export async function POST(request: NextRequest) {
       email: cleanEmail,
       password_hash: passwordHash,
       full_name: cleanName,
-      student_id: cleanStudentId,
       university: university || "UET Lahore",
       city: body.city || null,
       program: program || "BS Computer Science",
@@ -147,7 +129,7 @@ export async function POST(request: NextRequest) {
       userId: savedProfile?.id || profileId,
       email: cleanEmail,
       name: cleanName,
-      studentId: cleanStudentId,
+      studentId: cleanStudentId || cleanEmail.split("@")[0].toUpperCase(),
       role: isAdmin ? "admin" : "student",
       program: profileData.program,
       isVerified: false,

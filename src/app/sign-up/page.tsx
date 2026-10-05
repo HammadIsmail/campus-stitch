@@ -20,16 +20,34 @@ import {
   Search,
   Check,
   ChevronDown,
-  Camera,
   BookOpen,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
-import { convertToWebP } from "@/lib/image-converter";
 import { SUPPORTED_UNIVERSITIES, UniversityItem } from "@/lib/universities";
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+// Curated list of departments fed by the system
+export const DEPARTMENTS = [
+  "Computer Science",
+  "Software Engineering",
+  "Information Technology",
+  "Data Science & AI",
+  "Cyber Security",
+  "Electrical Engineering",
+  "Mechanical Engineering",
+  "Civil Engineering",
+  "Chemical Engineering",
+  "Mechatronics Engineering",
+  "Biomedical Engineering",
+  "Business Administration (BBA)",
+  "Accounting & Finance",
+  "Management Sciences",
+  "Architecture & Design",
+  "Mathematics & Computing",
+  "Physics & Applied Sciences",
+  "Social Sciences & Humanities",
+];
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -43,18 +61,26 @@ export default function SignUpPage() {
   const [selectedUni, setSelectedUni] = React.useState<UniversityItem>(SUPPORTED_UNIVERSITIES[0]);
   const [uniSearchQuery, setUniSearchQuery] = React.useState("");
   const [isUniDropdownOpen, setIsUniDropdownOpen] = React.useState(false);
-  const [selectedCampusCity, setSelectedCampusCity] = React.useState<string>(SUPPORTED_UNIVERSITIES[0].campuses[0] || "Lahore");
-  const [studentId, setStudentId] = React.useState("");
-  const [department, setDepartment] = React.useState("Computer Science");
+  const [selectedCampusCity, setSelectedCampusCity] = React.useState<string>(
+    SUPPORTED_UNIVERSITIES[0].campuses[0] || "Lahore"
+  );
+  const [department, setDepartment] = React.useState<string>(DEPARTMENTS[0]);
+  const [departmentsList, setDepartmentsList] = React.useState<string[]>(DEPARTMENTS);
   const [email, setEmail] = React.useState("");
+
+  React.useEffect(() => {
+    fetch("/api/departments")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.departments) && data.departments.length > 0) {
+          setDepartmentsList(data.departments);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
-
-  // Optional avatar
-  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
-  const avatarInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // OTP State
   const [otpCode, setOtpCode] = React.useState("");
@@ -62,7 +88,7 @@ export default function SignUpPage() {
   const [isResending, setIsResending] = React.useState(false);
   const [resendFeedback, setResendFeedback] = React.useState<string | null>(null);
 
-  // State indicators
+  // Loading & Error States
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [isFinalizing, setIsFinalizing] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -110,42 +136,16 @@ export default function SignUpPage() {
     return () => clearTimeout(timer);
   }, [step, resendCooldown]);
 
-  // Avatar file handling
-  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > MAX_FILE_SIZE) {
-      setErrorMsg("Profile photo must be under 2MB.");
-      return;
-    }
-
-    try {
-      const webpFile = await convertToWebP(file, 0.85);
-      setAvatarFile(webpFile);
-      setAvatarPreview(URL.createObjectURL(webpFile));
-    } catch {
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
-    }
-  };
-
   // Step 1 Submit: Validate and send OTP to email
   const handleProceedToOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
     const cleanName = fullName.trim();
-    const cleanId = studentId.trim();
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanName) {
       setErrorMsg("Please enter your full name.");
-      return;
-    }
-
-    if (!cleanId) {
-      setErrorMsg("Please enter your Student Roll Number / ID.");
       return;
     }
 
@@ -246,28 +246,9 @@ export default function SignUpPage() {
     setErrorMsg(null);
 
     try {
-      // Optional upload avatar if provided
-      let uploadedAvatarUrl: string | undefined = undefined;
-      if (avatarFile) {
-        const avatarFormData = new FormData();
-        avatarFormData.append("file", avatarFile);
-        try {
-          const upRes = await fetch("/api/upload", {
-            method: "POST",
-            body: avatarFormData,
-          });
-          const upData = await upRes.json();
-          if (upData.url) {
-            uploadedAvatarUrl = upData.url;
-          }
-        } catch {
-          // Non-critical if avatar upload fails
-        }
-      }
-
       const success = await signup({
         name: fullName.trim(),
-        studentId: studentId.trim().toUpperCase(),
+        studentId: "", // Roll no not required from user during signup
         email: email.trim().toLowerCase(),
         password,
         code: otpCode.trim(),
@@ -275,7 +256,6 @@ export default function SignUpPage() {
         city: selectedCampusCity,
         department: department.trim(),
         program: `BS ${department.trim()}`,
-        avatarUrl: uploadedAvatarUrl,
       });
 
       if (success) {
@@ -295,38 +275,38 @@ export default function SignUpPage() {
   return (
     <MobileShell hideNav>
       <div className="min-h-screen px-4 py-8 max-w-md mx-auto flex flex-col justify-center">
-        {/* Header / Brand */}
+        {/* Header / Brand (Unified Black & White Theme) */}
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3 border border-emerald-500/20 shadow-sm">
-            <GraduationCap className="w-7 h-7" />
+          <div className="w-13 h-13 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center mx-auto mb-3 border border-black dark:border-white shadow-xs">
+            <GraduationCap className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl font-black tracking-tight text-black dark:text-white">
             {step === 1 ? "Create Student Account" : "Verify Your Email"}
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             {step === 1
               ? "Join Campus Stitch. Select your university & city to get started."
               : `Enter the 6-digit code sent to ${email}`}
           </p>
         </div>
 
-        {/* Step Progress Bar */}
+        {/* Step Progress Bar (Monochrome) */}
         <div className="flex items-center gap-2 mb-6">
           <div
             className={`h-1.5 flex-1 rounded-full transition-all ${
-              step >= 1 ? "bg-emerald-500" : "bg-muted"
+              step >= 1 ? "bg-black dark:bg-white" : "bg-zinc-200 dark:bg-zinc-800"
             }`}
           />
           <div
             className={`h-1.5 flex-1 rounded-full transition-all ${
-              step === 2 ? "bg-emerald-500" : "bg-muted"
+              step === 2 ? "bg-black dark:bg-white" : "bg-zinc-200 dark:bg-zinc-800"
             }`}
           />
         </div>
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="mb-5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-start gap-2.5 text-xs animate-in fade-in">
+          <div className="mb-5 p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-black dark:text-white flex items-start gap-2.5 text-xs animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <div className="flex-1 font-medium">{errorMsg}</div>
           </div>
@@ -334,100 +314,72 @@ export default function SignUpPage() {
 
         {/* Resend Feedback */}
         {resendFeedback && (
-          <div className="mb-5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-2 text-xs">
+          <div className="mb-5 p-3 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-black dark:text-white flex items-center gap-2 text-xs">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span className="font-medium">{resendFeedback}</span>
+            <span className="font-semibold">{resendFeedback}</span>
           </div>
         )}
 
         {/* STEP 1: Registration Form */}
         {step === 1 && (
           <form onSubmit={handleProceedToOtp} className="space-y-4">
-            {/* Optional Avatar */}
-            <div className="flex justify-center mb-2">
-              <div
-                onClick={() => avatarInputRef.current?.click()}
-                className="relative group cursor-pointer w-20 h-20 rounded-full border-2 border-dashed border-emerald-500/30 hover:border-emerald-500 bg-muted/40 flex flex-col items-center justify-center overflow-hidden transition-all"
-              >
-                {avatarPreview ? (
-                  <img
-                    src={avatarPreview}
-                    alt="Profile Avatar Preview"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center text-muted-foreground group-hover:text-emerald-500">
-                    <Camera className="w-5 h-5 mb-0.5" />
-                    <span className="text-[10px] font-medium">Photo</span>
-                  </div>
-                )}
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarFileChange}
-                  className="hidden"
-                />
-              </div>
-            </div>
-
             {/* Full Name */}
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
-                Full Name <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
+                Full Name <span className="text-zinc-400">*</span>
               </label>
               <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   type="text"
                   required
                   placeholder="e.g. Ali Ahmed"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-muted-foreground/60"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                 />
               </div>
             </div>
 
             {/* University Searchable Dropdown */}
             <div className="relative" ref={dropdownRef}>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
-                University <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
+                University <span className="text-zinc-400">*</span>
               </label>
               <button
                 type="button"
                 onClick={() => setIsUniDropdownOpen((prev) => !prev)}
-                className="w-full pl-10 pr-10 py-2.5 bg-background border border-border rounded-xl text-left text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-left text-sm flex items-center justify-between focus:outline-none focus:border-black dark:focus:border-white transition-all"
               >
-                <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <span className="truncate font-medium text-foreground">
+                <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <span className="truncate font-semibold text-black dark:text-white">
                   {selectedUni.shortName} — {selectedUni.name}
                 </span>
                 <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${
+                  className={`w-4 h-4 text-zinc-400 shrink-0 transition-transform ${
                     isUniDropdownOpen ? "rotate-180" : ""
                   }`}
                 />
               </button>
 
               {isUniDropdownOpen && (
-                <div className="absolute z-50 left-0 right-0 mt-1.5 bg-card border border-border rounded-xl shadow-xl overflow-hidden max-h-60 flex flex-col animate-in fade-in-50 zoom-in-95">
-                  <div className="p-2 border-b border-border bg-muted/20 sticky top-0">
+                <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl shadow-xl overflow-hidden max-h-60 flex flex-col animate-in fade-in-50 zoom-in-95">
+                  <div className="p-2 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/90 sticky top-0">
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
                       <input
                         type="text"
                         placeholder="Search university..."
                         value={uniSearchQuery}
                         onChange={(e) => setUniSearchQuery(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                        className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                         autoFocus
                       />
                     </div>
                   </div>
-                  <div className="overflow-y-auto divide-y divide-border/50 py-1">
+                  <div className="overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800 py-1">
                     {filteredUniversities.length === 0 ? (
-                      <div className="p-3 text-center text-xs text-muted-foreground">
+                      <div className="p-3 text-center text-xs text-zinc-400">
                         No matching universities found
                       </div>
                     ) : (
@@ -438,15 +390,19 @@ export default function SignUpPage() {
                             key={uni.id}
                             type="button"
                             onClick={() => handleSelectUniversity(uni)}
-                            className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-emerald-500/10 transition-colors ${
-                              isSelected ? "bg-emerald-500/10 font-semibold text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                            className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
+                              isSelected
+                                ? "bg-black dark:bg-white text-white dark:text-black font-bold"
+                                : "text-zinc-800 dark:text-zinc-200"
                             }`}
                           >
                             <div className="pr-2 truncate">
-                              <div className="font-semibold truncate">{uni.shortName}</div>
-                              <div className="text-[11px] text-muted-foreground truncate">{uni.name}</div>
+                              <div className="font-bold truncate">{uni.shortName}</div>
+                              <div className={`text-[11px] truncate ${isSelected ? "opacity-80" : "text-zinc-500 dark:text-zinc-400"}`}>
+                                {uni.name}
+                              </div>
                             </div>
-                            {isSelected && <Check className="w-4 h-4 text-emerald-500 shrink-0" />}
+                            {isSelected && <Check className="w-4 h-4 shrink-0" />}
                           </button>
                         );
                       })
@@ -456,104 +412,90 @@ export default function SignUpPage() {
               )}
             </div>
 
-            {/* Campus / City Dropdown (City Names Only) */}
+            {/* Campus / City Dropdown (Clean City Names Only) */}
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
-                Campus City <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
+                Campus City <span className="text-zinc-400">*</span>
               </label>
               <div className="relative">
-                <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <select
                   value={selectedCampusCity}
                   onChange={(e) => setSelectedCampusCity(e.target.value)}
-                  className="w-full pl-10 pr-9 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 appearance-none transition-all cursor-pointer font-medium text-foreground"
+                  className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white appearance-none transition-all cursor-pointer font-semibold"
                 >
                   {selectedUni.campuses.map((city) => (
-                    <option key={city} value={city}>
+                    <option key={city} value={city} className="bg-white dark:bg-zinc-900 text-black dark:text-white">
                       {city}
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* Student Roll No / ID */}
+            {/* Department / Program Dropdown (Fed by us) */}
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
-                Student Roll No / ID <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
+                Department / Program <span className="text-zinc-400">*</span>
               </label>
               <div className="relative">
-                <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 2022-CS-101"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value.toUpperCase())}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 uppercase transition-all placeholder:text-muted-foreground/60 font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Department / Program */}
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
-                Department / Program <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Computer Science"
+                <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-muted-foreground/60"
-                />
+                  className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white appearance-none transition-all cursor-pointer font-semibold"
+                >
+                  {departmentsList.map((dept) => (
+                    <option key={dept} value={dept} className="bg-white dark:bg-zinc-900 text-black dark:text-white">
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
               </div>
             </div>
 
             {/* Email Address (Any standard email: Gmail, Outlook, Yahoo, etc.) */}
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
-                Email Address <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
+                Email Address <span className="text-zinc-400">*</span>
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   type="email"
                   required
                   placeholder="e.g. yourname@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-muted-foreground/60"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                 />
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
                 You can use any valid email (Gmail, Outlook, Yahoo, etc.). A 6-digit code will be sent to verify.
               </p>
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
-                Password <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
+                Password <span className="text-zinc-400">*</span>
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black dark:hover:text-white p-1"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -562,27 +504,27 @@ export default function SignUpPage() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
-                Confirm Password <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
+                Confirm Password <span className="text-zinc-400">*</span>
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="Repeat your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"
                 />
               </div>
             </div>
 
-            {/* Submit Button */}
+            {/* Submit Button (Unified Black & White theme) */}
             <Button
               type="submit"
               disabled={isProcessing}
-              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-md shadow-emerald-600/20 mt-2 flex items-center justify-center gap-2"
+              className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold text-xs shadow-xs mt-2 flex items-center justify-center gap-2 cursor-pointer transition-colors"
             >
               {isProcessing ? (
                 <>
@@ -601,14 +543,14 @@ export default function SignUpPage() {
         {/* STEP 2: Email OTP Verification */}
         {step === 2 && (
           <form onSubmit={handleCompleteSignUp} className="space-y-5 animate-in fade-in">
-            <div className="p-4 rounded-xl bg-muted/40 border border-border text-center">
-              <Mail className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
-              <div className="text-xs text-muted-foreground">We sent a verification code to:</div>
-              <div className="text-sm font-semibold text-foreground mt-0.5 break-all">{email}</div>
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-center">
+              <Mail className="w-6 h-6 text-black dark:text-white mx-auto mb-2" />
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">We sent a verification code to:</div>
+              <div className="text-sm font-bold text-black dark:text-white mt-0.5 break-all">{email}</div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-2 text-center">
+              <label className="block text-xs font-bold text-black dark:text-white mb-2 text-center">
                 Enter 6-Digit Code
               </label>
               <input
@@ -619,22 +561,22 @@ export default function SignUpPage() {
                 placeholder="123456"
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                className="w-full text-center tracking-[0.5em] font-mono text-2xl font-bold py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                className="w-full text-center tracking-[0.5em] font-mono text-2xl font-bold py-3 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"
               />
             </div>
 
             {/* Resend Code Button & Countdown */}
             <div className="text-center text-xs">
               {resendCooldown > 0 ? (
-                <span className="text-muted-foreground">
-                  Resend code in <strong className="text-foreground">{resendCooldown}s</strong>
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  Resend code in <strong className="text-black dark:text-white">{resendCooldown}s</strong>
                 </span>
               ) : (
                 <button
                   type="button"
                   onClick={handleResendOtp}
                   disabled={isResending}
-                  className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline inline-flex items-center gap-1"
+                  className="text-black dark:text-white font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
                   {isResending && <Loader2 className="w-3 h-3 animate-spin" />}
                   Resend Verification Code
@@ -642,12 +584,12 @@ export default function SignUpPage() {
               )}
             </div>
 
-            {/* Buttons */}
+            {/* Buttons (Monochrome Theme) */}
             <div className="space-y-2 pt-2">
               <Button
                 type="submit"
                 disabled={isFinalizing || otpCode.length !== 6}
-                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
+                className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold text-xs shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
                 {isFinalizing ? (
                   <>
@@ -670,7 +612,7 @@ export default function SignUpPage() {
                   setResendFeedback(null);
                 }}
                 disabled={isFinalizing}
-                className="w-full py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 transition-colors"
+                className="w-full py-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Change Registration Details
@@ -680,11 +622,11 @@ export default function SignUpPage() {
         )}
 
         {/* Sign In link */}
-        <div className="mt-8 text-center text-xs text-muted-foreground">
+        <div className="mt-8 text-center text-xs text-zinc-500 dark:text-zinc-400">
           Already have an account?{" "}
           <Link
             href="/sign-in"
-            className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+            className="text-black dark:text-white font-bold hover:underline"
           >
             Sign In
           </Link>

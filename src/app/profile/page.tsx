@@ -459,22 +459,22 @@ export default function ProfilePage() {
               </div>
               <span className="text-[11px] font-semibold flex items-center gap-1">
                 {verificationStatus === "verified" || user.verified ? (
-                  <span className="text-emerald-600 dark:text-emerald-400">Active Student</span>
+                  <span className="text-black dark:text-white font-bold">Active Student</span>
                 ) : verificationStatus === "pending" ? (
-                  <span className="text-blue-600 dark:text-blue-400">Pending Review</span>
+                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">Pending Review</span>
                 ) : (
-                  <span className="text-amber-600 dark:text-amber-400">Unverified</span>
+                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">Unverified</span>
                 )}
               </span>
             </div>
           </div>
 
-          {/* Verification CTA Banner */}
+          {/* Verification CTA Banner (Unified Black & White Theme) */}
           {verificationStatus === "pending" ? (
-            <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between gap-3 text-xs">
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                  <Clock size={18} className="animate-pulse" />
+                <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0">
+                  <Clock size={16} className="animate-pulse" />
                 </div>
                 <div>
                   <div className="font-bold text-foreground">Verification Under Review</div>
@@ -483,26 +483,26 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 shrink-0">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700 shrink-0">
                 Pending
               </span>
             </div>
           ) : verificationStatus !== "verified" && !user.verified ? (
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3 text-xs">
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <ShieldAlert size={18} />
+                <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0 shadow-xs">
+                  <ShieldAlert size={16} />
                 </div>
                 <div>
                   <div className="font-bold text-foreground">You are Unverified</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
-                    Complete quick Binance-style face scan & ID card upload to earn verified badge.
+                    Complete quick face scan & ID card upload to earn verified student badge.
                   </div>
                 </div>
               </div>
               <Link
                 href="/verify"
-                className="px-3.5 py-2 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs hover:opacity-90 transition-opacity shrink-0 flex items-center gap-1.5 shadow-sm"
+                className="px-3.5 py-2 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shrink-0 flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <span>Verify Yourself</span>
                 <ArrowRight size={13} />

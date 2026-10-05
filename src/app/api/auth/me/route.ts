@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
       
       const { data: profile } = await supabase
         .from("profiles")
-        .select("avatar_url, bio, full_name, student_id, is_verified, verification_status")
-        .or(`email.eq.${cleanEmail},student_id.eq.${payload.studentId}`)
+        .select("avatar_url, bio, full_name, is_verified, verification_status")
+        .eq("email", cleanEmail)
         .maybeSingle();
 
       if (profile) {

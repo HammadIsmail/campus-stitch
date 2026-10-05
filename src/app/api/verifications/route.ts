@@ -67,7 +67,6 @@ export async function POST(request: NextRequest) {
       user_id: targetUserId || null,
       email: cleanEmail,
       name: name || session?.name || "Student",
-      student_id: cleanStudentId,
       university: university || "UET Lahore",
       city: city || null,
       program: program || session?.program || "BS",
@@ -92,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update profile status to pending and save live selfie & card urls
-    if (targetUserId || cleanEmail || cleanStudentId) {
+    if (targetUserId || cleanEmail) {
       const updateData: any = {
         verification_status: "pending",
         card_photo_url: cardPhotoUrl,
@@ -105,10 +104,8 @@ export async function POST(request: NextRequest) {
       let profileQuery = supabase.from("profiles").update(updateData);
       if (targetUserId) {
         profileQuery = profileQuery.eq("id", targetUserId);
-      } else if (cleanEmail) {
-        profileQuery = profileQuery.eq("email", cleanEmail);
       } else {
-        profileQuery = profileQuery.eq("student_id", cleanStudentId);
+        profileQuery = profileQuery.eq("email", cleanEmail);
       }
 
       await profileQuery;
@@ -168,13 +165,11 @@ export async function PATCH(request: NextRequest) {
       profileQuery = profileQuery.eq("id", userId);
     } else if (email) {
       profileQuery = profileQuery.eq("email", String(email).trim().toLowerCase());
-    } else if (studentId) {
-      profileQuery = profileQuery.eq("student_id", String(studentId).trim().toUpperCase());
     } else {
-      // Lookup the verification record to find the student_id or email
+      // Lookup the verification record to find the user_id or email
       const { data: verRecord } = await supabase
         .from("verifications")
-        .select("user_id, email, student_id")
+        .select("user_id, email")
         .eq("id", id)
         .maybeSingle();
 
@@ -182,8 +177,6 @@ export async function PATCH(request: NextRequest) {
         profileQuery = profileQuery.eq("id", verRecord.user_id);
       } else if (verRecord?.email) {
         profileQuery = profileQuery.eq("email", verRecord.email);
-      } else if (verRecord?.student_id) {
-        profileQuery = profileQuery.eq("student_id", verRecord.student_id);
       }
     }
 

@@ -272,7 +272,7 @@ export default function VerifyKycPage() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div className="flex items-center gap-1.5 font-bold text-sm text-foreground">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-black dark:text-white" />
               <span>Identity Verification (KYC)</span>
             </div>
             <div className="w-8" />
@@ -281,7 +281,7 @@ export default function VerifyKycPage() {
           {/* Success Banner */}
           {submitSuccess ? (
             <div className="py-8 text-center space-y-4 animate-in fade-in">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-sm">
+              <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700 flex items-center justify-center mx-auto shadow-xs">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <h2 className="text-xl font-bold text-foreground">
@@ -295,7 +295,7 @@ export default function VerifyKycPage() {
               <div className="pt-4 space-y-2">
                 <Button
                   onClick={() => router.push("/profile")}
-                  className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-md shadow-emerald-600/20"
+                  className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold text-xs shadow-xs"
                 >
                   Return to Profile
                 </Button>
@@ -314,7 +314,7 @@ export default function VerifyKycPage() {
               <div>
                 <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
                   <span>Student KYC Verification</span>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700">
                     Binance-Style Face Scan
                   </span>
                 </h1>
@@ -344,8 +344,8 @@ export default function VerifyKycPage() {
                     </span>
                   </div>
                   {liveSelfiePreview && (
-                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Captured
+                    <span className="text-[11px] font-bold text-foreground flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-black dark:text-white" /> Captured
                     </span>
                   )}
                 </div>
@@ -379,9 +379,9 @@ export default function VerifyKycPage() {
                         muted
                         className="w-full h-full object-cover scale-x-[-1]"
                       />
-                      {/* Binance Oval Guide Frame Overlay */}
+                      {/* Oval Guide Frame Overlay (B&W) */}
                       <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
-                        <div className="w-44 h-56 rounded-[50%] border-2 border-dashed border-emerald-400/80 shadow-[0_0_15px_rgba(52,211,153,0.3)] animate-pulse" />
+                        <div className="w-44 h-56 rounded-[50%] border-2 border-dashed border-white/80 shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-pulse" />
                         <span className="mt-2 text-[10px] text-white/90 bg-black/60 px-2 py-0.5 rounded-full font-medium backdrop-blur-sm">
                           Align face inside oval
                         </span>
@@ -412,7 +412,7 @@ export default function VerifyKycPage() {
                       <Button
                         type="button"
                         onClick={captureSelfie}
-                        className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                        className="w-full h-10 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-colors"
                       >
                         <Camera className="w-4 h-4" /> Snap Live Selfie
                       </Button>
@@ -420,7 +420,7 @@ export default function VerifyKycPage() {
                       <Button
                         type="button"
                         onClick={startCamera}
-                        className="w-full h-10 bg-black dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm hover:opacity-90"
+                        className="w-full h-10 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-colors"
                       >
                         <Camera className="w-4 h-4" /> Open Camera Scan
                       </Button>
@@ -459,8 +459,8 @@ export default function VerifyKycPage() {
                     </span>
                   </div>
                   {cardPreview && (
-                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Uploaded
+                    <span className="text-[11px] font-bold text-foreground flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-black dark:text-white" /> Uploaded
                     </span>
                   )}
                 </div>
@@ -487,14 +487,14 @@ export default function VerifyKycPage() {
                 ) : (
                   <div
                     onClick={() => cardInputRef.current?.click()}
-                    className="w-full h-36 rounded-xl border-2 border-dashed border-border hover:border-emerald-500 bg-muted/20 hover:bg-muted/40 cursor-pointer flex flex-col items-center justify-center transition-all p-4 text-center group"
+                    className="w-full h-36 rounded-xl border-2 border-dashed border-border hover:border-black dark:hover:border-white bg-muted/20 hover:bg-muted/40 cursor-pointer flex flex-col items-center justify-center transition-all p-4 text-center group"
                   >
-                    <Upload className="w-6 h-6 text-muted-foreground group-hover:text-emerald-500 transition-colors mb-2" />
-                    <span className="text-xs font-semibold text-foreground">
+                    <Upload className="w-6 h-6 text-muted-foreground group-hover:text-foreground transition-colors mb-2" />
+                    <span className="text-xs font-bold text-foreground">
                       Click to upload Student ID card
                     </span>
                     <span className="text-[10px] text-muted-foreground mt-0.5">
-                      Clear photo showing your Name, Roll Number, and Photo
+                      Clear photo showing your Name and Photo
                     </span>
                   </div>
                 )}
@@ -509,9 +509,9 @@ export default function VerifyKycPage() {
 
               {/* Student Details Verification (Editable/Confirmable) */}
               <div className="p-4 rounded-2xl bg-muted/30 border border-border space-y-3 text-xs">
-                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                <div className="font-bold text-foreground flex items-center gap-1.5">
                   <GraduationCap className="w-4 h-4 text-muted-foreground" />
-                  <span>Student Credentials</span>
+                  <span>Student Information</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div className="p-2 rounded-lg bg-background border border-border">
@@ -519,10 +519,8 @@ export default function VerifyKycPage() {
                     <div className="font-bold text-foreground truncate">{name || "Student"}</div>
                   </div>
                   <div className="p-2 rounded-lg bg-background border border-border">
-                    <div className="text-muted-foreground">Roll No / ID</div>
-                    <div className="font-bold font-mono text-foreground truncate">
-                      {studentId || "202X-XX-XXX"}
-                    </div>
+                    <div className="text-muted-foreground">Program</div>
+                    <div className="font-bold text-foreground truncate">{program || "BS"}</div>
                   </div>
                   <div className="p-2 rounded-lg bg-background border border-border">
                     <div className="text-muted-foreground">University</div>
@@ -540,7 +538,7 @@ export default function VerifyKycPage() {
                 type="button"
                 onClick={handleSubmitVerification}
                 disabled={isSubmitting || !liveSelfieBlob || !cardFile}
-                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
+                className="w-full h-12 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
                 {isSubmitting ? (
                   <>

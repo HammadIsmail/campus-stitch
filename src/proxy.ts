@@ -23,10 +23,12 @@ export async function proxy(request: NextRequest) {
 
   // 1. Handle API Routes: Never redirect API requests to HTML pages!
   if (pathname.startsWith("/api/")) {
-    // Public API endpoints (auth, upload, webhooks)
+    // Public API endpoints (auth, upload, departments, universities)
     if (
       pathname.startsWith("/api/auth") ||
-      pathname.startsWith("/api/upload")
+      pathname.startsWith("/api/upload") ||
+      pathname.startsWith("/api/departments") ||
+      pathname.startsWith("/api/universities")
     ) {
       return NextResponse.next();
     }
