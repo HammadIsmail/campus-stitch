@@ -6,264 +6,556 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Camera,
-  Check,
+  CheckCircle2,
   ShieldCheck,
+  ShieldAlert,
   Loader2,
   Upload,
+  RefreshCw,
+  Sparkles,
+  AlertCircle,
+  Building2,
+  MapPin,
+  GraduationCap,
+  X,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { DataService } from "@/lib/data-service";
+import { useAuth } from "@/lib/auth-context";
+import { convertToWebP } from "@/lib/image-converter";
+import { SUPPORTED_UNIVERSITIES } from "@/lib/universities";
 
-export default function VerifyStudentCardPage() {
+export default function VerifyKycPage() {
   const router = useRouter();
-  const [name, setName] = React.useState("Muhammad Hammad");
-  const [studentId, setStudentId] = React.useState("2021-CS-104");
-  const [program, setProgram] = React.useState("BSCS");
+  const { user: authUser, refreshAuth } = useAuth();
+
+  // Dynamic user fields (pre-filled from authenticated user)
+  const [name, setName] = React.useState(authUser?.name || "");
+  const [studentId, setStudentId] = React.useState(authUser?.studentId || "");
+  const [university, setUniversity] = React.useState("UET Lahore");
+  const [city, setCity] = React.useState("Lahore");
+  const [program, setProgram] = React.useState(authUser?.program || "BS Computer Science");
   const [department, setDepartment] = React.useState("Computer Science");
-  const [cardPhotoUrl, setCardPhotoUrl] = React.useState<string | null>(null);
-  const [isUploadingPhoto, setIsUploadingPhoto] = React.useState(false);
+
+  // Step 1: Live Selfie (Binance style KYC) | Step 2: Student Card Upload | Step 3: Confirmation
+  const [step, setStep] = React.useState<1 | 2>(1);
+
+  // Live Camera Selfie State
+  const [isCameraActive, setIsCameraActive] = React.useState(false);
+  const [cameraError, setCameraError] = React.useState<string | null>(null);
+  const [liveSelfieBlob, setLiveSelfieBlob] = React.useState<Blob | null>(null);
+  const [liveSelfiePreview, setLiveSelfiePreview] = React.useState<string | null>(null);
+  const [isUploadingSelfie, setIsUploadingSelfie] = React.useState(false);
+
+  // Student Card State
+  const [cardFile, setCardFile] = React.useState<File | null>(null);
+  const [cardPreview, setCardPreview] = React.useState<string | null>(null);
+  const [isUploadingCard, setIsUploadingCard] = React.useState(false);
+
+  // Submission State
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [submitted, setSubmitted] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [submitSuccess, setSubmitSuccess] = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const cardInputRef = React.useRef<HTMLInputElement | null>(null);
+  const selfieUploadInputRef = React.useRef<HTMLInputElement | null>(null);
 
-    setIsUploadingPhoto(true);
+  // Synchronize auth user details when loaded
+  React.useEffect(() => {
+    if (authUser) {
+      if (authUser.name && !name) setName(authUser.name);
+      if (authUser.studentId && !studentId) setStudentId(authUser.studentId);
+      if (authUser.program && !program) setProgram(authUser.program);
+    }
+  }, [authUser, name, studentId, program]);
+
+  // Start Webcam stream for Binance KYC
+  const startCamera = async () => {
+    setCameraError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "campus_stitch/verifications");
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to upload card photo");
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 640 } },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+        setIsCameraActive(true);
+      } else {
+        setCameraError("Camera access is not supported by your browser. Please upload a clear selfie instead.");
       }
-
-      const data = await res.json();
-      if (data.url) {
-        setCardPhotoUrl(data.url);
-      }
-    } catch (err) {
-      console.error("Student card upload failed:", err);
-      alert("Failed to upload photo. Please try again.");
-    } finally {
-      setIsUploadingPhoto(false);
+    } catch (err: any) {
+      console.warn("Camera start error:", err);
+      setCameraError(
+        "Camera permission was denied or not available. You can upload a clear photo of your face below."
+      );
+      setIsCameraActive(false);
     }
   };
 
-  const handleConfirm = async () => {
-    setIsSubmitting(true);
-    try {
-      await DataService.submitVerification({
-        name: name.trim(),
-        student_id: studentId.trim(),
-        program: program.trim(),
-        department: department.trim(),
-        university: "UET Lahore",
-        card_photo_url: cardPhotoUrl || undefined,
-      });
-      setSubmitted(true);
+  // Stop Webcam stream
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+  };
 
-      setTimeout(() => {
-        router.push("/admin");
-      }, 1200);
-    } catch (err) {
+  React.useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  // Capture Live Selfie from Video Stream
+  const captureSelfie = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 640;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Flip horizontally for natural mirror selfie
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(
+      async (blob) => {
+        if (blob) {
+          setLiveSelfieBlob(blob);
+          setLiveSelfiePreview(URL.createObjectURL(blob));
+          stopCamera();
+        }
+      },
+      "image/webp",
+      0.9
+    );
+  };
+
+  // Fallback: Upload Selfie File
+  const handleSelfieFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const webpFile = await convertToWebP(file, 0.9);
+      setLiveSelfieBlob(webpFile);
+      setLiveSelfiePreview(URL.createObjectURL(webpFile));
+      stopCamera();
+    } catch {
+      setLiveSelfieBlob(file);
+      setLiveSelfiePreview(URL.createObjectURL(file));
+      stopCamera();
+    }
+  };
+
+  // Upload Student ID Card File
+  const handleCardFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const webpFile = await convertToWebP(file, 0.9);
+      setCardFile(webpFile);
+      setCardPreview(URL.createObjectURL(webpFile));
+    } catch {
+      setCardFile(file);
+      setCardPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Final Submit to Verification API
+  const handleSubmitVerification = async () => {
+    setErrorMsg(null);
+
+    if (!liveSelfieBlob) {
+      setErrorMsg("Please take a live selfie or upload your face photo.");
+      return;
+    }
+
+    if (!cardFile) {
+      setErrorMsg("Please upload your student ID card.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // 1. Upload live selfie
+      const selfieData = new FormData();
+      selfieData.append("file", liveSelfieBlob, "live_selfie.webp");
+      selfieData.append("folder", "campus_stitch/kyc_selfies");
+
+      const selfieRes = await fetch("/api/upload", {
+        method: "POST",
+        body: selfieData,
+      });
+      const selfieResult = await selfieRes.json();
+      if (!selfieResult.url) {
+        throw new Error("Failed to upload live selfie.");
+      }
+
+      // 2. Upload student card
+      const cardData = new FormData();
+      cardData.append("file", cardFile, "student_card.webp");
+      cardData.append("folder", "campus_stitch/verifications");
+
+      const cardRes = await fetch("/api/upload", {
+        method: "POST",
+        body: cardData,
+      });
+      const cardResult = await cardRes.json();
+      if (!cardResult.url) {
+        throw new Error("Failed to upload student card.");
+      }
+
+      // 3. Post verification request
+      const verRes = await fetch("/api/verifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: authUser?.userId,
+          name: name.trim() || authUser?.name,
+          studentId: studentId.trim() || authUser?.studentId,
+          email: authUser?.email,
+          university,
+          city,
+          program,
+          department,
+          livePhotoUrl: selfieResult.url,
+          cardPhotoUrl: cardResult.url,
+        }),
+      });
+
+      const verData = await verRes.json();
+      if (!verRes.ok || !verData.success) {
+        throw new Error(verData.message || "Failed to submit verification request.");
+      }
+
+      // Clear the prompt flag and refresh auth
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("campus_stitch_show_verify_prompt");
+      }
+      await refreshAuth();
+      setSubmitSuccess(true);
+    } catch (err: any) {
       console.error("Verification submit error:", err);
+      setErrorMsg(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <MobileShell>
-      <div className="w-full h-full flex flex-col bg-white text-zinc-900 select-none">
-        {/* Header with 3-step progress bar */}
-        <header className="flex items-center gap-2 px-4 py-3 flex-none border-b border-zinc-200">
-          <Link
-            href="/"
-            aria-label="Back"
-            className="w-9 h-9 -ml-1 flex items-center justify-center text-zinc-800 hover:bg-zinc-100 rounded-full transition-colors"
-          >
-            <ArrowLeft size={20} className="stroke-[2px]" />
-          </Link>
-          <div className="flex-1 flex gap-1.5 px-3">
-            <div className="flex-1 h-1 rounded-full bg-black" />
-            <div className="flex-1 h-1 rounded-full bg-black" />
-            <div className="flex-1 h-1 rounded-full bg-zinc-200" />
-          </div>
-          <span className="text-xs text-zinc-500 font-semibold shrink-0">
-            Step 2 of 3
-          </span>
-        </header>
-
-        {/* Form Body */}
-        <main className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-5">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-black">
-              Verify your student status
-            </h1>
-            <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-              Upload your UET Lahore student card to access campus rides and
-              student rates.
-            </p>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handlePhotoUpload}
-            className="hidden"
-          />
-
-          {/* Card Photo Preview & Upload */}
-          <div className="p-3.5 border border-zinc-200 rounded-xl bg-zinc-50/50 flex items-center gap-3">
-            {cardPhotoUrl ? (
-              <div className="w-20 h-14 rounded-lg overflow-hidden border border-zinc-300 relative shrink-0">
-                <img
-                  src={cardPhotoUrl}
-                  alt="Student ID card"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="w-20 h-14 shrink-0 rounded-lg bg-white border border-dashed border-zinc-300 flex flex-col items-center justify-center gap-1 text-[10px] text-zinc-500">
-                {isUploadingPhoto ? (
-                  <Loader2 size={16} className="animate-spin text-black" />
-                ) : (
-                  <Camera size={16} className="text-zinc-600" />
-                )}
-                <span>Card photo</span>
-              </div>
-            )}
-
-            <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-bold text-black flex items-center gap-1">
-                {cardPhotoUrl ? "Card uploaded" : "Student ID card"}
-                {cardPhotoUrl && <Check size={14} className="text-black" />}
-              </div>
-              <div className="text-[11px] text-zinc-500 mt-0.5 truncate">
-                {cardPhotoUrl
-                  ? "Photo attached"
-                  : "Upload clear photo of front of card"}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingPhoto}
-              className="px-3 py-1.5 rounded-lg border border-zinc-300 text-xs font-semibold text-black hover:bg-zinc-100 transition-colors cursor-pointer shrink-0"
+    <MobileShell hideNav>
+      <div className="min-h-screen px-4 py-6 max-w-md mx-auto flex flex-col justify-between">
+        {/* Top Header */}
+        <div>
+          <div className="flex items-center justify-between pb-4 border-b border-border mb-6">
+            <Link
+              href="/profile"
+              onClick={stopCamera}
+              className="p-2 -ml-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
             >
-              {cardPhotoUrl ? "Change" : "Upload"}
-            </button>
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div className="flex items-center gap-1.5 font-bold text-sm text-foreground">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Identity Verification (KYC)</span>
+            </div>
+            <div className="w-8" />
           </div>
 
-          {/* Form fields */}
-          <div className="space-y-3.5">
-            <div className="space-y-1">
-              <label
-                htmlFor="student-name-input"
-                className="text-xs font-bold text-zinc-900 tracking-wide"
-              >
-                Full Name
-              </label>
-              <Input
-                id="student-name-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-10 text-xs rounded-lg border-zinc-300 focus:border-black"
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label
-                htmlFor="student-id-input"
-                className="text-xs font-bold text-zinc-900 tracking-wide"
-              >
-                Student Roll Number
-              </label>
-              <Input
-                id="student-id-input"
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
-                placeholder="2021-CS-104"
-                className="h-10 text-xs rounded-lg border-zinc-300 focus:border-black font-mono"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label
-                  htmlFor="student-program-input"
-                  className="text-xs font-bold text-zinc-900 tracking-wide"
-                >
-                  Program
-                </label>
-                <Input
-                  id="student-program-input"
-                  value={program}
-                  onChange={(e) => setProgram(e.target.value)}
-                  className="h-10 text-xs rounded-lg border-zinc-300 focus:border-black"
-                  required
-                />
+          {/* Success Banner */}
+          {submitSuccess ? (
+            <div className="py-8 text-center space-y-4 animate-in fade-in">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle2 className="w-8 h-8" />
               </div>
-              <div className="space-y-1">
-                <label
-                  htmlFor="student-dept-input"
-                  className="text-xs font-bold text-zinc-900 tracking-wide"
+              <h2 className="text-xl font-bold text-foreground">
+                Verification Submitted!
+              </h2>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto">
+                Your live face selfie and university student ID have been submitted for admin review.
+                Once approved, your account badge will turn into{" "}
+                <strong className="text-foreground">Verified Student</strong>.
+              </p>
+              <div className="pt-4 space-y-2">
+                <Button
+                  onClick={() => router.push("/profile")}
+                  className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-md shadow-emerald-600/20"
                 >
-                  Department
-                </label>
-                <Input
-                  id="student-dept-input"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="h-10 text-xs rounded-lg border-zinc-300 focus:border-black"
-                  required
-                />
+                  Return to Profile
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/")}
+                  className="w-full h-10 rounded-xl text-xs font-semibold"
+                >
+                  Go to Home Feed
+                </Button>
               </div>
             </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Introduction */}
+              <div>
+                <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <span>Student KYC Verification</span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    Binance-Style Face Scan
+                  </span>
+                </h1>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  To protect campus safety, prevent fraud, and build trust in rides and listings,
+                  take a quick live selfie and snap your student ID card.
+                </p>
+              </div>
 
-            <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center gap-2.5 text-xs text-zinc-600">
-              <ShieldCheck size={18} className="text-black shrink-0" />
-              <span>
-                Verified students get a verified badge on commute rides and
-                marketplace listings.
-              </span>
+              {/* Error Message */}
+              {errorMsg && (
+                <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-start gap-2.5 text-xs animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div className="flex-1 font-medium">{errorMsg}</div>
+                </div>
+              )}
+
+              {/* STEP 1: Live Selfie KYC Frame */}
+              <div className="p-4 rounded-2xl bg-card border border-border space-y-3.5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold flex items-center justify-center">
+                      1
+                    </span>
+                    <span className="text-xs font-bold text-foreground">
+                      Live Face Selfie
+                    </span>
+                  </div>
+                  {liveSelfiePreview && (
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Captured
+                    </span>
+                  )}
+                </div>
+
+                {/* Webcam or Captured Selfie Preview */}
+                <div className="relative w-full aspect-square max-w-[280px] mx-auto rounded-2xl overflow-hidden bg-black flex items-center justify-center border-2 border-dashed border-border">
+                  {liveSelfiePreview ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={liveSelfiePreview}
+                        alt="Live Face Selfie"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLiveSelfiePreview(null);
+                          setLiveSelfieBlob(null);
+                          startCamera();
+                        }}
+                        className="absolute bottom-3 right-3 bg-black/70 hover:bg-black text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 backdrop-blur-sm transition-all"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" /> Retake
+                      </button>
+                    </div>
+                  ) : isCameraActive ? (
+                    <div className="relative w-full h-full">
+                      <video
+                        ref={videoRef}
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover scale-x-[-1]"
+                      />
+                      {/* Binance Oval Guide Frame Overlay */}
+                      <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
+                        <div className="w-44 h-56 rounded-[50%] border-2 border-dashed border-emerald-400/80 shadow-[0_0_15px_rgba(52,211,153,0.3)] animate-pulse" />
+                        <span className="mt-2 text-[10px] text-white/90 bg-black/60 px-2 py-0.5 rounded-full font-medium backdrop-blur-sm">
+                          Align face inside oval
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center text-muted-foreground flex flex-col items-center justify-center space-y-2">
+                      <div className="w-12 h-12 rounded-full bg-muted/60 flex items-center justify-center">
+                        <Camera className="w-6 h-6 text-foreground" />
+                      </div>
+                      <div className="text-xs font-semibold text-foreground">
+                        Live Facial Verification
+                      </div>
+                      <p className="text-[11px] text-muted-foreground max-w-[200px]">
+                        Look directly into your front camera to confirm live liveness
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Hidden Canvas for Frame Capture */}
+                  <canvas ref={canvasRef} className="hidden" />
+                </div>
+
+                {/* Camera Actions */}
+                {!liveSelfiePreview && (
+                  <div className="flex flex-col gap-2">
+                    {isCameraActive ? (
+                      <Button
+                        type="button"
+                        onClick={captureSelfie}
+                        className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        <Camera className="w-4 h-4" /> Snap Live Selfie
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={startCamera}
+                        className="w-full h-10 bg-black dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm hover:opacity-90"
+                      >
+                        <Camera className="w-4 h-4" /> Open Camera Scan
+                      </Button>
+                    )}
+
+                    {/* Upload File Alternative */}
+                    <div className="text-center pt-1">
+                      <button
+                        type="button"
+                        onClick={() => selfieUploadInputRef.current?.click()}
+                        className="text-[11px] text-muted-foreground hover:text-foreground font-semibold hover:underline inline-flex items-center gap-1"
+                      >
+                        <Upload className="w-3 h-3" /> Or upload a clear photo of your face
+                      </button>
+                      <input
+                        ref={selfieUploadInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleSelfieFileUpload}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* STEP 2: Student Card Upload */}
+              <div className="p-4 rounded-2xl bg-card border border-border space-y-3.5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold flex items-center justify-center">
+                      2
+                    </span>
+                    <span className="text-xs font-bold text-foreground">
+                      Student ID Card (Front)
+                    </span>
+                  </div>
+                  {cardPreview && (
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Uploaded
+                    </span>
+                  )}
+                </div>
+
+                {cardPreview ? (
+                  <div className="relative w-full h-44 rounded-xl overflow-hidden border border-border bg-muted/20">
+                    <img
+                      src={cardPreview}
+                      alt="Student ID Preview"
+                      className="w-full h-full object-contain p-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCardFile(null);
+                        setCardPreview(null);
+                      }}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-black text-white transition-colors"
+                      title="Remove card photo"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => cardInputRef.current?.click()}
+                    className="w-full h-36 rounded-xl border-2 border-dashed border-border hover:border-emerald-500 bg-muted/20 hover:bg-muted/40 cursor-pointer flex flex-col items-center justify-center transition-all p-4 text-center group"
+                  >
+                    <Upload className="w-6 h-6 text-muted-foreground group-hover:text-emerald-500 transition-colors mb-2" />
+                    <span className="text-xs font-semibold text-foreground">
+                      Click to upload Student ID card
+                    </span>
+                    <span className="text-[10px] text-muted-foreground mt-0.5">
+                      Clear photo showing your Name, Roll Number, and Photo
+                    </span>
+                  </div>
+                )}
+                <input
+                  ref={cardInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCardFileUpload}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Student Details Verification (Editable/Confirmable) */}
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border space-y-3 text-xs">
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                  <span>Student Credentials</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="p-2 rounded-lg bg-background border border-border">
+                    <div className="text-muted-foreground">Full Name</div>
+                    <div className="font-bold text-foreground truncate">{name || "Student"}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-background border border-border">
+                    <div className="text-muted-foreground">Roll No / ID</div>
+                    <div className="font-bold font-mono text-foreground truncate">
+                      {studentId || "202X-XX-XXX"}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-background border border-border">
+                    <div className="text-muted-foreground">University</div>
+                    <div className="font-bold text-foreground truncate">{university}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-background border border-border">
+                    <div className="text-muted-foreground">Campus City</div>
+                    <div className="font-bold text-foreground truncate">{city}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="button"
+                onClick={handleSubmitVerification}
+                disabled={isSubmitting || !liveSelfieBlob || !cardFile}
+                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting Verification...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-5 h-5" />
+                    Submit for Admin Approval
+                  </>
+                )}
+              </Button>
             </div>
-          </div>
-        </main>
-
-        {/* Footer Fixed Action */}
-        <div className="p-4 border-t border-zinc-200 bg-white flex-none">
-          <Button
-            type="button"
-            onClick={handleConfirm}
-            disabled={isSubmitting || submitted || !name || !studentId}
-            className="w-full h-11 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-bold"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={14} className="animate-spin mr-1.5" />
-                Submitting verification...
-              </>
-            ) : submitted ? (
-              "Verification Submitted ✓"
-            ) : (
-              "Submit for Verification"
-            )}
-          </Button>
+          )}
         </div>
       </div>
     </MobileShell>

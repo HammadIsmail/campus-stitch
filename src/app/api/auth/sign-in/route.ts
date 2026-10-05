@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       studentId: userProfile?.student_id || (isAdmin ? "UET-ADMIN-01" : cleanEmail.split("@")[0].toUpperCase()),
       role: isAdmin ? "admin" : "student",
       program: userProfile?.program || "BS Computer Science",
-      isVerified: true,
+      isVerified: userProfile ? !!userProfile.is_verified : (isAdmin ? true : false),
       hostelBlock: "",
       avatarUrl: userProfile?.avatar_url || null,
       bio: userProfile?.bio || null,

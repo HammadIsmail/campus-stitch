@@ -44,6 +44,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
+import { VerificationBadge } from "@/components/ui/verification-badge";
 
 interface Community {
   id: string;
@@ -963,6 +964,14 @@ export default function RedditCommunitiesPage() {
                           <span className="text-zinc-500 dark:text-zinc-400 whitespace-nowrap text-[11px] sm:text-xs">
                             {formatTimeAgo(post.created_at)}
                           </span>
+
+                          <span className="text-zinc-400 dark:text-zinc-500 font-medium">•</span>
+
+                          <span className="text-zinc-700 dark:text-zinc-300 font-semibold text-[11px] sm:text-xs truncate max-w-[120px]">
+                            {post.author_name || "student"}
+                          </span>
+
+                          <VerificationBadge isVerified={post.author_verified} size="xs" />
 
                           {post.flair && (
                             <span

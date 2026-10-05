@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       
       const { data: profile } = await supabase
         .from("profiles")
-        .select("avatar_url, bio, full_name, student_id")
+        .select("avatar_url, bio, full_name, student_id, is_verified, verification_status")
         .or(`email.eq.${cleanEmail},student_id.eq.${payload.studentId}`)
         .maybeSingle();
 
@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
         if (profile.avatar_url) payload.avatarUrl = profile.avatar_url;
         if (profile.bio) payload.bio = profile.bio;
         if (profile.full_name) payload.name = profile.full_name;
+        payload.isVerified = !!profile.is_verified;
       }
     } catch {}
 

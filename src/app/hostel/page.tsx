@@ -26,6 +26,7 @@ import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { VerificationBadge } from "@/components/ui/verification-badge";
 
 interface RoommateListing {
   id: string;
@@ -141,7 +142,7 @@ export default function HostelPage() {
       roomType: newRoomType,
       owner: authorName,
       program: authorProgram,
-      verified: true,
+      verified: user?.isVerified ?? false,
       amenities: ["WiFi", "Attached Bath"],
     };
 
@@ -156,7 +157,7 @@ export default function HostelPage() {
       await supabase.from("hostel_roommates").insert([
         {
           user_name: authorName,
-          is_verified: true,
+          is_verified: user?.isVerified ?? false,
           title: newTitle.trim(),
           room_type: newRoomType,
           monthly_rent: Number(newRent.trim()),
@@ -361,12 +362,9 @@ export default function HostelPage() {
                               {item.owner[0]}
                             </span>
                             <div>
-                              <div className="text-xs font-bold text-black dark:text-white flex items-center gap-1">
-                                {item.owner}
-                                <ShieldCheck
-                                  size={11}
-                                  className="stroke-[2.5px]"
-                                />
+                              <div className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5">
+                                <span>{item.owner}</span>
+                                <VerificationBadge isVerified={item.verified} size="xs" />
                               </div>
                               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
                                 {item.program}

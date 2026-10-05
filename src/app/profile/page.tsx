@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
+  ShieldAlert,
+  Clock,
+  ArrowRight,
   Compass,
   LogOut,
   ChevronRight,
@@ -31,6 +34,7 @@ import {
   Bell,
   Eye,
 } from "lucide-react";
+import { VerificationBadge } from "@/components/ui/verification-badge";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { DataService, Listing, SharedItem } from "@/lib/data-service";
@@ -48,13 +52,6 @@ interface ProfileReview {
   created_at: string;
 }
 
-const PRESET_AVATARS = [
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
-];
-
 export default function ProfilePage() {
   const router = useRouter();
   const { user: authUser, logout } = useAuth();
@@ -67,7 +64,7 @@ export default function ProfilePage() {
     studentId: authUser?.studentId || "",
     program: authUser?.program || "",
     university: "UET Lahore",
-    verified: authUser?.isVerified ?? true,
+    verified: authUser?.isVerified ?? false,
     role: authUser?.role || "student",
     avatarUrl: authUser?.avatarUrl || null,
   };
@@ -76,6 +73,10 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(
     authUser?.avatarUrl || null
   );
+  const [profileUniversity, setProfileUniversity] = React.useState<string>("UET Lahore");
+  const [verificationStatus, setVerificationStatus] = React.useState<
+    "unverified" | "pending" | "verified" | "rejected"
+  >(authUser?.isVerified ? "verified" : "unverified");
 
   // Edit Profile Modal State
   const [showEditProfileModal, setShowEditProfileModal] = React.useState(false);
@@ -161,6 +162,16 @@ export default function ProfilePage() {
           if (data.profile.avatar_url) {
             setAvatarUrl(data.profile.avatar_url);
             setEditAvatarUrlInput(data.profile.avatar_url);
+          }
+          if (data.profile.university) {
+            setProfileUniversity(data.profile.university);
+          }
+          if (data.profile.verification_status) {
+            setVerificationStatus(data.profile.verification_status);
+          } else if (data.profile.is_verified) {
+            setVerificationStatus("verified");
+          } else {
+            setVerificationStatus("unverified");
           }
         }
       } catch (err) {
@@ -373,13 +384,16 @@ export default function ProfilePage() {
                 <div className="min-w-0">
                   <h1 className="text-base font-extrabold text-black dark:text-white flex items-center gap-1.5 truncate">
                     <span>{user.name}</span>
-                    <ShieldCheck size={16} className="text-black dark:text-white shrink-0" />
+                    <VerificationBadge
+                      isVerified={user.verified || verificationStatus === "verified"}
+                      status={verificationStatus}
+                    />
                   </h1>
                   <div className="text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300">
                     {user.studentId}
                   </div>
                   <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
-                    {user.program} &bull; {user.university}
+                    {user.program} &bull; {profileUniversity}
                   </div>
                 </div>
               </div>
@@ -430,14 +444,71 @@ export default function ProfilePage() {
 
             <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 text-black dark:text-white font-bold">
-                <ShieldCheck size={16} className="text-black dark:text-white" />
-                <span>Verified UET Student Card</span>
+                <VerificationBadge
+                  isVerified={user.verified || verificationStatus === "verified"}
+                  status={verificationStatus}
+                  showText={false}
+                />
+                <span>
+                  {verificationStatus === "verified" || user.verified
+                    ? `Verified Student (${profileUniversity})`
+                    : verificationStatus === "pending"
+                    ? "Verification Under Review"
+                    : "Unverified Student Account"}
+                </span>
               </div>
-              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                <span>Active Student</span>
+              <span className="text-[11px] font-semibold flex items-center gap-1">
+                {verificationStatus === "verified" || user.verified ? (
+                  <span className="text-emerald-600 dark:text-emerald-400">Active Student</span>
+                ) : verificationStatus === "pending" ? (
+                  <span className="text-blue-600 dark:text-blue-400">Pending Review</span>
+                ) : (
+                  <span className="text-amber-600 dark:text-amber-400">Unverified</span>
+                )}
               </span>
             </div>
           </div>
+
+          {/* Verification CTA Banner */}
+          {verificationStatus === "pending" ? (
+            <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <Clock size={18} className="animate-pulse" />
+                </div>
+                <div>
+                  <div className="font-bold text-foreground">Verification Under Review</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Campus moderators are reviewing your live selfie and student ID card.
+                  </div>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 shrink-0">
+                Pending
+              </span>
+            </div>
+          ) : verificationStatus !== "verified" && !user.verified ? (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <ShieldAlert size={18} />
+                </div>
+                <div>
+                  <div className="font-bold text-foreground">You are Unverified</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Complete quick Binance-style face scan & ID card upload to earn verified badge.
+                  </div>
+                </div>
+              </div>
+              <Link
+                href="/verify"
+                className="px-3.5 py-2 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs hover:opacity-90 transition-opacity shrink-0 flex items-center gap-1.5 shadow-sm"
+              >
+                <span>Verify Yourself</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+          ) : null}
 
           {/* ======================================================== */}
           {/* PROFILE RATINGS & PEER REVIEWS SECTION                  */}
@@ -903,30 +974,6 @@ export default function ProfilePage() {
                       <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
                         Uploads are converted to high-speed WebP
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Preset Avatars Selection */}
-                  <div className="mt-3">
-                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 block mb-1.5">
-                      Or pick a campus preset avatar:
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {PRESET_AVATARS.map((url, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setEditAvatarUrlInput(url)}
-                          className={cn(
-                            "w-10 h-10 rounded-xl overflow-hidden border-2 transition-transform hover:scale-105 cursor-pointer",
-                            editAvatarUrlInput === url
-                              ? "border-black dark:border-white ring-2 ring-black dark:ring-white scale-105"
-                              : "border-zinc-200 dark:border-zinc-700 opacity-75 hover:opacity-100"
-                          )}
-                        >
-                          <img src={url} alt={`Preset ${i}`} className="w-full h-full object-cover" />
-                        </button>
-                      ))}
                     </div>
                   </div>
 

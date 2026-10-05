@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/theme-context";
 import { NotificationsSlider } from "@/components/notifications-slider";
+import { UnverifiedDialog } from "@/components/unverified-dialog";
 
 const NAV_LINKS = [
   { name: "Home", href: "/", icon: null },
@@ -262,6 +263,9 @@ export function MobileShell({
         onClose={() => setIsNotificationsOpen(false)}
         onUnreadCountChange={setUnreadCount}
       />
+
+      {/* Post-Registration Unverified Student Dialog */}
+      <UnverifiedDialog />
     </div>
   );
 }

@@ -4,253 +4,395 @@ import * as React from "react";
 import Link from "next/link";
 import {
   ShieldAlert,
+  ShieldCheck,
   CheckCircle2,
   XCircle,
   RefreshCw,
   Camera,
   LogOut,
   ChevronRight,
-  ShieldCheck,
+  Loader2,
+  User,
+  GraduationCap,
+  MapPin,
+  Building2,
+  Mail,
+  Clock,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
-import { DataService, VerificationRequest } from "@/lib/data-service";
+import { VerificationBadge } from "@/components/ui/verification-badge";
 
-const TABS = ["Verification", "Reports · 3", "Listings", "Users"];
+interface VerificationItem {
+  id: string;
+  user_id?: string;
+  email?: string;
+  name: string;
+  student_id: string;
+  program: string;
+  department: string;
+  university: string;
+  city?: string;
+  confidence_status: string;
+  status: "pending" | "approved" | "rejected" | "reupload";
+  card_photo_url?: string;
+  live_photo_url?: string;
+  created_at?: string;
+}
 
 export default function AdminVerificationPage() {
-  const [activeTab, setActiveTab] = React.useState("Verification");
-  const [queue, setQueue] = React.useState<VerificationRequest[]>([]);
+  const [queue, setQueue] = React.useState<VerificationItem[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [selectedIdx, setSelectedIdx] = React.useState(0);
+  const [isUpdating, setIsUpdating] = React.useState(false);
+  const [actionFeedback, setActionFeedback] = React.useState<string | null>(null);
+
+  // Fetch verifications from API
+  const fetchVerifications = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/verifications");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.verifications)) {
+        setQueue(data.verifications);
+      }
+    } catch (err) {
+      console.error("Failed to load verifications:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   React.useEffect(() => {
-    async function loadQueue() {
-      const data = await DataService.getVerifications();
-      setQueue(data);
-    }
-    loadQueue();
+    fetchVerifications();
   }, []);
 
   const currentItem = queue[selectedIdx] || queue[0];
 
-  const handleAction = async (
-    status: "approved" | "rejected" | "reupload" | "pending",
-  ) => {
+  const handleAction = async (status: "approved" | "rejected" | "pending") => {
     if (!currentItem) return;
-    await DataService.updateVerificationStatus(currentItem.id, status);
-    setQueue((prev) =>
-      prev.map((item, idx) =>
-        idx === selectedIdx ? { ...item, status } : item,
-      ),
-    );
+    setIsUpdating(true);
+    setActionFeedback(null);
+
+    try {
+      const res = await fetch("/api/verifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: currentItem.id,
+          status,
+          userId: currentItem.user_id,
+          studentId: currentItem.student_id,
+          email: currentItem.email,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setQueue((prev) =>
+          prev.map((item, idx) =>
+            idx === selectedIdx ? { ...item, status } : item
+          )
+        );
+        setActionFeedback(
+          status === "approved"
+            ? `Student ${currentItem.name} has been verified!`
+            : `Verification for ${currentItem.name} was rejected.`
+        );
+      } else {
+        alert(data.message || "Failed to update verification status.");
+      }
+    } catch (err: any) {
+      alert("Error updating status: " + err.message);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
-    <MobileShell>
-      <div className="w-full h-full flex flex-col bg-[#F9F9FB] text-zinc-900 select-none">
+    <MobileShell hideNav>
+      <div className="w-full min-h-screen flex flex-col bg-background text-foreground select-none max-w-4xl mx-auto px-4 py-6">
         {/* Header */}
-        <header className="flex items-center justify-between px-4 py-3 flex-none bg-white border-b border-zinc-200">
+        <header className="flex items-center justify-between pb-4 border-b border-border mb-6">
           <div>
-            <div className="font-extrabold text-base tracking-tight text-black">
-              Admin Panel
+            <div className="font-extrabold text-lg tracking-tight text-foreground flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span>Admin Verification Portal</span>
             </div>
-            <div className="text-[11px] font-medium text-zinc-500">
-              UET Lahore Verification & Safety Portal
+            <div className="text-xs text-muted-foreground mt-0.5">
+              Review live selfie & student ID card side-by-side for campus trust
             </div>
           </div>
-          <Link
-            href="/"
-            className="text-xs text-zinc-600 font-semibold hover:text-black px-2 flex items-center gap-1.5 transition-colors"
-          >
-            <LogOut size={13} />
-            Exit
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchVerifications}
+              disabled={isLoading}
+              className="p-2 rounded-xl border border-border bg-card hover:bg-muted/80 text-foreground transition-colors cursor-pointer"
+              title="Refresh queue"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            </button>
+            <Link
+              href="/"
+              className="text-xs font-semibold px-3 py-2 rounded-xl bg-muted/60 hover:bg-muted text-foreground flex items-center gap-1.5 transition-colors"
+            >
+              <LogOut size={13} />
+              <span>Exit Admin</span>
+            </Link>
+          </div>
         </header>
 
-        {/* Tab Pills */}
-        <div className="flex gap-2 overflow-x-auto p-3 flex-none bg-white border-b border-zinc-200 scrollbar-none">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`shrink-0 h-8 px-3.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === tab
-                  ? "bg-black text-white shadow-2xs"
-                  : "bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-100"
-              }`}
-            >
-              {tab === "Verification" ? `Verification · ${queue.length}` : tab}
-            </button>
-          ))}
-        </div>
+        {/* Feedback Alert */}
+        {actionFeedback && (
+          <div className="mb-4 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-2 text-xs font-medium animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{actionFeedback}</span>
+          </div>
+        )}
 
-        {/* Main Review Section */}
-        <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
-          {currentItem ? (
-            <section className="bg-white border border-zinc-200 rounded-xl p-4 shadow-2xs space-y-3.5">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-extrabold text-black">
-                  Student Card Review
-                </span>
-                <span className="px-2.5 py-0.5 rounded text-[11px] font-bold bg-zinc-100 border border-zinc-300 text-black">
-                  {currentItem.confidence_status}
-                </span>
+        {/* Main Content Area */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+          {/* Left / Review Details (2 cols on desktop) */}
+          <div className="lg:col-span-2 space-y-5">
+            {isLoading ? (
+              <div className="p-12 text-center text-muted-foreground border border-border rounded-2xl bg-card flex flex-col items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-foreground mb-2" />
+                <span className="text-xs font-medium">Loading verification requests...</span>
               </div>
-
-              {/* Student ID Card Preview */}
-              <div className="h-44 rounded-xl bg-zinc-100 border border-zinc-300 overflow-hidden flex flex-col items-center justify-center text-xs text-zinc-500 relative">
-                {currentItem.card_photo_url ? (
-                  <img
-                    src={currentItem.card_photo_url}
-                    alt="Uploaded Student ID"
-                    className="w-full h-full object-contain bg-black/5"
-                  />
-                ) : (
-                  <>
-                    <Camera size={26} className="text-zinc-400" />
-                    <span className="font-semibold text-xs text-zinc-800 mt-1">
-                      {currentItem.name} · Student Card Photo
+            ) : currentItem ? (
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-5">
+                <div className="flex justify-between items-center pb-3 border-b border-border">
+                  <div>
+                    <span className="text-sm font-extrabold text-foreground">
+                      Student Identity Comparison
                     </span>
-                    <span className="text-[10px] text-zinc-500">
-                      {currentItem.university}
-                    </span>
-                  </>
-                )}
-              </div>
-
-              {/* Data Table */}
-              <div className="divide-y divide-zinc-100 text-xs">
-                <div className="flex justify-between items-center py-2.5">
-                  <span className="text-zinc-500">Name</span>
-                  <span className="font-bold text-black">
-                    {currentItem.name}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2.5">
-                  <span className="text-zinc-500">Student Roll Number</span>
-                  <span className="font-bold text-black font-mono">
-                    {currentItem.student_id}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2.5">
-                  <span className="text-zinc-500">Program & Dept</span>
-                  <span className="font-bold text-black">
-                    {currentItem.program} · {currentItem.department}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2.5">
-                  <span className="text-zinc-500">University</span>
-                  <span className="font-bold text-black">
-                    {currentItem.university}
-                  </span>
-                </div>
-              </div>
-
-              {currentItem.status === "pending" && (
-                <>
-                  <div className="flex gap-2 pt-1">
-                    <Button
-                      onClick={() => handleAction("approved")}
-                      className="flex-1 h-10 rounded-lg text-xs font-bold bg-black hover:bg-zinc-800 text-white cursor-pointer"
-                    >
-                      Approve Student
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleAction("rejected")}
-                      className="flex-1 h-10 rounded-lg text-xs font-semibold text-black border-zinc-300 hover:bg-zinc-100 cursor-pointer"
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleAction("reupload")}
-                    className="w-full text-center text-xs font-medium text-zinc-600 hover:text-black hover:underline py-1 cursor-pointer"
-                  >
-                    Request Clear Photo Re-upload
-                  </button>
-                </>
-              )}
-
-              {currentItem.status === "approved" && (
-                <div className="p-3 bg-zinc-100 text-black text-xs font-bold rounded-lg flex items-center justify-between border border-zinc-300">
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle2 size={15} />
-                    Approved! Student is now verified.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleAction("pending")}
-                    className="underline text-[11px] cursor-pointer"
-                  >
-                    Undo
-                  </button>
-                </div>
-              )}
-
-              {currentItem.status === "rejected" && (
-                <div className="p-3 bg-zinc-100 text-zinc-800 text-xs font-bold rounded-lg flex items-center justify-between border border-zinc-300">
-                  <span className="flex items-center gap-1.5">
-                    <XCircle size={15} />
-                    Application marked as rejected.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleAction("pending")}
-                    className="underline text-[11px] cursor-pointer"
-                  >
-                    Undo
-                  </button>
-                </div>
-              )}
-            </section>
-          ) : (
-            <div className="p-8 bg-white border border-zinc-200 rounded-xl text-center text-xs text-zinc-500">
-              All verification requests reviewed!
-            </div>
-          )}
-
-          {/* Queue List */}
-          <section className="space-y-2">
-            <div className="text-[11px] font-bold text-zinc-500 tracking-wider uppercase">
-              All Queue Items ({queue.length})
-            </div>
-            {queue.length === 0 ? (
-              <div className="p-6 bg-white border border-zinc-200 rounded-xl text-center text-xs text-zinc-500 shadow-2xs">
-                No student ID cards currently awaiting moderation. Students can submit cards at /verify.
-              </div>
-            ) : (
-              <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-2xs divide-y divide-zinc-100">
-                {queue.map((req, idx) => (
-                  <div
-                    key={req.id}
-                    onClick={() => setSelectedIdx(idx)}
-                    className={`flex items-center justify-between min-h-[50px] px-4 cursor-pointer transition-colors ${
-                      selectedIdx === idx
-                        ? "bg-zinc-100 font-bold"
-                        : "hover:bg-zinc-50"
-                    }`}
-                  >
-                    <span className="text-xs font-bold text-black">
-                      {req.name}{" "}
-                      <span className="font-normal text-zinc-500">
-                        · {req.program}
-                      </span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-black">
-                        {req.status === "approved" ? "Verified ✓" : req.status}
-                      </span>
-                      <ChevronRight size={14} className="text-zinc-400" />
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                      Check if the face selfie matches the face on the student card
                     </div>
                   </div>
-                ))}
+                  <VerificationBadge
+                    status={
+                      currentItem.status === "approved"
+                        ? "verified"
+                        : currentItem.status === "rejected"
+                        ? "rejected"
+                        : "pending"
+                    }
+                    isVerified={currentItem.status === "approved"}
+                    size="sm"
+                  />
+                </div>
+
+                {/* SIDE-BY-SIDE COMPARISON: Live Selfie & Student ID Card */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Live Selfie (Binance KYC) */}
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>1. Live Facial Selfie</span>
+                    </div>
+                    <div className="aspect-square rounded-xl bg-muted/40 border border-border overflow-hidden flex items-center justify-center relative">
+                      {currentItem.live_photo_url ? (
+                        <img
+                          src={currentItem.live_photo_url}
+                          alt="Live Selfie"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center p-4 text-xs text-muted-foreground">
+                          <Camera className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                          <span>No live photo submitted</span>
+                        </div>
+                      )}
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-black/70 text-white backdrop-blur-sm">
+                        Live Webcam Capture
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Student ID Card */}
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                      <GraduationCap className="w-3.5 h-3.5 text-blue-500" />
+                      <span>2. University Student ID</span>
+                    </div>
+                    <div className="aspect-square rounded-xl bg-muted/40 border border-border overflow-hidden flex items-center justify-center relative">
+                      {currentItem.card_photo_url ? (
+                        <img
+                          src={currentItem.card_photo_url}
+                          alt="Student ID Card"
+                          className="w-full h-full object-contain p-2"
+                        />
+                      ) : (
+                        <div className="text-center p-4 text-xs text-muted-foreground">
+                          <ShieldAlert className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                          <span>No card photo submitted</span>
+                        </div>
+                      )}
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-black/70 text-white backdrop-blur-sm">
+                        Student ID Front
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Student Details Grid */}
+                <div className="p-3.5 rounded-xl bg-muted/30 border border-border grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Full Name</span>
+                    <span className="font-bold text-foreground">{currentItem.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Student Roll ID</span>
+                    <span className="font-bold font-mono text-foreground">{currentItem.student_id}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">University</span>
+                    <span className="font-bold text-foreground">{currentItem.university}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Campus City</span>
+                    <span className="font-bold text-foreground">{currentItem.city || "Not specified"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Program / Department</span>
+                    <span className="font-bold text-foreground truncate block">
+                      {currentItem.program} · {currentItem.department}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Email Address</span>
+                    <span className="font-bold text-foreground truncate block">{currentItem.email || "N/A"}</span>
+                  </div>
+                </div>
+
+                {/* Admin Actions */}
+                <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                  {currentItem.status === "pending" ? (
+                    <>
+                      <Button
+                        type="button"
+                        onClick={() => handleAction("approved")}
+                        disabled={isUpdating}
+                        className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+                      >
+                        {isUpdating ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            Approve & Verify Student
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleAction("rejected")}
+                        disabled={isUpdating}
+                        className="flex-1 h-11 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Reject Application
+                      </Button>
+                    </>
+                  ) : currentItem.status === "approved" ? (
+                    <div className="w-full flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
+                      <span className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Student is currently Approved & Verified.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAction("pending")}
+                        disabled={isUpdating}
+                        className="underline text-[11px] hover:opacity-80"
+                      >
+                        Reset to Pending
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full flex items-center justify-between p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">
+                      <span className="flex items-center gap-1.5">
+                        <XCircle className="w-4 h-4" />
+                        Application was Rejected.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAction("pending")}
+                        disabled={isUpdating}
+                        className="underline text-[11px] hover:opacity-80"
+                      >
+                        Reset to Pending
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="p-10 bg-card border border-border rounded-2xl text-center text-xs text-muted-foreground">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <div className="font-bold text-foreground">All Requests Reviewed!</div>
+                <p className="mt-1">No pending student verification requests at this time.</p>
               </div>
             )}
-          </section>
-        </main>
+          </div>
+
+          {/* Right Column: Queue Sidebar */}
+          <div className="space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+              <span>Verification Queue ({queue.length})</span>
+              <span className="text-[10px] lowercase text-muted-foreground font-normal">
+                {queue.filter((q) => q.status === "pending").length} pending
+              </span>
+            </div>
+
+            {queue.length === 0 ? (
+              <div className="p-6 bg-card border border-border rounded-2xl text-center text-xs text-muted-foreground">
+                No verification submissions yet.
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border/60 max-h-[500px] overflow-y-auto">
+                {queue.map((req, idx) => {
+                  const isSelected = selectedIdx === idx;
+                  return (
+                    <button
+                      key={req.id || idx}
+                      type="button"
+                      onClick={() => setSelectedIdx(idx)}
+                      className={`w-full text-left p-3 text-xs flex items-center justify-between transition-colors ${
+                        isSelected
+                          ? "bg-emerald-500/10 font-bold text-foreground border-l-4 border-emerald-500"
+                          : "hover:bg-muted/40 text-foreground"
+                      }`}
+                    >
+                      <div className="min-w-0 pr-2">
+                        <div className="font-bold truncate">{req.name}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono truncate">
+                          {req.student_id} &bull; {req.university || "UET"}
+                        </div>
+                      </div>
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        <span
+                          className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                            req.status === "approved"
+                              ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                              : req.status === "rejected"
+                              ? "bg-red-500/20 text-red-700 dark:text-red-300"
+                              : "bg-blue-500/20 text-blue-700 dark:text-blue-300"
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </MobileShell>
   );

@@ -19,6 +19,7 @@ interface AuthContextType {
     program?: string;
     hostel?: string;
     university?: string;
+    city?: string;
     department?: string;
     cnic?: string;
     expiryDate?: string;
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           studentId: parsed.studentId || parsed.student_id || "",
           role: parsed.role || "student",
           program: parsed.program || "BS Computer Science",
-          isVerified: parsed.isVerified ?? parsed.is_verified ?? true,
+          isVerified: parsed.isVerified ?? parsed.is_verified ?? false,
           avatarUrl: parsed.avatarUrl || parsed.avatar_url || null,
           bio: parsed.bio || null,
         });

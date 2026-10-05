@@ -19,6 +19,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DataService, Ride, BikeItem } from "@/lib/data-service";
+import { VerificationBadge } from "@/components/ui/verification-badge";
 
 export default function CommutePage() {
   const [activeTab, setActiveTab] = React.useState("rides");
@@ -178,10 +179,8 @@ export default function CommutePage() {
                           <span className="w-6 h-6 rounded-full bg-black dark:bg-white text-white dark:text-black text-[11px] font-bold flex items-center justify-center">
                             {ride.organizer_name.charAt(0)}
                           </span>
-                          {ride.organizer_name} ·{" "}
-                          <span className="text-zinc-500 dark:text-zinc-400 font-normal">
-                            Verified
-                          </span>
+                          <span>{ride.organizer_name}</span>
+                          <VerificationBadge isVerified={ride.organizer_verified} size="xs" />
                         </span>
                         <span
                           className={`text-[11px] font-bold px-2 py-0.5 rounded ${

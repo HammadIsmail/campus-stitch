@@ -18,6 +18,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { DataService, Listing } from "@/lib/data-service";
+import { VerificationBadge } from "@/components/ui/verification-badge";
 
 const CATEGORIES = ["All", "Electronics", "Hostel", "Books", "Furniture"];
 
@@ -206,9 +207,11 @@ export default function MarketPage() {
                     <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 truncate">
                       {item.location} · {item.condition}
                     </div>
-                    <div className="text-[10px] text-black dark:text-white font-semibold mt-2 pt-1.5 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-1">
-                      <ShieldCheck size={11} className="stroke-[2.5px]" />
-                      Verified Student
+                    <div className="mt-2 pt-1.5 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-[11px]">
+                      <span className="text-zinc-600 dark:text-zinc-300 font-semibold truncate max-w-[110px]">
+                        {item.seller_name || "Student"}
+                      </span>
+                      <VerificationBadge isVerified={item.seller_verified} size="xs" />
                     </div>
                   </div>
                 </div>
@@ -267,12 +270,9 @@ export default function MarketPage() {
                   <div>
                     <b>Category:</b> {selectedItem.category}
                   </div>
-                  <div>
-                    <b>Seller:</b> {selectedItem.seller_name}{" "}
-                    <span className="inline-flex items-center gap-0.5 text-black dark:text-white font-semibold ml-1">
-                      <ShieldCheck size={11} className="stroke-[2.5px]" />{" "}
-                      Verified
-                    </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <b>Seller:</b> <span>{selectedItem.seller_name}</span>
+                    <VerificationBadge isVerified={selectedItem.seller_verified} size="xs" />
                   </div>
                 </div>
 

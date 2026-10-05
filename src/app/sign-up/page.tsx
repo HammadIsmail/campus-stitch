@@ -8,164 +8,115 @@ import {
   User,
   GraduationCap,
   Building2,
-  ShieldCheck,
+  MapPin,
   ArrowRight,
   ArrowLeft,
   Loader2,
-  Camera,
   CheckCircle2,
   AlertCircle,
-  CreditCard,
   Lock,
   Eye,
   EyeOff,
+  Search,
+  Check,
+  ChevronDown,
+  Camera,
+  BookOpen,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { convertToWebP } from "@/lib/image-converter";
+import { SUPPORTED_UNIVERSITIES, UniversityItem } from "@/lib/universities";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-
-interface ExtractedStudentData {
-  name: string;
-  studentId: string;
-  university: string;
-  department: string;
-  program: string;
-  batch: string;
-  cnic: string;
-  expiryDate: string;
-  email: string;
-  cardPhotoUrl: string;
-  avatarUrl: string;
-}
 
 export default function SignUpPage() {
   const router = useRouter();
   const { signup } = useAuth();
 
-  // Step 1: Input email, password & card | Step 2: Read-Only Extracted Data Confirmation
+  // Step 1: Student Information Form | Step 2: 6-Digit Email OTP Verification
   const [step, setStep] = React.useState<1 | 2>(1);
 
-  // Form State (Step 1)
+  // Form Fields
+  const [fullName, setFullName] = React.useState("");
+  const [selectedUni, setSelectedUni] = React.useState<UniversityItem>(SUPPORTED_UNIVERSITIES[0]);
+  const [uniSearchQuery, setUniSearchQuery] = React.useState("");
+  const [isUniDropdownOpen, setIsUniDropdownOpen] = React.useState(false);
+  const [selectedCampusCity, setSelectedCampusCity] = React.useState<string>(SUPPORTED_UNIVERSITIES[0].campuses[0] || "Lahore");
+  const [studentId, setStudentId] = React.useState("");
+  const [department, setDepartment] = React.useState("Computer Science");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
 
-  const [cardFile, setCardFile] = React.useState<File | null>(null);
-  const [cardPreview, setCardPreview] = React.useState<string | null>(null);
+  // Optional avatar
   const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
+  const avatarInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  // Extracted Data (Step 2)
-  const [extractedData, setExtractedData] =
-    React.useState<ExtractedStudentData | null>(null);
-
-  // Email Verification OTP State
+  // OTP State
   const [otpCode, setOtpCode] = React.useState("");
   const [resendCooldown, setResendCooldown] = React.useState(60);
   const [isResending, setIsResending] = React.useState(false);
   const [resendFeedback, setResendFeedback] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (resendCooldown > 0) {
-      timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [resendCooldown]);
-
-  const handleResendOtp = async () => {
-    const targetEmail = (extractedData?.email || email).trim().toLowerCase();
-    if (resendCooldown > 0 || isResending || !targetEmail) return;
-
-    setIsResending(true);
-    setErrorMsg(null);
-    setResendFeedback(null);
-
-    try {
-      const res = await fetch("/api/auth/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: targetEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setErrorMsg(data.message || "Failed to resend verification code.");
-      } else {
-        setResendCooldown(60);
-        setResendFeedback("A new 6-digit code has been sent to your email.");
-      }
-    } catch {
-      setErrorMsg("Failed to send verification code. Please check your connection.");
-    } finally {
-      setIsResending(false);
-    }
-  };
-
-  // Loading & Error States
+  // State indicators
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [isFinalizing, setIsFinalizing] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const cardInputRef = React.useRef<HTMLInputElement | null>(null);
-  const avatarInputRef = React.useRef<HTMLInputElement | null>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  // Handle Student Card File Selection with WebP Conversion & 2MB Limit
-  const handleCardFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setErrorMsg(null);
-
-    // 2MB Size Validation
-    if (file.size > MAX_FILE_SIZE) {
-      setErrorMsg(
-        `Student card image exceeds 2MB limit (${(
-          file.size /
-          (1024 * 1024)
-        ).toFixed(2)}MB). Please upload an image under 2MB.`
-      );
-      return;
-    }
-
-    try {
-      const webpFile = await convertToWebP(file, 0.88);
-      if (webpFile.size > MAX_FILE_SIZE) {
-        setErrorMsg(
-          "Converted image still exceeds 2MB limit. Please select a smaller file."
-        );
-        return;
+  // Close university dropdown on outside click
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsUniDropdownOpen(false);
       }
-      setCardFile(webpFile);
-      setCardPreview(URL.createObjectURL(webpFile));
-    } catch (err) {
-      setCardFile(file);
-      setCardPreview(URL.createObjectURL(file));
     }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Update selected city if university changes
+  const handleSelectUniversity = (uni: UniversityItem) => {
+    setSelectedUni(uni);
+    setSelectedCampusCity(uni.campuses[0] || uni.city);
+    setIsUniDropdownOpen(false);
+    setUniSearchQuery("");
   };
 
-  // Handle Profile Avatar Selection with WebP Conversion & 2MB Limit
-  const handleAvatarFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  // Filtered universities
+  const filteredUniversities = React.useMemo(() => {
+    if (!uniSearchQuery.trim()) return SUPPORTED_UNIVERSITIES;
+    const q = uniSearchQuery.toLowerCase().trim();
+    return SUPPORTED_UNIVERSITIES.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.shortName.toLowerCase().includes(q) ||
+        u.city.toLowerCase().includes(q) ||
+        u.campuses.some((c) => c.toLowerCase().includes(q))
+    );
+  }, [uniSearchQuery]);
+
+  // Resend OTP countdown
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 2 && resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [step, resendCooldown]);
+
+  // Avatar file handling
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setErrorMsg(null);
-
-    // 2MB Size Validation
     if (file.size > MAX_FILE_SIZE) {
-      setErrorMsg(
-        `Profile photo exceeds 2MB limit (${(
-          file.size /
-          (1024 * 1024)
-        ).toFixed(2)}MB). Please upload an image under 2MB.`
-      );
+      setErrorMsg("Profile photo must be under 2MB.");
       return;
     }
 
@@ -173,21 +124,33 @@ export default function SignUpPage() {
       const webpFile = await convertToWebP(file, 0.85);
       setAvatarFile(webpFile);
       setAvatarPreview(URL.createObjectURL(webpFile));
-    } catch (err) {
+    } catch {
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
     }
   };
 
-  // Step 1 Submission: Validate email, password, and scan student card
-  const handleScanCard = async (e: React.FormEvent) => {
+  // Step 1 Submit: Validate and send OTP to email
+  const handleProceedToOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
+    const cleanName = fullName.trim();
+    const cleanId = studentId.trim();
     const cleanEmail = email.trim().toLowerCase();
 
-    if (!cleanEmail) {
-      setErrorMsg("Please enter your email address.");
+    if (!cleanName) {
+      setErrorMsg("Please enter your full name.");
+      return;
+    }
+
+    if (!cleanId) {
+      setErrorMsg("Please enter your Student Roll Number / ID.");
+      return;
+    }
+
+    if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      setErrorMsg("Please enter a valid email address.");
       return;
     }
 
@@ -197,89 +160,85 @@ export default function SignUpPage() {
     }
 
     if (password !== confirmPassword) {
-      setErrorMsg("Passwords do not match. Please re-enter your password.");
-      return;
-    }
-
-    if (!cardFile) {
-      setErrorMsg(
-        "Please upload a clear photo of your university student card."
-      );
+      setErrorMsg("Passwords do not match.");
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // 1. Strict check: verify email does NOT already exist before scanning
-      const emailCheckRes = await fetch("/api/auth/check-email", {
+      // 1. Check if email already registered
+      const checkRes = await fetch("/api/auth/check-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: cleanEmail }),
       });
-      const emailCheckData = await emailCheckRes.json();
-
-      if (emailCheckData.exists) {
-        setErrorMsg(
-          "An account with this email already exists. Please sign in instead."
-        );
+      const checkData = await checkRes.json();
+      if (checkData.exists) {
+        setErrorMsg("An account with this email already exists. Please sign in.");
         setIsProcessing(false);
         return;
       }
 
-      // 2. Scan and verify card
-      const formData = new FormData();
-      formData.append("cardFile", cardFile);
-      if (avatarFile) {
-        formData.append("avatarFile", avatarFile);
-      }
-      formData.append("email", cleanEmail);
-
-      const res = await fetch("/api/auth/verify-student-card", {
+      // 2. Send 6-digit OTP code to the email
+      const otpRes = await fetch("/api/auth/otp/send", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
       });
+      const otpData = await otpRes.json();
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setErrorMsg(
-          data.error ||
-            "Please upload a valid student card. The uploaded image could not be verified as a university student ID."
-        );
+      if (!otpRes.ok || !otpData.success) {
+        setErrorMsg(otpData.message || "Failed to send verification code. Please check your email.");
+        setIsProcessing(false);
         return;
       }
 
-      setExtractedData(data.extracted);
+      // Proceed to Step 2
       setStep(2);
-
-      // 3. Dispatch 6-digit verification code to user's email
-      try {
-        await fetch("/api/auth/otp/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail }),
-        });
-        setResendCooldown(60);
-      } catch (otpErr) {
-        console.warn("OTP dispatch notice:", otpErr);
-      }
+      setResendCooldown(60);
+      setResendFeedback("A 6-digit verification code was sent to your email.");
     } catch (err: any) {
-      console.error("Verification error:", err);
-      setErrorMsg(
-        "Failed to verify student card. Please ensure your image is clear and try again."
-      );
+      setErrorMsg(err.message || "An unexpected error occurred. Please try again.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Step 2 Submission: Confirm read-only details and create account
-  const handleFinalizeRegistration = async () => {
-    if (!extractedData) return;
+  // Resend OTP
+  const handleResendOtp = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (resendCooldown > 0 || isResending || !cleanEmail) return;
 
+    setIsResending(true);
+    setErrorMsg(null);
+    setResendFeedback(null);
+
+    try {
+      const res = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.message || "Failed to resend code.");
+      } else {
+        setResendCooldown(60);
+        setResendFeedback("New 6-digit code sent to your email.");
+      }
+    } catch {
+      setErrorMsg("Failed to resend code. Please try again.");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  // Step 2 Submit: Finalize registration with OTP
+  const handleCompleteSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!otpCode || otpCode.trim().length !== 6) {
-      setErrorMsg("Please enter the 6-digit verification code sent to your email.");
+      setErrorMsg("Please enter the 6-digit verification code.");
       return;
     }
 
@@ -287,611 +246,448 @@ export default function SignUpPage() {
     setErrorMsg(null);
 
     try {
-      await signup({
-        name: extractedData.name,
-        studentId: extractedData.studentId,
-        email: extractedData.email,
-        password: password,
+      // Optional upload avatar if provided
+      let uploadedAvatarUrl: string | undefined = undefined;
+      if (avatarFile) {
+        const avatarFormData = new FormData();
+        avatarFormData.append("file", avatarFile);
+        try {
+          const upRes = await fetch("/api/upload", {
+            method: "POST",
+            body: avatarFormData,
+          });
+          const upData = await upRes.json();
+          if (upData.url) {
+            uploadedAvatarUrl = upData.url;
+          }
+        } catch {
+          // Non-critical if avatar upload fails
+        }
+      }
+
+      const success = await signup({
+        name: fullName.trim(),
+        studentId: studentId.trim().toUpperCase(),
+        email: email.trim().toLowerCase(),
+        password,
         code: otpCode.trim(),
-        program: extractedData.program,
-        university: extractedData.university,
-        department: extractedData.department,
-        cnic: extractedData.cnic,
-        expiryDate: extractedData.expiryDate,
-        cardPhotoUrl: extractedData.cardPhotoUrl,
-        avatarUrl: extractedData.avatarUrl,
+        university: selectedUni.name,
+        city: selectedCampusCity,
+        department: department.trim(),
+        program: `BS ${department.trim()}`,
+        avatarUrl: uploadedAvatarUrl,
       });
 
-      // Move directly to dashboard with full session reload
-      window.location.href = "/";
+      if (success) {
+        // Set flag to prompt the one-time unverified dialog on home page
+        if (typeof window !== "undefined") {
+          localStorage.setItem("campus_stitch_show_verify_prompt", "true");
+        }
+        router.push("/");
+      }
     } catch (err: any) {
-      console.error("Sign-up error:", err);
-      setErrorMsg(
-        err.message ||
-          "Registration failed. Please check your information and try again."
-      );
+      setErrorMsg(err.message || "Failed to create account. Please check your verification code.");
     } finally {
       setIsFinalizing(false);
     }
   };
 
   return (
-    <MobileShell hideNav={true}>
-      <div className="w-full min-h-full flex flex-col bg-[#F9F9FB] text-zinc-900 select-none">
-        <div className="flex-1 flex flex-col items-center justify-center p-4 max-w-md mx-auto w-full py-8">
-          {/* Header Progress Indicators */}
-          <div className="w-full mb-6">
-            <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 mb-2">
-              <span className="flex items-center gap-1.5 text-black font-bold">
-                <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px]">
-                  {step}
-                </span>
-                {step === 1 ? "Upload & Verify Card" : "Review Extracted Data"}
-              </span>
-              <span>Step {step} of 2</span>
-            </div>
-            <div className="w-full h-1.5 bg-zinc-200 rounded-full overflow-hidden flex gap-1">
-              <div
-                className={`h-full transition-all duration-300 ${
-                  step >= 1 ? "bg-black flex-1" : "bg-zinc-200 flex-1"
-                }`}
-              />
-              <div
-                className={`h-full transition-all duration-300 ${
-                  step === 2 ? "bg-black flex-1" : "bg-zinc-200 flex-1"
-                }`}
-              />
-            </div>
+    <MobileShell hideNav>
+      <div className="min-h-screen px-4 py-8 max-w-md mx-auto flex flex-col justify-center">
+        {/* Header / Brand */}
+        <div className="text-center mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3 border border-emerald-500/20 shadow-sm">
+            <GraduationCap className="w-7 h-7" />
           </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            {step === 1 ? "Create Student Account" : "Verify Your Email"}
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            {step === 1
+              ? "Join Campus Stitch. Select your university & city to get started."
+              : `Enter the 6-digit code sent to ${email}`}
+          </p>
+        </div>
 
-          {/* Headline (No black CS box and no AI buzzwords) */}
-          <div className="text-center space-y-1.5 mb-6">
-            <h1 className="text-xl font-extrabold text-black tracking-tight">
-              {step === 1
-                ? "Student Account Verification"
-                : "Confirm Verified Details"}
-            </h1>
-            <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
-              {step === 1
-                ? "Provide your university email, create a password, and upload your student card to verify your campus identity."
-                : "Information verified from your official student card. The fields below are locked to ensure campus integrity."}
-            </p>
+        {/* Step Progress Bar */}
+        <div className="flex items-center gap-2 mb-6">
+          <div
+            className={`h-1.5 flex-1 rounded-full transition-all ${
+              step >= 1 ? "bg-emerald-500" : "bg-muted"
+            }`}
+          />
+          <div
+            className={`h-1.5 flex-1 rounded-full transition-all ${
+              step === 2 ? "bg-emerald-500" : "bg-muted"
+            }`}
+          />
+        </div>
+
+        {/* Error Alert */}
+        {errorMsg && (
+          <div className="mb-5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-start gap-2.5 text-xs animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="flex-1 font-medium">{errorMsg}</div>
           </div>
+        )}
 
-          {/* Error Message Alert */}
-          {errorMsg && (
-            <div className="w-full mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 font-medium flex items-start gap-2.5">
-              <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
-              <div className="flex-1 leading-relaxed">{errorMsg}</div>
-            </div>
-          )}
+        {/* Resend Feedback */}
+        {resendFeedback && (
+          <div className="mb-5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-2 text-xs">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span className="font-medium">{resendFeedback}</span>
+          </div>
+        )}
 
-          {/* ======================================================== */}
-          {/* STEP 1: EMAIL, PASSWORD & CARD UPLOAD SCREEN             */}
-          {/* ======================================================== */}
-          {step === 1 && (
-            <div className="w-full bg-white border border-zinc-200 rounded-2xl p-5 shadow-2xs space-y-4">
-              <form onSubmit={handleScanCard} className="space-y-4">
-                {/* Email Field */}
-                <div>
-                  <label className="text-xs font-bold text-black flex items-center gap-1.5 mb-1.5">
-                    <Mail size={13} />
-                    <span>Your Email Address</span>
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="e.g. yourname@gmail.com or @uet.edu.pk"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-11 px-3.5 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black transition-colors"
+        {/* STEP 1: Registration Form */}
+        {step === 1 && (
+          <form onSubmit={handleProceedToOtp} className="space-y-4">
+            {/* Optional Avatar */}
+            <div className="flex justify-center mb-2">
+              <div
+                onClick={() => avatarInputRef.current?.click()}
+                className="relative group cursor-pointer w-20 h-20 rounded-full border-2 border-dashed border-emerald-500/30 hover:border-emerald-500 bg-muted/40 flex flex-col items-center justify-center overflow-hidden transition-all"
+              >
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview}
+                    alt="Profile Avatar Preview"
+                    className="w-full h-full object-cover"
                   />
-                  <p className="text-[11px] text-zinc-500 mt-1">
-                    Any valid personal or university email address.
-                  </p>
-                </div>
-
-                {/* Password Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-black flex items-center justify-between mb-1.5">
-                      <span className="flex items-center gap-1">
-                        <Lock size={12} />
-                        <span>Password</span>
-                        <span className="text-red-500">*</span>
-                      </span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        required
-                        minLength={6}
-                        placeholder="Min 6 characters"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full h-10 px-3 pr-8 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black"
-                      >
-                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-black flex items-center justify-between mb-1.5">
-                      <span className="flex items-center gap-1">
-                        <Lock size={12} />
-                        <span>Confirm Password</span>
-                        <span className="text-red-500">*</span>
-                      </span>
-                    </label>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      minLength={6}
-                      placeholder="Re-enter password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full h-10 px-3 border border-zinc-300 rounded-xl text-xs text-black placeholder:text-zinc-400 focus:outline-none focus:border-black"
-                    />
-                  </div>
-                </div>
-
-                {/* Profile Photo Upload */}
-                <div>
-                  <label className="text-xs font-bold text-black flex items-center justify-between mb-1.5">
-                    <span className="flex items-center gap-1.5">
-                      <User size={13} />
-                      <span>Profile Photo</span>
-                    </span>
-                    <span className="text-[10px] text-zinc-400 font-normal">
-                      WebP &middot; Max 2MB
-                    </span>
-                  </label>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarFileChange}
-                    className="hidden"
-                  />
-                  <div
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="p-3 border border-dashed border-zinc-300 hover:border-black rounded-xl bg-zinc-50/50 flex items-center gap-3 cursor-pointer transition-all"
-                  >
-                    {avatarPreview ? (
-                      <div className="w-12 h-12 rounded-xl overflow-hidden border border-zinc-200 shrink-0">
-                        <img
-                          src={avatarPreview}
-                          alt="Avatar preview"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-zinc-500 shrink-0">
-                        <Camera size={18} />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold text-black truncate">
-                        {avatarFile ? "Profile photo selected" : "Add your profile photo"}
-                      </div>
-                      <div className="text-[11px] text-zinc-500">
-                        {avatarFile
-                          ? "Converted to WebP format"
-                          : "Upload a headshot for your student badge"}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="px-2.5 py-1 text-xs font-semibold text-black bg-white border border-zinc-200 rounded-lg hover:bg-zinc-100"
-                    >
-                      {avatarFile ? "Change" : "Browse"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* University Student Card Upload */}
-                <div>
-                  <label className="text-xs font-bold text-black flex items-center justify-between mb-1.5">
-                    <span className="flex items-center gap-1.5">
-                      <CreditCard size={13} />
-                      <span>University Student Card</span>
-                      <span className="text-red-500">*</span>
-                    </span>
-                    <span className="text-[10px] text-zinc-400 font-normal">
-                      WebP &middot; Max 2MB
-                    </span>
-                  </label>
-                  <input
-                    ref={cardInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCardFileChange}
-                    className="hidden"
-                  />
-                  <div
-                    onClick={() => cardInputRef.current?.click()}
-                    className={`p-3.5 border-2 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
-                      errorMsg && errorMsg.toLowerCase().includes("student card")
-                        ? "border-red-400 bg-red-50/20"
-                        : cardPreview
-                        ? "border-zinc-300 bg-white"
-                        : "border-dashed border-zinc-300 hover:border-black bg-zinc-50/50"
-                    }`}
-                  >
-                    {cardPreview ? (
-                      <div className="w-full space-y-2">
-                        <div
-                          className={`w-full h-40 rounded-lg overflow-hidden border relative flex items-center justify-center ${
-                            errorMsg && errorMsg.toLowerCase().includes("student card")
-                              ? "border-red-300 bg-red-50/30"
-                              : "border-zinc-200 bg-zinc-100"
-                          }`}
-                        >
-                          <img
-                            src={cardPreview}
-                            alt="Card preview"
-                            className="max-h-full max-w-full object-contain"
-                          />
-                        </div>
-
-                        {/* Clean File Status Banner */}
-                        <div className="flex items-center justify-between px-1 py-1">
-                          {errorMsg && errorMsg.toLowerCase().includes("student card") ? (
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-red-600 min-w-0">
-                              <AlertCircle size={14} className="shrink-0" />
-                              <span className="truncate">Invalid student card image</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-black min-w-0">
-                              <CheckCircle2 size={14} className="text-black shrink-0" />
-                              <span className="truncate">Student Card attached ✓</span>
-                              {cardFile && (
-                                <span className="text-[10px] text-zinc-400 font-mono font-normal shrink-0">
-                                  ({(cardFile.size / (1024 * 1024)).toFixed(1)}MB)
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cardInputRef.current?.click();
-                            }}
-                            className={`text-xs font-semibold underline shrink-0 ml-2 ${
-                              errorMsg && errorMsg.toLowerCase().includes("student card")
-                                ? "text-red-700 hover:text-red-900"
-                                : "text-zinc-600 hover:text-black"
-                            }`}
-                          >
-                            Upload Valid Card
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="py-4 text-center space-y-2">
-                        <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mx-auto text-zinc-600">
-                          <CreditCard size={22} />
-                        </div>
-                        <div>
-                          <span className="text-xs font-bold text-black">
-                            Tap to upload your student card
-                          </span>
-                          <p className="text-[11px] text-zinc-500 mt-0.5">
-                            Front side with Name, Roll No & University clearly legible
-                          </p>
-                        </div>
-                        <span className="inline-block text-[10px] bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded text-zinc-600 font-medium">
-                          Auto-converts to WebP &middot; Limit 2MB
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Scan Button (No AI buzzwords) */}
-                <div className="pt-2">
-                  <Button
-                    type="submit"
-                    disabled={isProcessing || !cardFile || !email.trim() || !password}
-                    className="w-full h-11 bg-black hover:bg-zinc-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 size={15} className="animate-spin" />
-                        <span>Verifying Student Card...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Verify Student Card</span>
-                        <ArrowRight size={14} />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-
-              <div className="pt-3 border-t border-zinc-100 text-center">
-                <span className="text-xs text-zinc-500">
-                  Already registered?{" "}
-                  <Link
-                    href="/sign-in"
-                    className="font-bold text-black hover:underline"
-                  >
-                    Sign In
-                  </Link>
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* ======================================================== */}
-          {/* STEP 2: READ-ONLY EXTRACTED DATA CONFIRMATION SCREEN      */}
-          {/* (NO HOSTEL INFO AS REQUESTED BY USER)                     */}
-          {/* ======================================================== */}
-          {step === 2 && extractedData && (
-            <div className="w-full bg-white border border-zinc-200 rounded-2xl p-5 shadow-2xs space-y-4">
-              {/* Notice Banner */}
-              <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex items-start gap-2.5">
-                <Lock size={15} className="text-black shrink-0 mt-0.5" />
-                <div className="text-[11.5px] leading-relaxed text-zinc-700">
-                  <span className="font-bold text-black">
-                    Verified from University Card.
-                  </span>{" "}
-                  These fields are locked to preserve campus security and peer trust.
-                </div>
-              </div>
-
-              {/* Student Visual Card Preview */}
-              <div className="p-3.5 bg-zinc-900 text-white rounded-xl flex items-center gap-3.5">
-                {extractedData.avatarUrl || avatarPreview ? (
-                  <div className="w-12 h-12 rounded-lg overflow-hidden border border-zinc-700 shrink-0">
-                    <img
-                      src={extractedData.avatarUrl || avatarPreview!}
-                      alt="Student Avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
                 ) : (
-                  <div className="w-12 h-12 rounded-lg bg-zinc-800 text-white font-extrabold text-base flex items-center justify-center shrink-0 border border-zinc-700">
-                    {extractedData.name.charAt(0)}
+                  <div className="flex flex-col items-center text-muted-foreground group-hover:text-emerald-500">
+                    <Camera className="w-5 h-5 mb-0.5" />
+                    <span className="text-[10px] font-medium">Photo</span>
                   </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
-                    <span>{extractedData.name}</span>
-                    <ShieldCheck size={14} className="text-white shrink-0" />
-                  </div>
-                  <div className="text-[11px] font-mono text-zinc-400">
-                    {extractedData.studentId}
-                  </div>
-                  <div className="text-[10px] text-zinc-400 truncate">
-                    {extractedData.university}
-                  </div>
-                </div>
-              </div>
-
-              {/* Read-Only Form Fields */}
-              <div className="space-y-3">
-                {/* Full Name */}
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-700 flex items-center gap-1 mb-1">
-                    <User size={12} />
-                    <span>Full Name</span>
-                    <span className="text-[10px] text-zinc-400 font-normal ml-auto">
-                      Read-only
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    disabled
-                    value={extractedData.name}
-                    className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-semibold cursor-not-allowed select-text"
-                  />
-                </div>
-
-                {/* Roll Number / Student ID */}
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-700 flex items-center gap-1 mb-1">
-                    <GraduationCap size={12} />
-                    <span>Roll Number / Student ID</span>
-                    <span className="text-[10px] text-zinc-400 font-normal ml-auto">
-                      Read-only
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    disabled
-                    value={extractedData.studentId}
-                    className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-mono font-bold cursor-not-allowed select-text"
-                  />
-                </div>
-
-                {/* University */}
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-700 flex items-center gap-1 mb-1">
-                    <Building2 size={12} />
-                    <span>University</span>
-                    <span className="text-[10px] text-zinc-400 font-normal ml-auto">
-                      Read-only
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    disabled
-                    value={extractedData.university}
-                    className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-semibold cursor-not-allowed select-text"
-                  />
-                </div>
-
-                {/* Department / Program */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[11px] font-bold text-zinc-700 mb-1 block">
-                      Department
-                    </label>
-                    <input
-                      type="text"
-                      readOnly
-                      disabled
-                      value={extractedData.department}
-                      className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-semibold cursor-not-allowed select-text"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-zinc-700 mb-1 block">
-                      Program
-                    </label>
-                    <input
-                      type="text"
-                      readOnly
-                      disabled
-                      value={extractedData.program}
-                      className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-semibold cursor-not-allowed select-text"
-                    />
-                  </div>
-                </div>
-
-                {/* CNIC & Expiry Date */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[11px] font-bold text-zinc-700 mb-1 block">
-                      CNIC Number
-                    </label>
-                    <input
-                      type="text"
-                      readOnly
-                      disabled
-                      value={extractedData.cnic || "Not specified"}
-                      className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-mono font-semibold cursor-not-allowed select-text"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-zinc-700 mb-1 block">
-                      Card Expiry
-                    </label>
-                    <input
-                      type="text"
-                      readOnly
-                      disabled
-                      value={extractedData.expiryDate || "Valid"}
-                      className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-semibold cursor-not-allowed select-text"
-                    />
-                  </div>
-                </div>
-
-                {/* Registered Email */}
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-700 flex items-center gap-1 mb-1">
-                    <Mail size={12} />
-                    <span>Registered Email</span>
-                    <span className="text-[10px] text-zinc-400 font-normal ml-auto">
-                      Read-only
-                    </span>
-                  </label>
-                  <input
-                    type="email"
-                    readOnly
-                    disabled
-                    value={extractedData.email}
-                    className="w-full h-10 px-3 bg-zinc-100 border border-zinc-200 rounded-xl text-xs text-zinc-800 font-semibold cursor-not-allowed select-text"
-                  />
-                </div>
-
-                {/* Email Verification OTP Section */}
-                <div className="pt-3 border-t border-zinc-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-black flex items-center gap-1.5">
-                      <Mail size={12} />
-                      <span>Email Verification Code (OTP)</span>
-                      <span className="text-red-500">*</span>
-                    </label>
-                    <button
-                      type="button"
-                      disabled={resendCooldown > 0 || isResending}
-                      onClick={handleResendOtp}
-                      className="text-[11px] font-bold text-black hover:underline disabled:text-zinc-400 disabled:no-underline cursor-pointer"
-                    >
-                      {isResending
-                        ? "Sending..."
-                        : resendCooldown > 0
-                        ? `Resend in ${resendCooldown}s`
-                        : "Resend Code"}
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    placeholder="Enter 6-digit code"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ""))}
-                    className="w-full h-11 px-3.5 border border-zinc-300 rounded-xl text-center text-sm font-mono font-bold tracking-[8px] text-black placeholder:tracking-normal placeholder:font-normal placeholder:text-zinc-400 focus:outline-none focus:border-black"
-                  />
-                  {resendFeedback && (
-                    <p className="text-[11px] text-emerald-600 font-medium">
-                      {resendFeedback}
-                    </p>
-                  )}
-                  <p className="text-[11px] text-zinc-500 leading-relaxed">
-                    A 6-digit verification code has been sent to{" "}
-                    <span className="font-bold text-black">{extractedData.email}</span>. Please enter it to verify email ownership.
-                  </p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-2 flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep(1)}
-                  disabled={isFinalizing}
-                  className="h-11 px-3 border-zinc-300 rounded-xl text-xs font-bold text-zinc-700 hover:bg-zinc-100 cursor-pointer"
-                >
-                  <ArrowLeft size={14} className="mr-1" />
-                  Re-upload
-                </Button>
-
-                <Button
-                  type="button"
-                  onClick={handleFinalizeRegistration}
-                  disabled={isFinalizing || otpCode.trim().length !== 6}
-                  className="flex-1 h-11 bg-black hover:bg-zinc-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
-                >
-                  {isFinalizing ? (
-                    <>
-                      <Loader2 size={15} className="animate-spin" />
-                      <span>Verifying & Creating Account...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Verify Email & Create Account</span>
-                      <ArrowRight size={14} />
-                    </>
-                  )}
-                </Button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarFileChange}
+                  className="hidden"
+                />
               </div>
             </div>
-          )}
 
-          {/* Trust Footnote */}
-          <div className="mt-5 text-center text-[11px] text-zinc-500 flex items-center justify-center gap-1.5">
-            <ShieldCheck size={14} className="text-black" />
-            <span>
-              All student accounts are verified for peer commute & campus safety.
-            </span>
-          </div>
+            {/* Full Name */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ali Ahmed"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-muted-foreground/60"
+                />
+              </div>
+            </div>
+
+            {/* University Searchable Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                University <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsUniDropdownOpen((prev) => !prev)}
+                className="w-full pl-10 pr-10 py-2.5 bg-background border border-border rounded-xl text-left text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+              >
+                <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <span className="truncate font-medium text-foreground">
+                  {selectedUni.shortName} — {selectedUni.name}
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${
+                    isUniDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {isUniDropdownOpen && (
+                <div className="absolute z-50 left-0 right-0 mt-1.5 bg-card border border-border rounded-xl shadow-xl overflow-hidden max-h-60 flex flex-col animate-in fade-in-50 zoom-in-95">
+                  <div className="p-2 border-b border-border bg-muted/20 sticky top-0">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Search university..."
+                        value={uniSearchQuery}
+                        onChange={(e) => setUniSearchQuery(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div className="overflow-y-auto divide-y divide-border/50 py-1">
+                    {filteredUniversities.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-muted-foreground">
+                        No matching universities found
+                      </div>
+                    ) : (
+                      filteredUniversities.map((uni) => {
+                        const isSelected = selectedUni.id === uni.id;
+                        return (
+                          <button
+                            key={uni.id}
+                            type="button"
+                            onClick={() => handleSelectUniversity(uni)}
+                            className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-emerald-500/10 transition-colors ${
+                              isSelected ? "bg-emerald-500/10 font-semibold text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                            }`}
+                          >
+                            <div className="pr-2 truncate">
+                              <div className="font-semibold truncate">{uni.shortName}</div>
+                              <div className="text-[11px] text-muted-foreground truncate">{uni.name}</div>
+                            </div>
+                            {isSelected && <Check className="w-4 h-4 text-emerald-500 shrink-0" />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Campus / City Dropdown (City Names Only) */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Campus City <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <select
+                  value={selectedCampusCity}
+                  onChange={(e) => setSelectedCampusCity(e.target.value)}
+                  className="w-full pl-10 pr-9 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 appearance-none transition-all cursor-pointer font-medium text-foreground"
+                >
+                  {selectedUni.campuses.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Student Roll No / ID */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Student Roll No / ID <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 2022-CS-101"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value.toUpperCase())}
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 uppercase transition-all placeholder:text-muted-foreground/60 font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Department / Program */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Department / Program <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Computer Science"
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-muted-foreground/60"
+                />
+              </div>
+            </div>
+
+            {/* Email Address (Any standard email: Gmail, Outlook, Yahoo, etc.) */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Email Address <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. yourname@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-muted-foreground/60"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                You can use any valid email (Gmail, Outlook, Yahoo, etc.). A 6-digit code will be sent to verify.
+              </p>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Confirm Password <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="Repeat your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={isProcessing}
+              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-md shadow-emerald-600/20 mt-2 flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Sending Verification Code...
+                </>
+              ) : (
+                <>
+                  Continue <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </Button>
+          </form>
+        )}
+
+        {/* STEP 2: Email OTP Verification */}
+        {step === 2 && (
+          <form onSubmit={handleCompleteSignUp} className="space-y-5 animate-in fade-in">
+            <div className="p-4 rounded-xl bg-muted/40 border border-border text-center">
+              <Mail className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+              <div className="text-xs text-muted-foreground">We sent a verification code to:</div>
+              <div className="text-sm font-semibold text-foreground mt-0.5 break-all">{email}</div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-2 text-center">
+                Enter 6-Digit Code
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={6}
+                autoFocus
+                placeholder="123456"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="w-full text-center tracking-[0.5em] font-mono text-2xl font-bold py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+              />
+            </div>
+
+            {/* Resend Code Button & Countdown */}
+            <div className="text-center text-xs">
+              {resendCooldown > 0 ? (
+                <span className="text-muted-foreground">
+                  Resend code in <strong className="text-foreground">{resendCooldown}s</strong>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={isResending}
+                  className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline inline-flex items-center gap-1"
+                >
+                  {isResending && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Resend Verification Code
+                </button>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div className="space-y-2 pt-2">
+              <Button
+                type="submit"
+                disabled={isFinalizing || otpCode.length !== 6}
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
+              >
+                {isFinalizing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Complete Registration
+                  </>
+                )}
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(1);
+                  setErrorMsg(null);
+                  setResendFeedback(null);
+                }}
+                disabled={isFinalizing}
+                className="w-full py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Change Registration Details
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Sign In link */}
+        <div className="mt-8 text-center text-xs text-muted-foreground">
+          Already have an account?{" "}
+          <Link
+            href="/sign-in"
+            className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+          >
+            Sign In
+          </Link>
         </div>
       </div>
     </MobileShell>
