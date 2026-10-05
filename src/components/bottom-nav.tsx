@@ -23,6 +23,25 @@ const navItems: NavItem[] = [
 export function BottomNav() {
   const pathname = usePathname();
 
+  const isAuthPage =
+    pathname === "/sign-in" ||
+    pathname === "/sign-up" ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
+    pathname === "/verify" ||
+    Boolean(pathname?.startsWith("/sign-in")) ||
+    Boolean(pathname?.startsWith("/sign-up")) ||
+    Boolean(pathname?.startsWith("/login")) ||
+    Boolean(pathname?.startsWith("/register")) ||
+    Boolean(pathname?.startsWith("/forgot-password")) ||
+    Boolean(pathname?.startsWith("/reset-password")) ||
+    Boolean(pathname?.startsWith("/verify")) ||
+    Boolean(pathname?.startsWith("/auth"));
+
+  if (isAuthPage) return null;
+
   return (
     <>
       {/* Invisible spacer so the fixed bottom bar never overlaps page content */}

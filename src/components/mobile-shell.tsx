@@ -48,9 +48,18 @@ export function MobileShell({
     pathname === "/sign-in" ||
     pathname === "/sign-up" ||
     pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
+    pathname === "/verify" ||
     Boolean(pathname?.startsWith("/sign-in")) ||
     Boolean(pathname?.startsWith("/sign-up")) ||
-    Boolean(pathname?.startsWith("/login"));
+    Boolean(pathname?.startsWith("/login")) ||
+    Boolean(pathname?.startsWith("/register")) ||
+    Boolean(pathname?.startsWith("/forgot-password")) ||
+    Boolean(pathname?.startsWith("/reset-password")) ||
+    Boolean(pathname?.startsWith("/verify")) ||
+    Boolean(pathname?.startsWith("/auth"));
 
   const isMessagesPage =
     pathname === "/messages" || Boolean(pathname?.startsWith("/messages"));
@@ -66,15 +75,11 @@ export function MobileShell({
       )}
     >
       {/* ======================================================== */}
-      {/* TOP GLOBAL WEB APP NAVIGATION HEADER */}
+      {/* TOP GLOBAL WEB APP NAVIGATION HEADER (HIDDEN ON AUTH)    */}
       {/* ======================================================== */}
-      <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-b border-[#E4E4E7] dark:border-zinc-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] shrink-0 transition-colors">
-        <div
-          className={cn(
-            "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4",
-            isAuthPage ? "justify-center sm:justify-start" : "justify-between"
-          )}
-        >
+      {!isAuthPage && (
+        <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-b border-[#E4E4E7] dark:border-zinc-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] shrink-0 transition-colors">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Classic Monogram Logo */}
           <div className="flex items-center gap-3 shrink-0">
             <Link href="/" className="flex items-center gap-2.5 group">
@@ -199,6 +204,7 @@ export function MobileShell({
           )}
         </div>
       </header>
+      )}
 
       {/* ======================================================== */}
       {/* MAIN APPLICATION CONTENT AREA */}
@@ -206,20 +212,23 @@ export function MobileShell({
       <main
         className={cn(
           "w-full flex-1 flex flex-col items-center min-h-0",
-          isAppLayoutPage && "h-[calc(100dvh-64px)] max-h-[calc(100dvh-64px)] overflow-hidden"
+          isAppLayoutPage && "h-[calc(100dvh-64px)] max-h-[calc(100dvh-64px)] overflow-hidden",
+          isAuthPage && "min-h-screen justify-center py-0"
         )}
       >
         <div
           className={cn(
             "w-full max-w-6xl xl:max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-6 flex-1 flex flex-col",
             isMessagesPage && "h-full py-0 sm:py-4 min-h-0 overflow-hidden",
-            isCommunityPage && "h-full py-0 sm:py-2 min-h-0 overflow-hidden max-w-7xl xl:max-w-[1536px]"
+            isCommunityPage && "h-full py-0 sm:py-2 min-h-0 overflow-hidden max-w-7xl xl:max-w-[1536px]",
+            isAuthPage && "max-w-full px-0 sm:px-0 py-0 sm:py-0 justify-center items-center"
           )}
         >
           <div
             className={cn(
               "w-full bg-white dark:bg-[#121215] sm:rounded-2xl sm:border border-[#E4E4E7] dark:border-zinc-800 sm:shadow-[0_2px_8px_rgba(0,0,0,0.04)] sm:overflow-hidden flex flex-col flex-1",
               isAppLayoutPage && "h-full min-h-0 overflow-hidden",
+              isAuthPage && "sm:border-0 sm:rounded-none sm:shadow-none bg-transparent dark:bg-transparent justify-center",
               className,
             )}
           >
