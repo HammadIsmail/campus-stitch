@@ -69,11 +69,58 @@
   `To https://github.com/HammadIsmail/campus-stitch.git on branch main`
 - Triggered automated Vercel production rebuild with strict verification and dynamic post routes.
 
-### H. Resolved Profile Persistence & "Account Does Not Exist" Error
-- **Root Cause Identified:** In `src/app/api/auth/sign-up/route.ts`, the profile was being upserted with a string `id: "u_..."` into PostgreSQL's `uuid` column `profiles.id`, causing Postgres error `22P02 (invalid input syntax for type uuid)`. Because Supabase errors are returned in `{ error }` and not thrown, this failure was silently ignored, preventing any row from being created in Supabase. When students later tried to sign in, `/api/auth/sign-in` found 0 matching rows and returned `"No account found with this email"`.
-- **UUID Generation Fix:** Updated sign-up to generate valid standard UUIDs (`crypto.randomUUID()`) for `profiles.id`, added database error checking to reject failed inserts, and added duplicate student ID protection.
-- **Database Unique Index:** Added `profiles_email_idx` (`CREATE UNIQUE INDEX ON public.profiles(email)`) in Supabase to guarantee 1-to-1 account mapping.
-- **Robust Session Redirection:** Replaced `router.push` with `window.location.href` on sign-up and sign-in completion to ensure browsers immediately attach newly set authentication cookies during full page loads without client router cache lag.
+### I. Complete Dummy Data Seeding Across All Database Endpoints
+- **Automated Seeding Pipeline (`scripts/seed_all_endpoints.mjs`):** Populated remote Supabase PostgreSQL with rich, contextual UET Lahore student data across all endpoints.
+- **Seeded Tables:**
+  - `profiles`: Authentic student accounts across CS, EE, ME, Civil, Architecture with hashed passwords and verified badges.
+  - `rides`: Realistic carpools & rickshaw splits (Khurrialwala, Shahdara, Thokar, Gulberg, Begum Kot to UET).
+  - `bikes`: Bicycle rentals located at Hostel Blocks (Honda CD 70, Sohrab Roadstar, Phoenix Commuter).
+  - `listings`: Student marketplace items (Calculators, textbooks, phone coolers, mini refrigerators, lab coats).
+  - `shared_items` & `owners`: High-demand fractional campus gear (DSLR cameras, gaming monitors, scientific instruments).
+  - `hostel_roommates` & `services`: Roommate matching listings and room services (laundry, room cleaning, ironing).
+  - `communities`: Core subreddits (`r/cs-uet`, `r/commute-splits`, `r/market-uet`, `r/hostel-life`, `r/exam-pastpapers`, etc.).
+  - `community_posts` & `comments`: Authentic campus discussions, midterm past paper drives, and lab tips.
+  - `notifications`: Realistic alerts for ride confirmations, buyer inquiries, verification badges, and comment replies.
+- **Verification Scripts:** Verified live in database via `scripts/verify_all_endpoints.mjs` and `scripts/test_api_endpoints.mjs`.
+
+### J. Dark Mode System & Theme Provider (`src/lib/theme-context.tsx`)
+- **Theme Provider:** Created `ThemeProvider` with support for `"light" | "dark" | "system"`.
+- **Theme Flash Prevention:** Added inline anti-flash script in `src/app/layout.tsx` before DOM render to immediately apply `.dark` class from `localStorage` without FOUC (flash of unstyled content).
+- **Navbar & Profile Settings:** Added instant theme toggle button (Sun/Moon icon) in the header (`src/components/mobile-shell.tsx`) and an interactive theme switcher switch in the Profile page settings (`src/app/profile/page.tsx`).
+- **Comprehensive Dark Styling:** Styled inputs, modals, sidebars, community posts, dropdowns, and cards using Tailwind dark variants (`dark:bg-[#121215]`, `dark:border-zinc-800`, `dark:text-white`).
+
+### K. End-to-End Forgot Password Flow (`/forgot-password`)
+- **Interactive 3-Step UI (`src/app/forgot-password/page.tsx`):**
+  - **Step 1:** Student submits registered UET email address.
+  - **Step 2:** Student enters the 6-digit verification OTP delivered to their email.
+  - **Step 3:** Student inputs and confirms their new password with validation.
+- **OTP Generation & Email Route (`POST /api/auth/forgot-password`):** Generates a secure 6-digit numeric OTP, records it in the Supabase `password_resets` table with a 15-minute expiration, and delivers it instantly via Nodemailer Gmail SMTP.
+- **Password Reset Endpoint (`POST /api/auth/reset-password`):** Validates the email and OTP, computes a new `pbkdf2Sync` password hash with a unique salt, updates `profiles.password_hash`, and marks the OTP as used.
+- **Sign-In Page Integration:** Added a "Forgot password?" link on the student login form (`src/app/sign-in/page.tsx`).
+
+### L. Separate Upvote and Downvote Counters
+- **Independent Counter Architecture:** Updated both the Reddit community quad feed (`src/app/community/page.tsx`) and the post detail view (`src/app/community/post/[id]/page.tsx`) to show separate vote counters instead of a merged net score.
+- **Pill UI Layout:** Implemented an integrated split pill: `[ ↑ {upvotes} | ↓ {downvotes} ]` with a central divider line, individual active colors (orange for upvoted, blue for downvoted), and optimistic state updates with Supabase persistence.
+
+### M. Student Profile Data Integrity & Nullable Bio
+- **Avatar Synchronization:** The profile picture provided by the student during registration is now fetched and displayed on `/profile` via `GET /api/profile` and `GET /api/auth/me`.
+- **Database Bio Support:** Added `bio` text column to `profiles` table (`ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bio text;`).
+- **Nullable Bio State:** Bio state in profile defaults to `authUser?.bio || ""` with full editing capabilities.
+- **Removed Hardcoded Mock Leaks:** Removed all hardcoded user names, emails, roll numbers, and dummy credentials.
+- **Removed Hostel Info:** Excluded hostel fields from the user profile display as requested.
+
+### N. Cart-Style Notification Slide-Over Drawer (`src/components/notifications-slider.tsx`)
+- **Right Slide-Over Drawer:** Instead of redirecting to a separate page, clicking the notification bell in the global header opens a slide-over panel from the right edge (`fixed inset-y-0 right-0 w-full sm:w-[420px]`).
+- **Dimmed Backdrop Overlay:** Includes an accessible `fixed inset-0 bg-black/60 backdrop-blur-xs` overlay that dismisses on click or <kbd>Esc</kbd> keypress, with body scroll locking.
+- **Category Filter Tabs:** Tabs for `All`, `Rides`, `Market`, and `Verification`.
+- **Rich Cards & Actions:** Category badges/icons (Compass, Bike, Tag, ShieldCheck, MessageSquare), unread pulse dots, relative timestamps, and "View details →" links that route and close the drawer.
+- **Instant Mark As Read:** Features a "Mark read" button updating both local state and remote Supabase `notifications` records.
+- **Global Header Connection:** Replaced the Bell `<Link href="/notifications">` with an interactive button in `src/components/mobile-shell.tsx`.
+
+### O. Pinned Community Bottom Navigation & Footer Removal
+- **Pinned Bottom Navigation in Communities:** Added `<BottomNav />` to `src/app/community/page.tsx` and `src/app/community/post/[id]/page.tsx`, with `pb-20 md:pb-5` padding on the center scroll containers to ensure posts scroll smoothly above the fixed mobile bar.
+- **Removed Global Web Footer:** Completely deleted the desktop and mobile footer from `src/components/mobile-shell.tsx`. No footer is rendered anywhere across the application.
+- **Vercel Build Font Fix:** Replaced `next/font/google` (`Figtree`) in `src/app/layout.tsx` with preconnected Google Fonts (`Plus Jakarta Sans` & `Inter`), resolving Turbopack `@vercel/turbopack-next/internal/font/google/font` resolution failure and dropping production build time to 9.1s.
 
 ---
 
@@ -81,12 +128,14 @@
 | Component | Status | Notes |
 | :--- | :--- | :--- |
 | **Dev Server** | 🟢 Running | `npm run dev` running locally on port 3000 |
-| **TypeScript Compilation** | 🟢 Passing | `npx tsc --noEmit` exits with code 0 |
-| **Account Creation & DB** | 🟢 Fixed | Valid UUID profile persistence; verified in remote Supabase PostgreSQL |
-| **Student Card Verification** | 🟢 Strict & Fixed | Cropped photos rejected; required fields enforced; zero mock fallbacks |
-| **Reddit Communities** | 🟢 Dynamic Routes | Dedicated `/community/post/[id]` pages + 3-column independent scroll |
-| **Messaging & Voice** | 🟢 Ready | Base64 audio playback + fixed auto-scroll message container |
-| **NextAuth.js v5** | 🟢 Active | Configured in `src/auth.ts` |
-| **Nodemailer SMTP** | 🟢 Verified | Tested live email sending to Gmail (< 2s delivery) |
-| **Route Protection** | 🟢 Active | Next.js 16 `src/proxy.ts` guarding platform routes |
-| **Remote Git** | 🟢 Synced | Ready to push |
+| **TypeScript Compilation** | 🟢 Passing | `npx tsc --noEmit` exits with code 0 (zero errors) |
+| **Production Build** | 🟢 Passing | `npm run build` with Turbopack compiles 49 routes in ~9s |
+| **Account Creation & DB** | 🟢 Fixed | Valid UUID profile persistence; verified in Supabase PostgreSQL |
+| **Forgot Password Flow** | 🟢 Live | Email OTP delivery + password reset verified end-to-end |
+| **Separate Vote Counts** | 🟢 Active | `[ ↑ {upvotes} \| ↓ {downvotes} ]` on feed and post detail |
+| **Dark Mode System** | 🟢 Active | Theme context with anti-flash script, header & profile toggle |
+| **Notifications Drawer** | 🟢 Active | Cart-style right slider with filter tabs and mark-as-read |
+| **Community Bottom Nav** | 🟢 Active | Pinned mobile tabs on `/community` and `/community/post/[id]` |
+| **Global Web Footer** | 🟢 Removed | Completely eliminated from all views |
+| **Student Card Verification** | 🟢 Strict & Fixed | Cropped photos rejected; required fields enforced |
+| **Remote Git** | 🟢 Synced | Pushed to GitHub `main` branch |

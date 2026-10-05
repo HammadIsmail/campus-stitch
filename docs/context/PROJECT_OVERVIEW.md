@@ -29,11 +29,16 @@ It unifies daily campus mobility, student-to-student commerce, hostel living ser
 
 ### 👥 5. Reddit-Style Campus Communities (`/community`)
 - **Subreddit Architecture:** Organized by campus spaces (e.g., `r/cs-uet`, `r/commute-splits`, `r/hostel-life`, `r/exam-pastpapers`, `r/lost-and-found`).
-- **Dynamic Post Pages (`/community/post/[id]`):** Dedicated discussion pages with vertical voting pillars (▲ score ▼), verified student badges, image attachments, comment composer, and threaded nested discussions.
+- **Dynamic Post Pages (`/community/post/[id]`):** Dedicated discussion pages with separate upvote/downvote counters (`[ ↑ {upvotes} | ↓ {downvotes} ]`), verified student badges, image attachments, comment composer, and threaded nested discussions.
 - **Independent 3-Column Scroll:** Left subreddit directory, center discussion feed, and right "About Community" widget each scroll independently with zero full-webpage body scroll.
-- **Join/Leave Management:** Instant community membership toggling.
+- **Pinned Bottom Navigation:** Mobile users retain constant access to the platform bottom navigation tabs without obscuring feed content.
 
-### 🎙️ 6. AI Student Assistant (`/assistant`) & Voice Messaging (`/messages`)
+### 🔔 6. Cart-Style Notification Slide-Over Drawer
+- **Quick Slide-Out Access:** Clicking the notification bell in the global header slides out a smooth cart-like drawer from the right edge on web and mobile.
+- **Categorized Tabs:** Real-time updates filtered by `All`, `Rides`, `Market`, and `Verification`.
+- **Instant Actions:** One-click "Mark read" and direct deep-linking to relevant rides, listings, or community posts.
+
+### 🎙️ 7. AI Student Assistant (`/assistant`) & Voice Messaging (`/messages`)
 - **Multilingual Support:** English and Urdu voice query support.
 - **Urdu Speech-to-Speech:** Integrated with Uplift AI (Urdu TTS) and Google Gemini with tool calls via the Vercel AI SDK.
 - **Voice Notes in Chat:** Resilient HTML5 base64 audio voice note recording and playback with format fallbacks and auto-scrolling message streams.
@@ -46,11 +51,13 @@ It unifies daily campus mobility, student-to-student commerce, hostel living ser
 - **Enforced Card Fields:** University Name / Institutional Header, Student Full Name, and Roll Number / Student ID must all be clearly visible.
 - **Cropped Photo Rejection:** Cropped or partially obscured photos are immediately rejected with specific guidance on which field was cut off.
 - **Zero Mock Fallbacks:** No hardcoded mock profiles or default names; verification strictly reflects the actual uploaded card.
+- **Forgot Password & Account Recovery:** Secure 6-digit email OTP verification pipeline delivering OTPs via Nodemailer Gmail SMTP.
 
 ---
 
 ## 4. Design Philosophy & User Experience
-- **Monochrome Elegance:** Strictly curated black, zinc, and white palette (`#000000`, `#18181B`, `#FFFFFF`, `#F4F4F5`, `#ECEEF2`). No generic or conflicting bright colors.
-- **Mobile-First Responsive Shell:** Optimized for both mobile devices (bottom navigation bar) and desktop screens (top navigation bar + independent section scroll containers).
-- **Zero Dummy Data in Production:** All listings, rides, posts, and services connect directly to persistent Supabase database tables.
+- **Monochrome Elegance & Dark Mode:** Strictly curated black, zinc, and white palette (`#000000`, `#18181B`, `#FFFFFF`, `#F4F4F5`, `#ECEEF2`, `#121215`) with a complete dark mode switch in header and profile settings.
+- **No Unnecessary Footers:** The application operates as a clean modern web app without redundant bottom web footers.
+- **Mobile-First Responsive Shell:** Optimized for mobile devices (pinned bottom navigation bar) and desktop screens (top navigation bar + independent section scroll containers).
+- **Persistent Backend:** All listings, rides, posts, and services connect directly to remote Supabase PostgreSQL database tables.
 

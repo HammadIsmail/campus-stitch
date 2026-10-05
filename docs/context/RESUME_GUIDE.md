@@ -28,24 +28,43 @@ When this repository is loaded into an AI agent session after closing Antigravit
      }
      ```
 
-4. **Community Independent Section Scrolling (No Body Scroll):**
+4. **Community Independent Section Scrolling & Pinned BottomNav:**
    - On `/community` and `/community/post/[id]`, full body scrolling is prohibited.
    - Handled in `src/components/mobile-shell.tsx` via `isCommunityPage`, locking the main container to `h-screen max-h-screen overflow-hidden` and `h-[calc(100dvh-64px)] min-h-0`.
-   - Desktop footer is hidden on community routes.
-   - Each column (`<aside>` left, `<main>` center, `<aside>` right) manages its own `h-full overflow-y-auto` scroll container.
+   - Each column manages its own independent `h-full overflow-y-auto` scroll container with `pb-20 md:pb-5` padding so cards scroll cleanly above the mobile tabs.
+   - Pinned mobile bottom navigation `<BottomNav />` is rendered on all community pages.
+   - The global desktop/mobile footer has been completely removed across the application.
 
 5. **AI Assistant & Tool Calling Architecture:**
    - `src/app/api/assistant/chat/route.ts` is built on the **Vercel AI SDK** (`ai` + `@ai-sdk/google`).
    - Uses `generateText()` with `stepCountIs(5)` and tools: `searchCampusInfo`, `getCommuteRides`, `getMarketplaceItems`, `getBikeRentals`, `getHostelServices`, `createTicket`.
    - `src/app/api/auth/verify-student-card/route.ts` uses raw Gemini Vision REST calls and regex/OCR parsing (not Vercel AI SDK).
 
-6. **Design Aesthetic:**
+6. **Design Aesthetic & Dark Mode:**
    - Unified classic black & white monochrome aesthetic (`#000000`, `#FFFFFF`, `#18181B`, `#F4F4F5`, `#ECEEF2`).
-   - No flashy or unharmonious primary colors.
+   - Full dark mode support managed by `ThemeProvider` (`src/lib/theme-context.tsx`).
+   - All components must provide dark variant classes (`dark:bg-[#121215]`, `dark:border-zinc-800`, `dark:text-white`).
 
-7. **Secrets & Git Security:**
-   - `.env.local` contains live credentials (Gmail App Password, Supabase Key, Gemini Key, Uplift Key, Cloudinary).
-   - `.env.local` is in `.gitignore`. **NEVER commit sensitive credentials to GitHub.**
+7. **Notification Slide-Over Drawer:**
+   - Notifications do **NOT** navigate away to `/notifications`.
+   - Clicking the Bell button in the global header triggers the right slide-over drawer (`src/components/notifications-slider.tsx`) with category filters (`All`, `Rides`, `Market`, `Verification`) and instant mark-as-read.
+
+8. **Turbopack Google Font Rule (Vercel Build Stability):**
+   - Do **NOT** use `next/font/google` (`import { Figtree } from "next/font/google"`).
+   - In Next.js 16 (`16.3.8`), Turbopack on Vercel fails with `Can't resolve '@vercel/turbopack-next/internal/font/google/font'`.
+   - Always load external fonts via preconnected `<link rel="stylesheet">` tags in `src/app/layout.tsx` `<head>` and declare via `--font-sans` in `src/app/globals.css`.
+
+9. **Separate Upvote & Downvote Counters:**
+   - Upvotes and downvotes must always be kept separate (`[ ↑ {upvotes} | ↓ {downvotes} ]`), not merged into a single net score.
+
+10. **Zero Dummy Data Leaks:**
+    - Never hardcode mock student credentials, names, emails, roll numbers, or passwords in components or routes.
+    - Profiles must dynamically read from `profiles` via `useAuth()` or `GET /api/profile`.
+    - Profile `bio` is nullable and user-editable. Do not display hostel details on student profiles.
+
+11. **Secrets & Git Security:**
+    - `.env.local` contains live credentials (Gmail App Password, Supabase Key, Gemini Key, Uplift Key, Cloudinary).
+    - `.env.local` is in `.gitignore`. **NEVER commit sensitive credentials to GitHub.**
 
 ---
 

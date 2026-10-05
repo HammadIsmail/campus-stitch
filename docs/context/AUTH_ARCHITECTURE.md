@@ -156,3 +156,56 @@ export const { GET, POST } = handlers;
 2. **Cropping Rejection:** If any of the 3 fields cannot be identified (e.g., header was cut off when snapping the photo), verification halts immediately and returns HTTP 400 with a detailed error listing what was cut off.
 3. **Anti-Mock Policy:** All test profile defaults (`MUHAMMAD HAMMAD ISMAIL`, `2023-CS-807`, `3660128257509`, `31-10-2027`) have been completely deleted from both the backend route and frontend sign-up defaults.
 
+---
+
+## 4. Forgot Password & Password Reset Pipeline
+
+```
+┌─────────────────────────────────┐
+│ Student clicks "Forgot password"│
+│       (/forgot-password)        │
+└────────────────┬────────────────┘
+                 │
+   POST /api/auth/forgot-password { email }
+                 │
+┌────────────────▼────────────────┐
+│ Checks Supabase `profiles` table│
+│ Generates 6-Digit Numeric OTP   │
+│ Stores in `password_resets`     │
+│ (expires in 15 minutes)         │
+└────────────────┬────────────────┘
+                 │
+┌────────────────▼────────────────┐
+│ Delivers via Nodemailer SMTP    │
+│ to student's inbox (< 2s)       │
+└────────────────┬────────────────┘
+                 │
+   Student submits OTP + New Password
+                 │
+   POST /api/auth/reset-password { email, otp, newPassword }
+                 │
+┌────────────────▼────────────────┐
+│ Validates OTP & Expiry          │
+│ Hashes password (pbkdf2Sync)    │
+│ Updates `profiles.password_hash`│
+│ Marks OTP used in DB            │
+└────────────────┬────────────────┘
+                 │
+   Redirects to /sign-in with success banner
+```
+
+- **Endpoints:**
+  - `POST /api/auth/forgot-password`: Expects `{ email }`. Inserts into `password_resets (email, otp, expires_at, used: false)`.
+  - `POST /api/auth/reset-password`: Expects `{ email, otp, newPassword }`. Hashes via `crypto.pbkdf2Sync(newPassword, salt, 1000, 64, "sha512")`, updating `profiles.password_hash`.
+- **Database Table (`password_resets`):** `id (uuid pk)`, `email`, `otp`, `expires_at`, `used (boolean)`, `created_at`.
+
+---
+
+## 5. Profile Data Fetching & Real Avatar Synchronization
+
+- **Registration Photo Persistence:** When a student uploads their photo or student card during sign-up, the Cloudinary image URL is saved to `profiles.avatar_url`.
+- **Profile Resolution (`GET /api/profile` & `GET /api/auth/me`):**
+  - Authenticated requests resolve the logged-in user via JWT token cookie `campus_stitch_token`.
+  - Queries `profiles` by `email` or `user_id` to retrieve authentic `full_name`, `avatar_url`, `bio`, `student_id`, `university`, `program`, `department`, and `is_verified`.
+  - Populates client `AuthContext` (`user.avatarUrl`, `user.bio`) without any hardcoded mock fallbacks or dummy data leaks.
+
