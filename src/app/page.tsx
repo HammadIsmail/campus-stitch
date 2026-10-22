@@ -18,8 +18,11 @@ import {
 } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
+import { useAuth } from "@/lib/auth-context";
+import { MapPin, Crown, Shield } from "lucide-react";
 
 export default function HomePage() {
+  const { user } = useAuth();
   const [hasBooking, setHasBooking] = React.useState(false);
   const [latestBooking, setLatestBooking] = React.useState<any>(null);
 
@@ -40,9 +43,39 @@ export default function HomePage() {
   return (
     <MobileShell>
       <div className="w-full min-h-full flex flex-col bg-[#F9F9FB] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 transition-colors">
-        {/* Hero Search Section */}
+        {/* Hero Search Section with Campus Tenant Badge */}
         <div className="bg-white dark:bg-[#121215] border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-8 py-5 transition-colors">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto space-y-3">
+            {/* Campus Tenant Indicator Bar */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-black dark:text-white">
+                  <MapPin size={12} className="text-zinc-500 shrink-0" />
+                  <span className="truncate max-w-[200px] sm:max-w-none">
+                    {user?.universityName || "UET Lahore"} &bull; {user?.campusName || "Main Campus"}
+                  </span>
+                </span>
+                {user?.role === "super_admin" && (
+                  <Link
+                    href="/admin/super"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-black dark:bg-white text-white dark:text-black uppercase tracking-wider hover:opacity-90 transition-opacity"
+                  >
+                    <Crown size={12} />
+                    <span>Super Admin Console</span>
+                  </Link>
+                )}
+                {user?.role === "campus_admin" && (
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-black dark:bg-white text-white dark:text-black uppercase tracking-wider hover:opacity-90 transition-opacity"
+                  >
+                    <Shield size={12} />
+                    <span>Campus Moderator</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+
             {/* Smart Assistant Search Bar */}
             <div className="flex items-center bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl shadow-2xs hover:border-black dark:hover:border-white transition-all p-1.5 focus-within:border-black dark:focus-within:border-white focus-within:ring-2 focus-within:ring-black/5 dark:focus-within:ring-white/5">
               <Link
@@ -51,8 +84,7 @@ export default function HomePage() {
               >
                 <Search size={16} className="text-black dark:text-white shrink-0" />
                 <span className="truncate font-medium">
-                  Search: &quot;Find rickshaw split from Khurrialwala to UET
-                  tomorrow 8 AM&quot;
+                  Search: &quot;Find rides, market items, or hostel notices in {user?.campusName || "campus"}&quot;
                 </span>
               </Link>
               <div className="flex items-center gap-1.5 shrink-0 pr-1">
@@ -74,7 +106,7 @@ export default function HomePage() {
           {/* Campus Services (4-Card Grid on Desktop, Hidden on Mobile Screen) */}
           <section className="hidden md:block space-y-3">
             <div className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 tracking-wider uppercase">
-              Campus Services · UET Lahore
+              Campus Services · {user?.universityName || "UET Lahore"} ({user?.campusName || "Main Campus"})
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Link

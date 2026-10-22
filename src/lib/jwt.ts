@@ -6,8 +6,13 @@ export interface JwtUserPayload {
   email: string;
   name: string;
   studentId: string;
-  role: "student" | "admin" | "moderator";
+  role: "student" | "campus_admin" | "super_admin" | "admin";
+  universityId?: string;
+  universityName?: string;
+  campusId?: string;
+  campusName?: string;
   program?: string;
+  department?: string;
   isVerified: boolean;
   hostelBlock?: string;
   avatarUrl?: string | null;

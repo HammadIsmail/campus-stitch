@@ -81,10 +81,15 @@ export default function HostelPage() {
       // 2. Fetch fresh data from Supabase
       try {
         const supabase = createClient();
-        const [roomsRes, servicesRes] = await Promise.all([
-          supabase.from("hostel_roommates").select("*").order("created_at", { ascending: false }),
-          supabase.from("hostel_services").select("*").order("created_at", { ascending: false }),
-        ]);
+        let roomQuery = supabase.from("hostel_roommates").select("*").order("created_at", { ascending: false });
+        let serviceQuery = supabase.from("hostel_services").select("*").order("created_at", { ascending: false });
+
+        if (user?.campusId) {
+          roomQuery = roomQuery.eq("campus_id", user.campusId);
+          serviceQuery = serviceQuery.eq("campus_id", user.campusId);
+        }
+
+        const [roomsRes, servicesRes] = await Promise.all([roomQuery, serviceQuery]);
 
         if (roomsRes.data && roomsRes.data.length > 0) {
           const mappedRooms: RoommateListing[] = roomsRes.data.map((r: any) => ({
@@ -94,7 +99,7 @@ export default function HostelPage() {
             details: `${r.room_type} in ${r.hostel_block}. Available from ${r.available_from}.`,
             roomType: r.room_type,
             owner: r.user_name,
-            program: "UET Lahore",
+            program: user?.universityName || "University",
             verified: r.is_verified ?? true,
             amenities: ["WiFi", "Attached Bath"],
           }));
@@ -125,7 +130,7 @@ export default function HostelPage() {
     }
 
     loadHostelData();
-  }, []);
+  }, [user?.campusId, user?.universityName]);
 
   const handlePostRoom = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,11 +193,17 @@ export default function HostelPage() {
                   <Building2 size={20} className="stroke-[2.2px]" />
                 </span>
                 <div>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700">
+                      <MapPin size={11} className="text-zinc-500" />
+                      <span>{user?.campusName || "Main Campus"} &bull; {user?.universityName || "UET Lahore"}</span>
+                    </span>
+                  </div>
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black dark:text-white">
                     Hostel Hub
                   </h1>
                   <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">
-                    Verified Roommates, Student Services & Hostel Living at UET Lahore
+                    Verified Roommates & Campus Services for {user?.campusName || "Main Campus"}
                   </p>
                 </div>
               </div>

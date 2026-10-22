@@ -20,8 +20,11 @@ import { MobileShell } from "@/components/mobile-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DataService, Ride, BikeItem } from "@/lib/data-service";
 import { VerificationBadge } from "@/components/ui/verification-badge";
+import { useAuth } from "@/lib/auth-context";
+import { MapPin } from "lucide-react";
 
 export default function CommutePage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = React.useState("rides");
   const [fromFilter, setFromFilter] = React.useState("");
   const [toFilter, setToFilter] = React.useState("");
@@ -34,8 +37,8 @@ export default function CommutePage() {
     async function loadData() {
       setLoading(true);
       const [ridesData, bikesData] = await Promise.all([
-        DataService.getRides(),
-        DataService.getBikes(),
+        DataService.getRides(user?.campusId),
+        DataService.getBikes(user?.campusId),
       ]);
       setRides(ridesData);
       setBikes(bikesData);
@@ -50,7 +53,7 @@ export default function CommutePage() {
       setLoading(false);
     }
     loadData();
-  }, []);
+  }, [user?.campusId]);
 
   const filteredRides = rides.filter((r) => {
     const matchFrom =
@@ -69,12 +72,17 @@ export default function CommutePage() {
         <div className="bg-white dark:bg-[#121215] border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-8 py-5 transition-colors">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
             <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700">
+                  <MapPin size={11} className="text-zinc-500" />
+                  <span>{user?.campusName || "Main Campus"} &bull; {user?.universityName || "UET Lahore"}</span>
+                </span>
+              </div>
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black dark:text-white">
                 Student Commute & Carpooling
               </h1>
               <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">
-                Khurrialwala daily route, rickshaw cost splitting & campus bike
-                rentals
+                Daily ride sharing, rickshaw cost splitting & campus bike rentals
               </p>
             </div>
             <Link

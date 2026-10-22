@@ -182,9 +182,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Post not found" }, { status: 404 });
     }
 
+    const campusId = searchParams.get("campusId") || req.headers.get("x-user-campus-id");
+
     try {
       const supabase = await createClient();
       let dbQuery = supabase.from("community_posts").select("*");
+
+      if (campusId) {
+        dbQuery = dbQuery.eq("campus_id", campusId);
+      }
 
       if (community && community !== "all") {
         dbQuery = dbQuery.eq("community_name", community);
@@ -248,33 +254,32 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      communityName,
-      title,
-      content,
+      communityName = "r/general",
+      title = "",
+      content = "",
       flair = "Discussion",
-      imageUrl,
-      authorName = "Muhammad Hammad Ismail",
-      authorStudentId = "2023-CS-807",
-      authorId = "u_2023_cs_807",
+      imageUrl = null,
+      linkUrl = null,
     } = body;
+    const campusId = req.headers.get("x-user-campus-id") || body.campusId || null;
+    const universityId = req.headers.get("x-user-university-id") || body.universityId || null;
+    const authorName = body.authorName || req.headers.get("x-user-name") || "Student";
+    const authorId = body.authorId || req.headers.get("x-user-id") || "u_student";
+    const authorStudentId = body.authorStudentId || "STUDENT";
 
-    if (!title || !content || !communityName) {
-      return NextResponse.json(
-        { success: false, error: "Community, Title and Content are required" },
-        { status: 400 }
-      );
-    }
-
-    const newPost = {
+    const newPost: any = {
       community_name: communityName,
       title: title.trim(),
       content: content.trim(),
       flair,
       image_url: imageUrl || null,
+      link_url: linkUrl || null,
       author_id: authorId,
       author_name: authorName,
       author_student_id: authorStudentId,
       author_verified: true,
+      campus_id: campusId,
+      university_id: universityId,
       upvotes: 1,
       downvotes: 0,
       score: 1,

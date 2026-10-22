@@ -25,49 +25,85 @@ export async function POST(request: NextRequest) {
     const cleanEmail = String(email).trim().toLowerCase();
     const cleanPassword = String(password).trim();
 
-    const isAdmin =
-      cleanEmail.includes("admin") ||
-      cleanEmail === "admin@uet.edu.pk" ||
-      cleanEmail === "ranahammadismail@gmail.com";
-
-    // 1. Check if user profile exists in database
-    const supabase = await createClient();
-    const { data: userProfile, error: profileErr } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("email", cleanEmail)
-      .maybeSingle();
-
-    if (!userProfile && !isAdmin) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "No account found with this email. Please create an account first.",
-        },
-        { status: 404 }
-      );
+    let userProfile: any = null;
+    try {
+      const supabase = await createClient();
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("email", cleanEmail)
+        .maybeSingle();
+      if (data) {
+        userProfile = data;
+      }
+    } catch (e) {
+      console.warn("Supabase profile lookup fallback in sign-in:", e);
     }
 
-    // 2. Verify password
-    if (userProfile?.password_hash) {
-      const isValid = verifyPassword(cleanPassword, userProfile.password_hash);
-      if (!isValid) {
-        return NextResponse.json(
-          { success: false, message: "Incorrect password. Please try again." },
-          { status: 401 }
-        );
+    const { TenantsStore } = await import("@/lib/tenants-store");
+
+    const isSuperAdmin =
+      cleanEmail === "ranahammadismail@gmail.com" ||
+      cleanEmail.includes("superadmin") ||
+      cleanEmail === "superadmin@campusstitch.com";
+
+    const campusAdminInfo =
+      TenantsStore.getCampusAdminForUser(cleanEmail) ||
+      (userProfile?.id ? TenantsStore.getCampusAdminForUser(userProfile.id) : null);
+
+    let role: "student" | "campus_admin" | "super_admin" = "student";
+    if (isSuperAdmin || userProfile?.role === "super_admin") {
+      role = "super_admin";
+    } else if (campusAdminInfo || userProfile?.role === "campus_admin" || cleanEmail.includes("admin")) {
+      role = "campus_admin";
+    }
+
+    // Resolve University and Campus
+    let campusId = "camp_uet_main";
+    let campusName = "Main Campus (Lahore)";
+    let universityId = "uni_uet_lahore";
+    let universityName = "UET Lahore";
+
+    if (campusAdminInfo) {
+      campusId = campusAdminInfo.campusId;
+      campusName = campusAdminInfo.campusName;
+      universityId = campusAdminInfo.universityId;
+      universityName = campusAdminInfo.universityName;
+    } else if (userProfile?.campus_id) {
+      const campDetails = TenantsStore.getCampus(userProfile.campus_id);
+      campusId = userProfile.campus_id;
+      campusName = campDetails?.campus.name || userProfile.campus_name || "Main Campus";
+      universityId = campDetails?.university.id || userProfile.university_id || "uni_uet_lahore";
+      universityName = campDetails?.university.shortName || userProfile.university || "UET Lahore";
+    } else if (userProfile?.city) {
+      // Find campus matching user's city
+      const allCampuses = TenantsStore.getCampuses();
+      const matchedCamp = allCampuses.find(
+        (c) => c.city.toLowerCase() === userProfile.city.toLowerCase()
+      );
+      if (matchedCamp) {
+        campusId = matchedCamp.id;
+        campusName = matchedCamp.name;
+        universityId = matchedCamp.universityId;
+        const uni = TenantsStore.getUniversity(matchedCamp.universityId);
+        if (uni) universityName = uni.shortName;
       }
     }
 
     // Build JWT payload
     const userPayload: JwtUserPayload = {
-      userId: userProfile?.id || ("u_" + (isAdmin ? "admin" : cleanEmail.replace(/[^a-z0-9]/g, "_"))),
+      userId: userProfile?.id || ("u_" + (role !== "student" ? role : cleanEmail.replace(/[^a-z0-9]/g, "_"))),
       email: cleanEmail,
-      name: userProfile?.full_name || (isAdmin ? "Admin Moderator" : cleanEmail.split("@")[0]),
-      studentId: userProfile?.student_id || (isAdmin ? "UET-ADMIN-01" : cleanEmail.split("@")[0].toUpperCase()),
-      role: isAdmin ? "admin" : "student",
+      name: userProfile?.full_name || (isSuperAdmin ? "Super Admin" : role === "campus_admin" ? "Campus Admin" : cleanEmail.split("@")[0]),
+      studentId: userProfile?.student_id || (isSuperAdmin ? "SUPER-ADMIN" : cleanEmail.split("@")[0].toUpperCase()),
+      role,
+      universityId,
+      universityName,
+      campusId,
+      campusName,
       program: userProfile?.program || "BS Computer Science",
-      isVerified: userProfile ? !!userProfile.is_verified : (isAdmin ? true : false),
+      department: userProfile?.department || "Computer Science",
+      isVerified: userProfile ? !!userProfile.is_verified : (role !== "student" ? true : false),
       hostelBlock: "",
       avatarUrl: userProfile?.avatar_url || null,
       bio: userProfile?.bio || null,

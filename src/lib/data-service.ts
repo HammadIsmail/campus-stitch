@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/client";
 
 export interface Ride {
   id: string;
+  university_id?: string;
+  campus_id?: string;
   organizer_name: string;
   organizer_verified: boolean;
   from_location: string;
@@ -23,6 +25,8 @@ export interface Ride {
 
 export interface Listing {
   id: string;
+  university_id?: string;
+  campus_id?: string;
   seller_name: string;
   seller_verified: boolean;
   title: string;
@@ -39,6 +43,8 @@ export interface Listing {
 
 export interface BikeItem {
   id: string;
+  university_id?: string;
+  campus_id?: string;
   owner_name: string;
   owner_verified: boolean;
   model: string;
@@ -62,6 +68,8 @@ export interface SharedOwner {
 
 export interface SharedItem {
   id: string;
+  university_id?: string;
+  campus_id?: string;
   title: string;
   total_cost: number;
   current_valuation: number;
@@ -76,9 +84,13 @@ export interface VerificationRequest {
   program: string;
   department: string;
   university: string;
+  university_id?: string;
+  campus_id?: string;
+  campus_name?: string;
   confidence_status: "matches" | "unreadable" | "unclear" | "expired";
   status: "pending" | "approved" | "rejected" | "reupload";
   card_photo_url?: string;
+  live_photo_url?: string;
   created_at?: string;
 }
 
@@ -114,13 +126,19 @@ function setStored<T>(key: string, value: T): void {
 // ========================================================
 export const DataService = {
   // ---- RIDES ----
-  async getRides(): Promise<Ride[]> {
+  async getRides(campusId?: string): Promise<Ride[]> {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase
+      let query = supabase
         .from("rides")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (campusId) {
+        query = query.eq("campus_id", campusId);
+      }
+
+      const { data, error } = await query;
 
       if (data && data.length > 0 && !error) {
         setStored("rides", data);
@@ -129,7 +147,9 @@ export const DataService = {
     } catch {
       // Fallback
     }
-    return getStored<Ride[]>("rides", SEED_RIDES);
+    const all = getStored<Ride[]>("rides", SEED_RIDES);
+    if (!campusId) return all;
+    return all.filter((r) => r.campus_id === campusId || (!r.campus_id && campusId === "camp_uet_main"));
   },
 
   async createRide(ride: Omit<Ride, "id">): Promise<Ride> {
@@ -204,20 +224,28 @@ export const DataService = {
   },
 
   // ---- MARKET LISTINGS ----
-  async getListings(): Promise<Listing[]> {
+  async getListings(campusId?: string): Promise<Listing[]> {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase
+      let query = supabase
         .from("listings")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (campusId) {
+        query = query.eq("campus_id", campusId);
+      }
+
+      const { data, error } = await query;
 
       if (data && data.length > 0 && !error) {
         setStored("listings", data);
         return data as Listing[];
       }
     } catch {}
-    return getStored<Listing[]>("listings", SEED_LISTINGS);
+    const all = getStored<Listing[]>("listings", SEED_LISTINGS);
+    if (!campusId) return all;
+    return all.filter((l) => l.campus_id === campusId || (!l.campus_id && campusId === "camp_uet_main"));
   },
 
   async createListing(listing: Omit<Listing, "id">): Promise<Listing> {
@@ -263,16 +291,22 @@ export const DataService = {
   },
 
   // ---- BIKES ----
-  async getBikes(): Promise<BikeItem[]> {
+  async getBikes(campusId?: string): Promise<BikeItem[]> {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.from("bikes").select("*");
+      let query = supabase.from("bikes").select("*");
+      if (campusId) {
+        query = query.eq("campus_id", campusId);
+      }
+      const { data, error } = await query;
       if (data && data.length > 0 && !error) {
         setStored("bikes", data);
         return data as BikeItem[];
       }
     } catch {}
-    return getStored<BikeItem[]>("bikes", SEED_BIKES);
+    const all = getStored<BikeItem[]>("bikes", SEED_BIKES);
+    if (!campusId) return all;
+    return all.filter((b) => b.campus_id === campusId || (!b.campus_id && campusId === "camp_uet_main"));
   },
 
   async rentBike(bikeId: string, renterName: string): Promise<boolean> {
@@ -299,12 +333,14 @@ export const DataService = {
   },
 
   // ---- SHARED ITEMS ----
-  async getSharedItems(): Promise<SharedItem[]> {
+  async getSharedItems(campusId?: string): Promise<SharedItem[]> {
     try {
       const supabase = createClient();
-      const { data: items, error: itemsError } = await supabase
-        .from("shared_items")
-        .select("*");
+      let query = supabase.from("shared_items").select("*");
+      if (campusId) {
+        query = query.eq("campus_id", campusId);
+      }
+      const { data: items, error: itemsError } = await query;
       const { data: owners, error: ownersError } = await supabase
         .from("shared_item_owners")
         .select("*");
@@ -322,6 +358,8 @@ export const DataService = {
             }));
           return {
             id: it.id,
+            university_id: it.university_id,
+            campus_id: it.campus_id,
             title: it.title,
             total_cost: Number(it.total_cost),
             current_valuation: Number(it.current_valuation),
@@ -333,7 +371,9 @@ export const DataService = {
         return mapped;
       }
     } catch {}
-    return getStored<SharedItem[]>("shared_items", SEED_SHARED_ITEMS);
+    const all = getStored<SharedItem[]>("shared_items", SEED_SHARED_ITEMS);
+    if (!campusId) return all;
+    return all.filter((s) => s.campus_id === campusId || (!s.campus_id && campusId === "camp_uet_main"));
   },
 
   async addSharedOwner(

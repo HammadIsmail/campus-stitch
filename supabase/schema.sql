@@ -1,20 +1,51 @@
 -- ========================================================
--- CampuStitch - Complete Supabase Database Schema
--- Run this in your Supabase SQL Editor (https://supabase.com/dashboard/project/_/sql)
+-- CampuStitch - Complete Multi-Tenant Supabase Database Schema
+-- Multi-Tenant Campus Isolation, Super Admin, Campus Admin & Students
 -- ========================================================
 
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
--- 1. PROFILES TABLE
+-- 1. UNIVERSITIES TABLE
+create table if not exists public.universities (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null,
+  short_name text not null,
+  slug text unique not null,
+  city text not null,
+  province text not null,
+  logo_url text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create unique index if not exists universities_slug_idx on public.universities (slug);
+
+-- 2. CAMPUSES TABLE (TENANT ROOT ENTITY)
+create table if not exists public.campuses (
+  id uuid primary key default uuid_generate_v4(),
+  university_id uuid references public.universities(id) on delete cascade not null,
+  name text not null,
+  city text not null,
+  slug text,
+  is_active boolean not null default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index if not exists campuses_uni_idx on public.campuses (university_id);
+
+-- 3. PROFILES TABLE (Multi-Tenant User Profile)
 create table if not exists public.profiles (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references auth.users(id) on delete cascade,
   email text,
   password_hash text,
   full_name text not null,
+  role text check (role in ('student', 'campus_admin', 'super_admin')) not null default 'student',
   university text not null default 'UET Lahore',
+  university_id uuid references public.universities(id) on delete set null,
   city text,
+  campus_id uuid references public.campuses(id) on delete set null,
+  campus_name text,
   program text,
   department text,
   is_verified boolean not null default false,
@@ -32,22 +63,30 @@ create table if not exists public.profiles (
 );
 
 create unique index if not exists profiles_email_idx on public.profiles (email);
+create index if not exists profiles_campus_idx on public.profiles (campus_id);
+create index if not exists profiles_role_idx on public.profiles (role);
 
 -- Idempotent column migrations for existing profiles table
 alter table if exists public.profiles drop column if exists student_id;
 alter table if exists public.profiles add column if not exists city text;
 alter table if exists public.profiles add column if not exists live_photo_url text;
+alter table if exists public.profiles add column if not exists role text check (role in ('student', 'campus_admin', 'super_admin')) default 'student';
+alter table if exists public.profiles add column if not exists university_id uuid references public.universities(id) on delete set null;
+alter table if exists public.profiles add column if not exists campus_id uuid references public.campuses(id) on delete set null;
+alter table if exists public.profiles add column if not exists campus_name text;
 
--- 2. DEPARTMENTS & PROGRAMS TABLE (System Fed)
+-- 4. DEPARTMENTS & PROGRAMS TABLE (System Fed)
 create table if not exists public.departments (
   id uuid primary key default uuid_generate_v4(),
   name text not null unique,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 3. RIDES (COMMUTE) TABLE
+-- 5. RIDES (COMMUTE) TABLE - TENANT SCOPED
 create table if not exists public.rides (
   id uuid primary key default uuid_generate_v4(),
+  university_id uuid references public.universities(id) on delete set null,
+  campus_id uuid references public.campuses(id) on delete set null,
   organizer_id uuid references public.profiles(id) on delete set null,
   organizer_name text not null,
   organizer_verified boolean default true,
@@ -66,7 +105,12 @@ create table if not exists public.rides (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. RIDE BOOKINGS TABLE
+create index if not exists rides_campus_idx on public.rides (campus_id);
+
+alter table if exists public.rides add column if not exists university_id uuid references public.universities(id) on delete set null;
+alter table if exists public.rides add column if not exists campus_id uuid references public.campuses(id) on delete set null;
+
+-- 6. RIDE BOOKINGS TABLE
 create table if not exists public.ride_bookings (
   id uuid primary key default uuid_generate_v4(),
   ride_id uuid references public.rides(id) on delete cascade not null,
@@ -77,9 +121,11 @@ create table if not exists public.ride_bookings (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. MARKETPLACE LISTINGS TABLE
+-- 7. MARKETPLACE LISTINGS TABLE - TENANT SCOPED
 create table if not exists public.listings (
   id uuid primary key default uuid_generate_v4(),
+  university_id uuid references public.universities(id) on delete set null,
+  campus_id uuid references public.campuses(id) on delete set null,
   seller_id uuid references public.profiles(id) on delete set null,
   seller_name text not null,
   seller_verified boolean default true,
@@ -94,9 +140,16 @@ create table if not exists public.listings (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 6. BIKES FOR RENT TABLE
+create index if not exists listings_campus_idx on public.listings (campus_id);
+
+alter table if exists public.listings add column if not exists university_id uuid references public.universities(id) on delete set null;
+alter table if exists public.listings add column if not exists campus_id uuid references public.campuses(id) on delete set null;
+
+-- 8. BIKES FOR RENT TABLE - TENANT SCOPED
 create table if not exists public.bikes (
   id uuid primary key default uuid_generate_v4(),
+  university_id uuid references public.universities(id) on delete set null,
+  campus_id uuid references public.campuses(id) on delete set null,
   owner_id uuid references public.profiles(id) on delete set null,
   owner_name text not null,
   owner_verified boolean default true,
@@ -112,7 +165,12 @@ create table if not exists public.bikes (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 7. BIKE RENTAL REQUESTS TABLE
+create index if not exists bikes_campus_idx on public.bikes (campus_id);
+
+alter table if exists public.bikes add column if not exists university_id uuid references public.universities(id) on delete set null;
+alter table if exists public.bikes add column if not exists campus_id uuid references public.campuses(id) on delete set null;
+
+-- 9. BIKE RENTAL REQUESTS TABLE
 create table if not exists public.bike_rentals (
   id uuid primary key default uuid_generate_v4(),
   bike_id uuid references public.bikes(id) on delete cascade not null,
@@ -124,9 +182,11 @@ create table if not exists public.bike_rentals (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. SHARED CO-OWNED ITEMS TABLE
+-- 10. SHARED CO-OWNED ITEMS TABLE - TENANT SCOPED
 create table if not exists public.shared_items (
   id uuid primary key default uuid_generate_v4(),
+  university_id uuid references public.universities(id) on delete set null,
+  campus_id uuid references public.campuses(id) on delete set null,
   title text not null,
   total_cost numeric not null,
   current_valuation numeric not null default 2000,
@@ -144,9 +204,11 @@ create table if not exists public.shared_item_owners (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 9. HOSTEL ROOMMATES & SERVICES TABLE
+-- 11. HOSTEL ROOMMATES & SERVICES TABLE - TENANT SCOPED
 create table if not exists public.hostel_roommates (
   id uuid primary key default uuid_generate_v4(),
+  university_id uuid references public.universities(id) on delete set null,
+  campus_id uuid references public.campuses(id) on delete set null,
   user_name text not null,
   is_verified boolean default true,
   title text not null,
@@ -160,6 +222,8 @@ create table if not exists public.hostel_roommates (
 
 create table if not exists public.hostel_services (
   id uuid primary key default uuid_generate_v4(),
+  university_id uuid references public.universities(id) on delete set null,
+  campus_id uuid references public.campuses(id) on delete set null,
   provider_name text not null,
   service_name text not null,
   location text not null,
@@ -168,9 +232,11 @@ create table if not exists public.hostel_services (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 10. COMMUNITY EVENTS TABLE
+-- 12. COMMUNITY EVENTS TABLE - TENANT SCOPED
 create table if not exists public.community_events (
   id uuid primary key default uuid_generate_v4(),
+  university_id uuid references public.universities(id) on delete set null,
+  campus_id uuid references public.campuses(id) on delete set null,
   title text not null,
   organizer text not null,
   event_month text not null default 'OCT',
@@ -181,22 +247,29 @@ create table if not exists public.community_events (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 11. STUDENT KYC VERIFICATIONS QUEUE (ADMIN)
+-- 13. STUDENT KYC VERIFICATIONS QUEUE (CAMPUS ADMIN & SUPER ADMIN)
 create table if not exists public.verifications (
   id text primary key default gen_random_uuid()::text,
   user_id uuid references public.profiles(id) on delete set null,
   name text not null,
   email text,
   university text not null default 'UET Lahore',
+  university_id uuid references public.universities(id) on delete set null,
   city text,
+  campus_id uuid references public.campuses(id) on delete set null,
+  campus_name text,
   program text not null,
   department text,
   confidence_status text check (confidence_status in ('matches', 'unreadable', 'unclear', 'expired')) default 'matches',
   status text check (status in ('pending', 'approved', 'rejected', 'reupload')) default 'pending',
   card_photo_url text,
   live_photo_url text,
+  reviewed_by uuid references public.profiles(id) on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+create index if not exists verifications_campus_idx on public.verifications (campus_id);
+create index if not exists verifications_status_idx on public.verifications (status);
 
 -- Idempotent column migrations for existing verifications table
 alter table if exists public.verifications drop column if exists student_id;
@@ -204,12 +277,18 @@ alter table if exists public.verifications add column if not exists user_id uuid
 alter table if exists public.verifications add column if not exists email text;
 alter table if exists public.verifications add column if not exists city text;
 alter table if exists public.verifications add column if not exists live_photo_url text;
+alter table if exists public.verifications add column if not exists university_id uuid references public.universities(id) on delete set null;
+alter table if exists public.verifications add column if not exists campus_id uuid references public.campuses(id) on delete set null;
+alter table if exists public.verifications add column if not exists campus_name text;
+alter table if exists public.verifications add column if not exists reviewed_by uuid references public.profiles(id) on delete set null;
 
 -- ========================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
--- Permissive policies for verified student campus sharing
+-- Multi-Tenant Campus Isolation
 -- ========================================================
 
+alter table public.universities enable row level security;
+alter table public.campuses enable row level security;
 alter table public.profiles enable row level security;
 alter table public.departments enable row level security;
 alter table public.rides enable row level security;
@@ -224,7 +303,13 @@ alter table public.hostel_services enable row level security;
 alter table public.community_events enable row level security;
 alter table public.verifications enable row level security;
 
--- Public READ & WRITE policies (for seamless student access)
+-- Public read for universities & campuses
+create policy "Allow public read universities" on public.universities for select using (true);
+create policy "Allow public read campuses" on public.campuses for select using (true);
+create policy "Allow super admin manage universities" on public.universities for all using (true);
+create policy "Allow super admin manage campuses" on public.campuses for all using (true);
+
+-- Permissive policies
 create policy "Allow public read profiles" on public.profiles for select using (true);
 create policy "Allow public insert profiles" on public.profiles for insert with check (true);
 create policy "Allow public update profiles" on public.profiles for update using (true);
@@ -269,7 +354,7 @@ create policy "Allow public insert verifications" on public.verifications for in
 create policy "Allow public update verifications" on public.verifications for update using (true);
 
 -- ========================================================
--- SEED DATA - Exact initial state matching design specifications
+-- SEED DATA - Universities, Campuses & Curated Departments
 -- ========================================================
 
 -- Feed Curated Departments
@@ -294,62 +379,151 @@ insert into public.departments (name) values
   ('Social Sciences & Humanities')
 on conflict (name) do nothing;
 
--- Insert Initial Rides
-insert into public.rides (organizer_name, organizer_verified, from_location, to_location, departure_time, vehicle_type, total_cost, price_per_seat, total_seats, available_seats, pickup_point, notes)
-values
-  ('Ahmed', true, 'Khurrialwala', 'University', '8:00 AM', 'rickshaw', 200, 50, 4, 1, 'Main chowk stop', 'Rickshaw split: Rs. 200 ÷ 4 students'),
-  ('Sara', true, 'Near Khurrialwala', 'University', '8:15 AM', 'car', 280, 70, 4, 3, 'Gulshan gate', 'AC on, polite driving'),
-  ('Usman', true, 'Khurrialwala', 'University', '8:30 AM', 'car', 240, 60, 4, 2, 'Civil lines stop', 'Leaving sharp 8:30 AM');
-
--- Insert Initial Bikes
-insert into public.bikes (owner_name, owner_verified, model, condition, location, daily_rate, deposit_amount, available_date, available_time)
-values
-  ('Ahmed', true, 'Honda CD 70', 'Good condition', 'Hostel Block A', 300, 1000, 'Tomorrow', '8 AM – 4 PM'),
-  ('Bilal', true, 'Yamaha YBR 125', 'Excellent condition', 'Hostel Block B', 380, 1500, 'Tomorrow', '8 AM – 4 PM');
-
--- Insert Initial Listings
-insert into public.listings (seller_name, seller_verified, title, category, price, condition, location, is_graduation_sale, status)
-values
-  ('Ahmed K.', true, 'Phone cooler', 'Electronics', 1800, 'Like new', 'Hostel Block B', false, 'available'),
-  ('Zainab M.', true, 'Study table', 'Furniture', 2000, 'Good', 'Hostel Block A', true, 'available'),
-  ('Hamza R.', true, 'Chair', 'Furniture', 1000, 'Good', 'Hostel Block A', true, 'sold'),
-  ('Ayesha S.', true, '24-inch monitor', 'Electronics', 15000, 'Good', 'Near campus', true, 'reserved'),
-  ('Bilal T.', true, 'Mini fridge', 'Hostel', 8000, 'Fair', 'Hostel Block B', true, 'available');
-
--- Insert Initial Shared Item
+-- Feed Universities & Campuses
 do $$
 declare
-  item_id uuid;
+  u_uet uuid;
+  u_fast uuid;
+  u_nust uuid;
+  u_lums uuid;
+  u_comsats uuid;
+  u_giki uuid;
+  u_itu uuid;
+  u_pu uuid;
+  u_gcu uuid;
+  u_uet_taxila uuid;
+  u_iba uuid;
+  u_ned uuid;
+  u_bahria uuid;
+  u_air uuid;
+  u_qau uuid;
+  u_ntu uuid;
+  c_uet_main uuid;
 begin
-  insert into public.shared_items (title, total_cost, current_valuation)
-  values ('Phone cooler', 4000, 2000)
-  returning id into item_id;
+  -- UET Lahore
+  insert into public.universities (name, short_name, slug, city, province)
+  values ('University of Engineering and Technology (UET) Lahore', 'UET Lahore', 'uet-lahore', 'Lahore', 'Punjab')
+  on conflict (slug) do update set name = excluded.name
+  returning id into u_uet;
 
-  insert into public.shared_item_owners (item_id, owner_name, owner_initial, contribution_amount, share_percentage)
+  insert into public.campuses (university_id, name, city, slug)
   values
-    (item_id, 'Ali', 'A', 1000, 25),
-    (item_id, 'Ahmed', 'A', 1000, 25),
-    (item_id, 'Hassan', 'H', 1000, 25),
-    (item_id, 'Usman', 'U', 1000, 25);
+    (u_uet, 'Main Campus (Lahore)', 'Lahore', 'uet-main-lahore'),
+    (u_uet, 'Kala Shah Kaku (KSK) Campus', 'Kala Shah Kaku', 'uet-ksk'),
+    (u_uet, 'Faisalabad Campus', 'Faisalabad', 'uet-faisalabad'),
+    (u_uet, 'Narowal Campus', 'Narowal', 'uet-narowal')
+  on conflict do nothing;
+
+  select id into c_uet_main from public.campuses where university_id = u_uet and slug = 'uet-main-lahore' limit 1;
+
+  -- FAST-NUCES
+  insert into public.universities (name, short_name, slug, city, province)
+  values ('National University of Computer and Emerging Sciences (FAST-NUCES)', 'FAST-NUCES', 'fast-nuces', 'Lahore', 'Punjab')
+  on conflict (slug) do update set name = excluded.name
+  returning id into u_fast;
+
+  insert into public.campuses (university_id, name, city, slug)
+  values
+    (u_fast, 'Lahore Campus', 'Lahore', 'fast-lahore'),
+    (u_fast, 'Islamabad Campus', 'Islamabad', 'fast-islamabad'),
+    (u_fast, 'Karachi Campus', 'Karachi', 'fast-karachi'),
+    (u_fast, 'Peshawar Campus', 'Peshawar', 'fast-peshawar'),
+    (u_fast, 'Chiniot-Faisalabad Campus', 'Chiniot', 'fast-chiniot')
+  on conflict do nothing;
+
+  -- NUST
+  insert into public.universities (name, short_name, slug, city, province)
+  values ('National University of Sciences and Technology (NUST)', 'NUST', 'nust', 'Islamabad', 'Islamabad Capital Territory')
+  on conflict (slug) do update set name = excluded.name
+  returning id into u_nust;
+
+  insert into public.campuses (university_id, name, city, slug)
+  values
+    (u_nust, 'Islamabad (H-12 Main)', 'Islamabad', 'nust-islamabad'),
+    (u_nust, 'Rawalpindi (EME)', 'Rawalpindi', 'nust-rawalpindi'),
+    (u_nust, 'Karachi (PNEC)', 'Karachi', 'nust-karachi'),
+    (u_nust, 'Risalpur (CAE)', 'Risalpur', 'nust-risalpur')
+  on conflict do nothing;
+
+  -- LUMS
+  insert into public.universities (name, short_name, slug, city, province)
+  values ('Lahore University of Management Sciences (LUMS)', 'LUMS', 'lums', 'Lahore', 'Punjab')
+  on conflict (slug) do update set name = excluded.name
+  returning id into u_lums;
+
+  insert into public.campuses (university_id, name, city, slug)
+  values (u_lums, 'Main Campus (DHA Lahore)', 'Lahore', 'lums-main')
+  on conflict do nothing;
+
+  -- COMSATS
+  insert into public.universities (name, short_name, slug, city, province)
+  values ('COMSATS University Islamabad (CUI)', 'COMSATS', 'comsats', 'Islamabad', 'Islamabad Capital Territory')
+  on conflict (slug) do update set name = excluded.name
+  returning id into u_comsats;
+
+  insert into public.campuses (university_id, name, city, slug)
+  values
+    (u_comsats, 'Islamabad Campus', 'Islamabad', 'comsats-islamabad'),
+    (u_comsats, 'Lahore Campus', 'Lahore', 'comsats-lahore'),
+    (u_comsats, 'Abbottabad Campus', 'Abbottabad', 'comsats-abbottabad'),
+    (u_comsats, 'Wah Cantt Campus', 'Wah Cantt', 'comsats-wah'),
+    (u_comsats, 'Attock Campus', 'Attock', 'comsats-attock'),
+    (u_comsats, 'Sahiwal Campus', 'Sahiwal', 'comsats-sahiwal'),
+    (u_comsats, 'Vehari Campus', 'Vehari', 'comsats-vehari')
+  on conflict do nothing;
+
+  -- GIKI
+  insert into public.universities (name, short_name, slug, city, province)
+  values ('Ghulam Ishaq Khan Institute (GIKI)', 'GIKI', 'giki', 'Topi', 'Khyber Pakhtunkhwa')
+  on conflict (slug) do update set name = excluded.name
+  returning id into u_giki;
+
+  insert into public.campuses (university_id, name, city, slug)
+  values (u_giki, 'Topi Campus', 'Topi', 'giki-topi')
+  on conflict do nothing;
+
+  -- ITU
+  insert into public.universities (name, short_name, slug, city, province)
+  values ('Information Technology University (ITU)', 'ITU', 'itu', 'Lahore', 'Punjab')
+  on conflict (slug) do update set name = excluded.name
+  returning id into u_itu;
+
+  insert into public.campuses (university_id, name, city, slug)
+  values (u_itu, 'Arfa Karim Tower Campus', 'Lahore', 'itu-main')
+  on conflict do nothing;
+
+  -- Punjab University
+  insert into public.universities (name, short_name, slug, city, province)
+  values ('University of the Punjab (PU)', 'Punjab University', 'pu', 'Lahore', 'Punjab')
+  on conflict (slug) do update set name = excluded.name
+  returning id into u_pu;
+
+  insert into public.campuses (university_id, name, city, slug)
+  values
+    (u_pu, 'Quaid-e-Azam (New) Campus', 'Lahore', 'pu-new-campus'),
+    (u_pu, 'Allama Iqbal (Old) Campus', 'Lahore', 'pu-old-campus'),
+    (u_pu, 'Gujranwala Campus', 'Gujranwala', 'pu-gujranwala'),
+    (u_pu, 'Jhelum Campus', 'Jhelum', 'pu-jhelum')
+  on conflict do nothing;
+
+  -- GCU Lahore
+  insert into public.universities (name, short_name, slug, city, province)
+  values ('Government College University (GCU) Lahore', 'GCU Lahore', 'gcu', 'Lahore', 'Punjab')
+  on conflict (slug) do update set name = excluded.name
+  returning id into u_gcu;
+
+  insert into public.campuses (university_id, name, city, slug)
+  values
+    (u_gcu, 'Main Campus (Katchery Road)', 'Lahore', 'gcu-main'),
+    (u_gcu, 'Kala Shah Kaku (KSK) Campus', 'Kala Shah Kaku', 'gcu-ksk')
+  on conflict do nothing;
+
+  -- Update existing unassigned rides, listings, and verifications to UET Lahore Main Campus
+  update public.rides set university_id = u_uet, campus_id = c_uet_main where campus_id is null;
+  update public.listings set university_id = u_uet, campus_id = c_uet_main where campus_id is null;
+  update public.bikes set university_id = u_uet, campus_id = c_uet_main where campus_id is null;
+  update public.hostel_roommates set university_id = u_uet, campus_id = c_uet_main where campus_id is null;
+  update public.hostel_services set university_id = u_uet, campus_id = c_uet_main where campus_id is null;
+  update public.community_events set university_id = u_uet, campus_id = c_uet_main where campus_id is null;
+  update public.verifications set university_id = u_uet, campus_id = c_uet_main where campus_id is null;
 end $$;
-
--- Insert Hostel Roommate & Services
-insert into public.hostel_roommates (user_name, is_verified, title, room_type, monthly_rent, available_from, hostel_block)
-values ('Usman', true, '1 seat in Block B', 'Shared room, 2 students', 8000, 'November', 'Hostel Block B');
-
-insert into public.hostel_services (provider_name, service_name, location, turnaround_time, is_verified)
-values ('Hamza S.', 'Laundry pickup', 'Hostel Block A', 'Next-day return', true);
-
--- Insert Community Events
-insert into public.community_events (title, organizer, event_month, event_day, event_time, category, registered_count)
-values
-  ('Agentic AI workshop', 'CS Society', 'OCT', '7', 'Wed, 3:00 PM', 'Workshop', 42),
-  ('Career talk: internships', 'Placement office', 'OCT', '9', 'Fri, 11:00 AM', 'Seminar', 85);
-
--- Insert Initial Admin Verification Queue
-insert into public.verifications (name, program, department, university, confidence_status, status)
-values
-  ('Ali Raza', 'BSCS', 'Computer Science', 'UET Lahore', 'matches', 'pending'),
-  ('Sara K.', 'BSCS', 'Computer Science', 'UET Lahore', 'unclear', 'pending'),
-  ('Bilal R.', 'BSEE', 'Electrical Engineering', 'UET Lahore', 'matches', 'pending'),
-  ('Usman T.', 'BSME', 'Mechanical Engineering', 'UET Lahore', 'matches', 'pending');

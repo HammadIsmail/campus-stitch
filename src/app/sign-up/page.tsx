@@ -58,17 +58,36 @@ export default function SignUpPage() {
 
   // Form Fields
   const [fullName, setFullName] = React.useState("");
-  const [selectedUni, setSelectedUni] = React.useState<UniversityItem>(SUPPORTED_UNIVERSITIES[0]);
+  const [universitiesList, setUniversitiesList] = React.useState<any[]>(SUPPORTED_UNIVERSITIES);
+  const [selectedUni, setSelectedUni] = React.useState<any>(SUPPORTED_UNIVERSITIES[0]);
   const [uniSearchQuery, setUniSearchQuery] = React.useState("");
   const [isUniDropdownOpen, setIsUniDropdownOpen] = React.useState(false);
+  const [selectedCampusId, setSelectedCampusId] = React.useState<string>("camp_uet_main");
   const [selectedCampusCity, setSelectedCampusCity] = React.useState<string>(
-    SUPPORTED_UNIVERSITIES[0].campuses[0] || "Lahore"
+    SUPPORTED_UNIVERSITIES[0].campuses[0] || "Main Campus (Lahore)"
   );
   const [department, setDepartment] = React.useState<string>(DEPARTMENTS[0]);
   const [departmentsList, setDepartmentsList] = React.useState<string[]>(DEPARTMENTS);
   const [email, setEmail] = React.useState("");
 
   React.useEffect(() => {
+    // Load dynamic universities from database / tenant store
+    fetch("/api/universities")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.universities) && data.universities.length > 0) {
+          setUniversitiesList(data.universities);
+          setSelectedUni(data.universities[0]);
+          const camps = data.universities[0].campuses || [];
+          if (camps.length > 0) {
+            const firstCamp = camps[0];
+            setSelectedCampusId(typeof firstCamp === "string" ? firstCamp : firstCamp.id);
+            setSelectedCampusCity(typeof firstCamp === "string" ? firstCamp : firstCamp.name);
+          }
+        }
+      })
+      .catch(() => {});
+
     fetch("/api/departments")
       .then((res) => res.json())
       .then((data) => {
@@ -107,25 +126,37 @@ export default function SignUpPage() {
   }, []);
 
   // Update selected city if university changes
-  const handleSelectUniversity = (uni: UniversityItem) => {
+  const handleSelectUniversity = (uni: any) => {
     setSelectedUni(uni);
-    setSelectedCampusCity(uni.campuses[0] || uni.city);
+    const camps = uni.campuses || [];
+    if (camps.length > 0) {
+      const first = camps[0];
+      setSelectedCampusId(typeof first === "string" ? first : first.id);
+      setSelectedCampusCity(typeof first === "string" ? first : first.name);
+    } else {
+      setSelectedCampusId(uni.id + "_main");
+      setSelectedCampusCity(uni.city || "Main Campus");
+    }
     setIsUniDropdownOpen(false);
     setUniSearchQuery("");
   };
 
   // Filtered universities
   const filteredUniversities = React.useMemo(() => {
-    if (!uniSearchQuery.trim()) return SUPPORTED_UNIVERSITIES;
+    if (!uniSearchQuery.trim()) return universitiesList;
     const q = uniSearchQuery.toLowerCase().trim();
-    return SUPPORTED_UNIVERSITIES.filter(
-      (u) =>
-        u.name.toLowerCase().includes(q) ||
-        u.shortName.toLowerCase().includes(q) ||
-        u.city.toLowerCase().includes(q) ||
-        u.campuses.some((c) => c.toLowerCase().includes(q))
-    );
-  }, [uniSearchQuery]);
+    return universitiesList.filter((item: any) => {
+      const camps = Array.isArray(item.campuses) ? item.campuses : [];
+      return (
+        item.name.toLowerCase().includes(q) ||
+        item.shortName.toLowerCase().includes(q) ||
+        (item.city && item.city.toLowerCase().includes(q)) ||
+        camps.some((c: any) =>
+          typeof c === "string" ? c.toLowerCase().includes(q) : c.name.toLowerCase().includes(q)
+        )
+      );
+    });
+  }, [uniSearchQuery, universitiesList]);
 
   // Resend OTP countdown
   React.useEffect(() => {
@@ -252,7 +283,10 @@ export default function SignUpPage() {
         email: email.trim().toLowerCase(),
         password,
         code: otpCode.trim(),
-        university: selectedUni.name,
+        university: selectedUni.name || selectedUni.shortName,
+        universityId: selectedUni.id,
+        campusId: selectedCampusId,
+        campusName: selectedCampusCity,
         city: selectedCampusCity,
         department: department.trim(),
         program: `BS ${department.trim()}`,
@@ -412,23 +446,36 @@ export default function SignUpPage() {
               )}
             </div>
 
-            {/* Campus / City Dropdown (Clean City Names Only) */}
+            {/* Campus / City Dropdown */}
             <div>
               <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
-                Campus City <span className="text-zinc-400">*</span>
+                Campus <span className="text-zinc-400">*</span>
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <select
-                  value={selectedCampusCity}
-                  onChange={(e) => setSelectedCampusCity(e.target.value)}
+                  value={selectedCampusId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedCampusId(val);
+                    const campObj = (selectedUni.campuses || []).find((c: any) =>
+                      typeof c === "string" ? c === val : c.id === val
+                    );
+                    if (campObj) {
+                      setSelectedCampusCity(typeof campObj === "string" ? campObj : campObj.name);
+                    }
+                  }}
                   className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white appearance-none transition-all cursor-pointer font-semibold"
                 >
-                  {selectedUni.campuses.map((city) => (
-                    <option key={city} value={city} className="bg-white dark:bg-zinc-900 text-black dark:text-white">
-                      {city}
-                    </option>
-                  ))}
+                  {(selectedUni.campuses || []).map((camp: any) => {
+                    const cid = typeof camp === "string" ? camp : camp.id;
+                    const cname = typeof camp === "string" ? camp : `${camp.name} · ${camp.city}`;
+                    return (
+                      <option key={cid} value={cid} className="bg-white dark:bg-zinc-900 text-black dark:text-white">
+                        {cname}
+                      </option>
+                    );
+                  })}
                 </select>
                 <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
               </div>

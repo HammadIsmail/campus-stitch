@@ -12,13 +12,16 @@ interface AuthContextType {
   login: (data: { email: string; password?: string; name?: string; studentId?: string; isDemo?: boolean }) => Promise<boolean>;
   signup: (data: {
     name: string;
-    studentId: string;
+    studentId?: string;
     email: string;
     password?: string;
     code?: string;
     program?: string;
     hostel?: string;
     university?: string;
+    universityId?: string;
+    campusId?: string;
+    campusName?: string;
     city?: string;
     department?: string;
     cnic?: string;
@@ -65,7 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: parsed.name || parsed.full_name || "Student",
           studentId: parsed.studentId || parsed.student_id || "",
           role: parsed.role || "student",
+          universityId: parsed.universityId || "uni_uet_lahore",
+          universityName: parsed.universityName || parsed.university || "UET Lahore",
+          campusId: parsed.campusId || "camp_uet_main",
+          campusName: parsed.campusName || parsed.city || "Main Campus (Lahore)",
           program: parsed.program || "BS Computer Science",
+          department: parsed.department || "Computer Science",
           isVerified: parsed.isVerified ?? parsed.is_verified ?? false,
           avatarUrl: parsed.avatarUrl || parsed.avatar_url || null,
           bio: parsed.bio || null,
@@ -119,13 +127,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = async (data: {
     name: string;
-    studentId: string;
+    studentId?: string;
     email: string;
     password?: string;
     code?: string;
     program?: string;
     hostel?: string;
     university?: string;
+    universityId?: string;
+    campusId?: string;
+    campusName?: string;
+    city?: string;
     department?: string;
     cnic?: string;
     expiryDate?: string;

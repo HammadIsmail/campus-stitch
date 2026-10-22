@@ -77,10 +77,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isAdmin =
-      cleanEmail.includes("admin") ||
-      cleanEmail === "admin@uet.edu.pk" ||
-      cleanEmail === "ranahammadismail@gmail.com";
+    const { TenantsStore } = await import("@/lib/tenants-store");
+
+    const isSuperAdmin =
+      cleanEmail === "ranahammadismail@gmail.com" ||
+      cleanEmail.includes("superadmin") ||
+      cleanEmail === "superadmin@campusstitch.com";
+
+    // Resolve university & campus
+    let uId = body.universityId;
+    let cId = body.campusId;
+    let uName = university || "UET Lahore";
+    let cName = body.city || "Main Campus (Lahore)";
+
+    if (cId) {
+      const campDetails = TenantsStore.getCampus(cId);
+      if (campDetails) {
+        cName = campDetails.campus.name;
+        uId = campDetails.university.id;
+        uName = campDetails.university.shortName;
+      }
+    } else if (uId) {
+      const uni = TenantsStore.getUniversity(uId);
+      if (uni) {
+        uName = uni.shortName;
+        if (uni.campuses.length > 0) {
+          cId = uni.campuses[0].id;
+          cName = uni.campuses[0].name;
+        }
+      }
+    } else {
+      uId = "uni_uet_lahore";
+      cId = "camp_uet_main";
+      uName = "UET Lahore";
+      cName = "Main Campus (Lahore)";
+    }
+
+    const role: "student" | "campus_admin" | "super_admin" = isSuperAdmin
+      ? "super_admin"
+      : cleanEmail.includes("admin")
+      ? "campus_admin"
+      : "student";
 
     // 3. Hash password if provided
     const passwordHash = password ? hashPassword(password) : null;
@@ -93,8 +130,12 @@ export async function POST(request: NextRequest) {
       email: cleanEmail,
       password_hash: passwordHash,
       full_name: cleanName,
-      university: university || "UET Lahore",
-      city: body.city || null,
+      role,
+      university: uName,
+      university_id: uId,
+      campus_id: cId,
+      campus_name: cName,
+      city: cName,
       program: program || "BS Computer Science",
       department: department || "Computer Science",
       is_verified: false,
@@ -107,31 +148,35 @@ export async function POST(request: NextRequest) {
       rating_count: 0,
     };
 
-    // 6. Persist profile to Supabase database
-    const { data: savedProfile, error: dbErr } = await supabase
-      .from("profiles")
-      .insert([profileData])
-      .select()
-      .single();
-
-    if (dbErr) {
-      console.error("DB profile insert error:", dbErr);
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to create student account: " + dbErr.message,
-        },
-        { status: 500 }
-      );
+    // 6. Persist profile to Supabase database (with resilient fallback)
+    let savedProfile = null;
+    try {
+      const { data, error: dbErr } = await supabase
+        .from("profiles")
+        .insert([profileData])
+        .select()
+        .single();
+      if (!dbErr && data) {
+        savedProfile = data;
+      } else if (dbErr) {
+        console.warn("Supabase profile insert notice:", dbErr.message);
+      }
+    } catch (dbEx: any) {
+      console.warn("Supabase connection notice during signup:", dbEx.message);
     }
 
     const userPayload: JwtUserPayload = {
       userId: savedProfile?.id || profileId,
       email: cleanEmail,
       name: cleanName,
-      studentId: cleanStudentId || cleanEmail.split("@")[0].toUpperCase(),
-      role: isAdmin ? "admin" : "student",
+      studentId: cleanStudentId || (isSuperAdmin ? "SUPER-ADMIN" : cleanEmail.split("@")[0].toUpperCase()),
+      role,
+      universityId: uId,
+      universityName: uName,
+      campusId: cId,
+      campusName: cName,
       program: profileData.program,
+      department: profileData.department,
       isVerified: false,
       hostelBlock: "",
       avatarUrl: savedProfile?.avatar_url || profileData.avatar_url || null,

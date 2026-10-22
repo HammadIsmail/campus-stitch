@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/theme-context";
+import { useAuth } from "@/lib/auth-context";
 import { NotificationsSlider } from "@/components/notifications-slider";
 import { UnverifiedDialog } from "@/components/unverified-dialog";
 
@@ -40,6 +41,7 @@ export function MobileShell({
   hideNav?: boolean;
 }) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const { resolvedTheme, toggleTheme } = useTheme();
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
   const [unreadCount, setUnreadCount] = React.useState(0);
@@ -91,8 +93,8 @@ export function MobileShell({
                 <span className="font-bold text-[18px] tracking-tight text-black dark:text-white leading-none">
                   CampuStitch
                 </span>
-                <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold mt-0.5">
-                  UET Lahore
+                <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold mt-0.5 truncate max-w-[140px] sm:max-w-[220px]">
+                  {user?.campusName || user?.universityName || "Pakistan"}
                 </span>
               </div>
             </Link>

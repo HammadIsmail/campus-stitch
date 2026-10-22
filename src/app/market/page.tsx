@@ -19,10 +19,13 @@ import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { DataService, Listing } from "@/lib/data-service";
 import { VerificationBadge } from "@/components/ui/verification-badge";
+import { useAuth } from "@/lib/auth-context";
+import { MapPin } from "lucide-react";
 
 const CATEGORIES = ["All", "Electronics", "Hostel", "Books", "Furniture"];
 
 export default function MarketPage() {
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = React.useState("All");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [listings, setListings] = React.useState<Listing[]>([]);
@@ -34,12 +37,12 @@ export default function MarketPage() {
   React.useEffect(() => {
     async function loadListings() {
       setLoading(true);
-      const data = await DataService.getListings();
+      const data = await DataService.getListings(user?.campusId);
       setListings(data);
       setLoading(false);
     }
     loadListings();
-  }, []);
+  }, [user?.campusId]);
 
   const filteredItems = listings.filter((item) => {
     const matchesCat =
@@ -71,8 +74,9 @@ export default function MarketPage() {
             <div className="font-bold text-lg tracking-tight text-black dark:text-white">
               Student Marketplace
             </div>
-            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
-              UET Lahore · Direct student-to-student
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1">
+              <MapPin size={11} className="text-zinc-400" />
+              <span>{user?.campusName || "Main Campus"} &bull; {user?.universityName || "UET Lahore"}</span>
             </div>
           </div>
           <Link

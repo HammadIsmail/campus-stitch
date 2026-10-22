@@ -43,7 +43,14 @@ export async function proxy(request: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired session" }, { status: 401 });
     }
 
-    if (pathname.startsWith("/api/admin") && payload.role !== "admin") {
+    const isSuperAdmin = payload.role === "super_admin";
+    const isCampusAdmin = payload.role === "campus_admin" || isSuperAdmin || payload.role === "admin";
+
+    if (pathname.startsWith("/api/admin/super") && !isSuperAdmin) {
+      return NextResponse.json({ error: "Super Admin access required" }, { status: 403 });
+    }
+
+    if (pathname.startsWith("/api/admin") && !isCampusAdmin) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
@@ -52,6 +59,8 @@ export async function proxy(request: NextRequest) {
     requestHeaders.set("x-user-email", payload.email);
     requestHeaders.set("x-user-role", payload.role);
     requestHeaders.set("x-user-name", payload.name);
+    if (payload.campusId) requestHeaders.set("x-user-campus-id", payload.campusId);
+    if (payload.universityId) requestHeaders.set("x-user-university-id", payload.universityId);
 
     return NextResponse.next({
       request: { headers: requestHeaders },
@@ -107,9 +116,18 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
+  const isSuperAdmin = payload.role === "super_admin";
+  const isCampusAdmin = payload.role === "campus_admin" || isSuperAdmin || payload.role === "admin";
+
   // Role-based authorization check for admin routes
+  if (pathname.startsWith("/admin/super") && !isSuperAdmin) {
+    const homeUrl = new URL("/admin", request.url);
+    homeUrl.searchParams.set("error", "super_admin_access_required");
+    return NextResponse.redirect(homeUrl);
+  }
+
   const isAdminRoute = ADMIN_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-  if (isAdminRoute && payload.role !== "admin") {
+  if (isAdminRoute && !isCampusAdmin) {
     const homeUrl = new URL("/", request.url);
     homeUrl.searchParams.set("error", "admin_access_required");
     return NextResponse.redirect(homeUrl);
@@ -121,6 +139,8 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set("x-user-email", payload.email);
   requestHeaders.set("x-user-role", payload.role);
   requestHeaders.set("x-user-name", payload.name);
+  if (payload.campusId) requestHeaders.set("x-user-campus-id", payload.campusId);
+  if (payload.universityId) requestHeaders.set("x-user-university-id", payload.universityId);
 
   return NextResponse.next({
     request: {

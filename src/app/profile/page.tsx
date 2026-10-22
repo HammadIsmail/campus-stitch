@@ -63,7 +63,8 @@ export default function ProfilePage() {
     email: authUser?.email || "",
     studentId: authUser?.studentId || "",
     program: authUser?.program || "",
-    university: "UET Lahore",
+    university: authUser?.universityName || "UET Lahore",
+    campus: authUser?.campusName || "Main Campus (Lahore)",
     verified: authUser?.isVerified ?? false,
     role: authUser?.role || "student",
     avatarUrl: authUser?.avatarUrl || null,
@@ -73,7 +74,9 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(
     authUser?.avatarUrl || null
   );
-  const [profileUniversity, setProfileUniversity] = React.useState<string>("UET Lahore");
+  const [profileUniversity, setProfileUniversity] = React.useState<string>(
+    authUser?.universityName || "UET Lahore"
+  );
   const [verificationStatus, setVerificationStatus] = React.useState<
     "unverified" | "pending" | "verified" | "rejected"
   >(authUser?.isVerified ? "verified" : "unverified");
@@ -322,8 +325,8 @@ export default function ProfilePage() {
             <div className="font-extrabold text-base tracking-tight text-black dark:text-white">
               Student Profile & Reputation
             </div>
-            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
-              UET Lahore &bull; Verified Campus Identity
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium truncate">
+              {user.university} &bull; {user.campus}
             </div>
           </div>
           <button
@@ -393,7 +396,28 @@ export default function ProfilePage() {
                     {user.studentId}
                   </div>
                   <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
-                    {user.program} &bull; {profileUniversity}
+                    {user.program ? `${user.program} • ` : ""}{user.campus}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {user.role === "super_admin" ? (
+                      <Link
+                        href="/admin/super"
+                        className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors"
+                      >
+                        Super Admin Console &rarr;
+                      </Link>
+                    ) : user.role === "campus_admin" ? (
+                      <Link
+                        href="/admin"
+                        className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors"
+                      >
+                        Campus Admin Panel &rarr;
+                      </Link>
+                    ) : (
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                        Student
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

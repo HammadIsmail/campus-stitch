@@ -18,10 +18,12 @@ import {
   Building2,
   Mail,
   Clock,
+  Crown,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { VerificationBadge } from "@/components/ui/verification-badge";
+import { useAuth } from "@/lib/auth-context";
 
 interface VerificationItem {
   id: string;
@@ -32,6 +34,8 @@ interface VerificationItem {
   program: string;
   department: string;
   university: string;
+  campus_id?: string;
+  campus_name?: string;
   city?: string;
   confidence_status: string;
   status: "pending" | "approved" | "rejected" | "reupload";
@@ -41,17 +45,40 @@ interface VerificationItem {
 }
 
 export default function AdminVerificationPage() {
+  const { user } = useAuth();
   const [queue, setQueue] = React.useState<VerificationItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedIdx, setSelectedIdx] = React.useState(0);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [actionFeedback, setActionFeedback] = React.useState<string | null>(null);
+  const [campusFilter, setCampusFilter] = React.useState<string>("all");
+  const [campusesList, setCampusesList] = React.useState<any[]>([]);
+
+  const isSuperAdmin = user?.role === "super_admin";
+
+  // Load campuses if super admin
+  React.useEffect(() => {
+    if (isSuperAdmin) {
+      fetch("/api/campuses")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.campuses)) {
+            setCampusesList(data.campuses);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isSuperAdmin]);
 
   // Fetch verifications from API
-  const fetchVerifications = async () => {
+  const fetchVerifications = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/verifications");
+      let url = "/api/verifications";
+      if (isSuperAdmin && campusFilter !== "all") {
+        url += `?campusId=${encodeURIComponent(campusFilter)}`;
+      }
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success && Array.isArray(data.verifications)) {
         setQueue(data.verifications);
@@ -61,11 +88,11 @@ export default function AdminVerificationPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isSuperAdmin, campusFilter]);
 
   React.useEffect(() => {
     fetchVerifications();
-  }, []);
+  }, [fetchVerifications]);
 
   const currentItem = queue[selectedIdx] || queue[0];
 
@@ -112,18 +139,55 @@ export default function AdminVerificationPage() {
   return (
     <MobileShell hideNav>
       <div className="w-full min-h-screen flex flex-col bg-background text-foreground select-none max-w-4xl mx-auto px-4 py-6">
+        {/* Super Admin Top Banner */}
+        {isSuperAdmin && (
+          <div className="mb-4 p-3 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <Crown size={15} />
+              <span>Platform Super Administrator Mode</span>
+            </div>
+            <Link
+              href="/admin/super"
+              className="text-xs font-bold underline hover:opacity-80 flex items-center gap-1"
+            >
+              <span>Manage Universities & Campuses</span>
+              <ChevronRight size={14} />
+            </Link>
+          </div>
+        )}
+
         {/* Header */}
-        <header className="flex items-center justify-between pb-4 border-b border-border mb-6">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border mb-6 gap-3">
           <div>
             <div className="font-extrabold text-lg tracking-tight text-foreground flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-black dark:text-white" />
-              <span>Admin Verification Portal</span>
+              <span>
+                {isSuperAdmin
+                  ? "Global Student KYC Verification Portal"
+                  : `Campus KYC Portal · ${user?.campusName || "Campus Moderator"}`}
+              </span>
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              Review live selfie & student ID card side-by-side for campus trust
+              {isSuperAdmin
+                ? "Reviewing student verification requests across all registered campus tenants"
+                : `Reviewing live selfie & student card front for ${user?.universityName || "University"} (${user?.campusName || "Main Campus"})`}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            {isSuperAdmin && campusesList.length > 0 && (
+              <select
+                value={campusFilter}
+                onChange={(e) => setCampusFilter(e.target.value)}
+                className="h-9 px-2.5 rounded-xl border border-border bg-card text-xs text-foreground font-semibold focus:outline-none"
+              >
+                <option value="all">All Campuses ({campusesList.length})</option>
+                {campusesList.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.city})
+                  </option>
+                ))}
+              </select>
+            )}
             <button
               onClick={fetchVerifications}
               disabled={isLoading}
@@ -369,7 +433,7 @@ export default function AdminVerificationPage() {
                       <div className="min-w-0 pr-2">
                         <div className="font-bold truncate">{req.name}</div>
                         <div className="text-[10px] text-muted-foreground truncate">
-                          {req.program || "Student"} &bull; {req.university || "UET"}
+                          {req.program || "Student"} &bull; {req.campus_name || req.city || req.university || "Main Campus"}
                         </div>
                       </div>
                       <div className="shrink-0 flex items-center gap-1.5">

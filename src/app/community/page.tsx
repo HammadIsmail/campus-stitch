@@ -196,6 +196,9 @@ export default function RedditCommunitiesPage() {
       if (searchQuery.trim()) {
         params.set("query", searchQuery.trim());
       }
+      if (user?.campusId) {
+        params.set("campusId", user.campusId);
+      }
 
       const res = await fetch(`/api/community/posts?${params.toString()}`);
       const data = await res.json();
@@ -207,7 +210,7 @@ export default function RedditCommunitiesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCommunity, activeSort, searchQuery]);
+  }, [selectedCommunity, activeSort, searchQuery, user?.campusId]);
 
   React.useEffect(() => {
     fetchCommunities();
@@ -368,6 +371,8 @@ export default function RedditCommunitiesPage() {
           authorName: user?.name || "Student",
           authorStudentId: user?.studentId || "",
           authorId: user?.userId || "u_student",
+          campusId: user?.campusId,
+          universityId: user?.universityId,
         }),
       });
 
@@ -753,6 +758,22 @@ export default function RedditCommunitiesPage() {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Campus Tenant Isolation Banner */}
+            {user?.campusName && (
+              <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-zinc-100/90 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-xs">
+                <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+                  <Building2 size={14} className="text-black dark:text-white shrink-0" />
+                  <span className="font-semibold">{user.campusName}</span>
+                  {user.universityName && (
+                    <span className="text-[11px] text-zinc-400 hidden sm:inline">({user.universityName})</span>
+                  )}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Campus Feed
+                </span>
               </div>
             )}
 
