@@ -146,23 +146,57 @@ const FALLBACK_COMMUNITIES = [
 
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const hasPagination = searchParams.has("limit") || searchParams.has("page");
+    const isAll = searchParams.get("all") === "true";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.max(1, parseInt(searchParams.get("limit") || "3", 10));
+    const offset = (page - 1) * limit;
+
     try {
       const supabase = await createClient();
-      const { data, error } = await supabase
+      let dbQuery = supabase
         .from("communities")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("member_count", { ascending: false });
 
+      if (hasPagination && !isAll) {
+        dbQuery = dbQuery.range(offset, offset + limit - 1);
+      }
+
+      const { data, count, error } = await dbQuery;
+
       if (data && data.length > 0 && !error) {
-        return NextResponse.json({ success: true, communities: data });
+        const total = count ?? data.length;
+        return NextResponse.json({
+          success: true,
+          communities: data,
+          total,
+          page: hasPagination && !isAll ? page : 1,
+          limit: hasPagination && !isAll ? limit : total,
+          hasMore: hasPagination && !isAll ? offset + data.length < total : false,
+        });
       }
     } catch (err) {
       console.warn("DB communities query notice:", err);
     }
 
+    const total = FALLBACK_COMMUNITIES.length;
+    let communities = [...FALLBACK_COMMUNITIES];
+    let hasMore = false;
+
+    if (hasPagination && !isAll) {
+      communities = communities.slice(offset, offset + limit);
+      hasMore = offset + limit < total;
+    }
+
     return NextResponse.json({
       success: true,
-      communities: FALLBACK_COMMUNITIES,
+      communities,
+      total,
+      page: hasPagination && !isAll ? page : 1,
+      limit: hasPagination && !isAll ? limit : total,
+      hasMore,
     });
   } catch (error: any) {
     return NextResponse.json(

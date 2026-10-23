@@ -183,10 +183,13 @@ export async function GET(req: NextRequest) {
     }
 
     const campusId = searchParams.get("campusId") || req.headers.get("x-user-campus-id");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.max(1, parseInt(searchParams.get("limit") || "3", 10));
+    const offset = (page - 1) * limit;
 
     try {
       const supabase = await createClient();
-      let dbQuery = supabase.from("community_posts").select("*");
+      let dbQuery = supabase.from("community_posts").select("*", { count: "exact" });
 
       if (campusId) {
         dbQuery = dbQuery.eq("campus_id", campusId);
@@ -211,9 +214,17 @@ export async function GET(req: NextRequest) {
           .order("created_at", { ascending: false });
       }
 
-      const { data, error } = await dbQuery.limit(50);
+      const { data, count, error } = await dbQuery.range(offset, offset + limit - 1);
       if (data && data.length > 0 && !error) {
-        return NextResponse.json({ success: true, posts: data });
+        const total = count ?? data.length;
+        return NextResponse.json({
+          success: true,
+          posts: data,
+          page,
+          limit,
+          total,
+          hasMore: offset + data.length < total,
+        });
       }
     } catch (dbErr) {
       console.warn("DB query notice:", dbErr);
@@ -241,7 +252,18 @@ export async function GET(req: NextRequest) {
       filtered.sort((a, b) => b.score - a.score);
     }
 
-    return NextResponse.json({ success: true, posts: filtered });
+    const total = filtered.length;
+    const paginated = filtered.slice(offset, offset + limit);
+    const hasMore = offset + limit < total;
+
+    return NextResponse.json({
+      success: true,
+      posts: paginated,
+      page,
+      limit,
+      total,
+      hasMore,
+    });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },

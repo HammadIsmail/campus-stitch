@@ -62,17 +62,17 @@ export default function OfferRidePage() {
 
   return (
     <MobileShell>
-      <div className="w-full h-full flex flex-col bg-white text-[#101828] select-none">
+      <div className="w-full h-full flex flex-col bg-white dark:bg-[#121215] text-[#101828] dark:text-zinc-100 select-none">
         {/* Header */}
-        <header className="flex items-center gap-2 px-4 py-2.5 flex-none border-b border-[#E4E7EC] min-h-[56px]">
+        <header className="flex items-center gap-2 px-4 py-2.5 flex-none border-b border-[#E4E7EC] dark:border-zinc-800 bg-white dark:bg-[#121215] min-h-[56px]">
           <Link
             href="/commute"
             aria-label="Back"
-            className="w-10 h-10 -ml-1.5 flex items-center justify-center text-[#101828] hover:bg-[#F2F4F7] rounded-full transition-colors"
+            className="w-10 h-10 -ml-1.5 flex items-center justify-center text-[#101828] dark:text-zinc-100 hover:bg-[#F2F4F7] dark:hover:bg-zinc-800 rounded-full transition-colors"
           >
             <ArrowLeft size={22} className="stroke-[1.8px]" />
           </Link>
-          <div className="flex-1 font-bold text-[17px] tracking-tight">
+          <div className="flex-1 font-bold text-[17px] tracking-tight text-black dark:text-white">
             Offer a ride
           </div>
         </header>
@@ -84,14 +84,14 @@ export default function OfferRidePage() {
         >
           <main className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3.5">
             {/* Vehicle Selector */}
-            <div className="flex p-1 bg-[#E4E7EC] rounded-xl">
+            <div className="flex p-1 bg-[#E4E7EC] dark:bg-zinc-800 rounded-xl">
               <button
                 type="button"
                 onClick={() => setVehicle("rickshaw")}
                 className={`flex-1 min-h-[38px] rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   vehicle === "rickshaw"
-                    ? "bg-white text-[#101828] shadow-xs"
-                    : "text-[#5B6472] hover:text-[#101828]"
+                    ? "bg-white dark:bg-zinc-900 text-[#101828] dark:text-white shadow-xs"
+                    : "text-[#5B6472] dark:text-zinc-400 hover:text-[#101828] dark:hover:text-white"
                 }`}
               >
                 Rickshaw
@@ -101,8 +101,8 @@ export default function OfferRidePage() {
                 onClick={() => setVehicle("bike")}
                 className={`flex-1 min-h-[38px] rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   vehicle === "bike"
-                    ? "bg-white text-[#101828] shadow-xs"
-                    : "text-[#5B6472] hover:text-[#101828]"
+                    ? "bg-white dark:bg-zinc-900 text-[#101828] dark:text-white shadow-xs"
+                    : "text-[#5B6472] dark:text-zinc-400 hover:text-[#101828] dark:hover:text-white"
                 }`}
               >
                 Bike
@@ -112,8 +112,8 @@ export default function OfferRidePage() {
                 onClick={() => setVehicle("car")}
                 className={`flex-1 min-h-[38px] rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   vehicle === "car"
-                    ? "bg-white text-[#101828] shadow-xs"
-                    : "text-[#5B6472] hover:text-[#101828]"
+                    ? "bg-white dark:bg-zinc-900 text-[#101828] dark:text-white shadow-xs"
+                    : "text-[#5B6472] dark:text-zinc-400 hover:text-[#101828] dark:hover:text-white"
                 }`}
               >
                 Car
@@ -125,7 +125,7 @@ export default function OfferRidePage() {
               <div className="space-y-1">
                 <label
                   htmlFor="from-input"
-                  className="text-xs font-bold text-[#344054] tracking-wide"
+                  className="text-xs font-bold text-[#344054] dark:text-zinc-300 tracking-wide"
                 >
                   From
                 </label>
@@ -141,7 +141,7 @@ export default function OfferRidePage() {
               <div className="space-y-1">
                 <label
                   htmlFor="to-input"
-                  className="text-xs font-bold text-[#344054] tracking-wide"
+                  className="text-xs font-bold text-[#344054] dark:text-zinc-300 tracking-wide"
                 >
                   To
                 </label>
@@ -158,7 +158,7 @@ export default function OfferRidePage() {
                 <div className="space-y-1">
                   <label
                     htmlFor="date-input"
-                    className="text-xs font-bold text-[#344054] tracking-wide"
+                    className="text-xs font-bold text-[#344054] dark:text-zinc-300 tracking-wide"
                   >
                     Date
                   </label>
@@ -171,7 +171,7 @@ export default function OfferRidePage() {
                 <div className="space-y-1">
                   <label
                     htmlFor="time-input"
-                    className="text-xs font-bold text-[#344054] tracking-wide"
+                    className="text-xs font-bold text-[#344054] dark:text-zinc-300 tracking-wide"
                   >
                     Time
                   </label>
@@ -185,26 +185,26 @@ export default function OfferRidePage() {
 
               <div className="grid grid-cols-2 gap-3 items-end">
                 <div className="space-y-1">
-                  <span className="text-xs font-bold text-[#344054] tracking-wide">
+                  <span className="text-xs font-bold text-[#344054] dark:text-zinc-300 tracking-wide">
                     Available Seats
                   </span>
-                  <div className="flex items-center justify-between h-12 border border-[#D0D5DD] rounded-xl px-2 bg-white">
+                  <div className="flex items-center justify-between h-12 border border-[#D0D5DD] dark:border-zinc-800 rounded-xl px-2 bg-white dark:bg-zinc-900">
                     <button
                       type="button"
                       aria-label="Fewer seats"
                       onClick={() => setSeats(Math.max(1, seats - 1))}
-                      className="w-10 h-10 flex items-center justify-center text-lg font-bold text-[#101828] hover:bg-zinc-100 rounded-lg cursor-pointer"
+                      className="w-10 h-10 flex items-center justify-center text-lg font-bold text-[#101828] dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg cursor-pointer"
                     >
                       −
                     </button>
-                    <span className="text-base font-bold text-[#101828]">
+                    <span className="text-base font-bold text-[#101828] dark:text-white">
                       {seats}
                     </span>
                     <button
                       type="button"
                       aria-label="More seats"
                       onClick={() => setSeats(Math.min(6, seats + 1))}
-                      className="w-10 h-10 flex items-center justify-center text-lg font-bold text-[#101828] hover:bg-zinc-100 rounded-lg cursor-pointer"
+                      className="w-10 h-10 flex items-center justify-center text-lg font-bold text-[#101828] dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg cursor-pointer"
                     >
                       +
                     </button>
@@ -214,7 +214,7 @@ export default function OfferRidePage() {
                 <div className="space-y-1">
                   <label
                     htmlFor="price-input"
-                    className="text-xs font-bold text-[#344054] tracking-wide"
+                    className="text-xs font-bold text-[#344054] dark:text-zinc-300 tracking-wide"
                   >
                     Price per person (Rs.)
                   </label>
@@ -228,7 +228,7 @@ export default function OfferRidePage() {
               </div>
 
               {/* Dynamic split explanation */}
-              <div className="p-3 rounded-xl bg-[#E3F2EF] text-[#0B4F49] text-xs font-semibold leading-relaxed">
+              <div className="p-3 rounded-xl bg-[#E3F2EF] dark:bg-teal-950/40 text-[#0B4F49] dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 text-xs font-semibold leading-relaxed">
                 Rs.{" "}
                 {vehicle === "rickshaw" ? 200 : vehicle === "bike" ? 150 : 300}{" "}
                 {vehicle} ÷ {seats + 1} riders = Rs. {price} each
@@ -237,10 +237,10 @@ export default function OfferRidePage() {
               <div className="space-y-1">
                 <label
                   htmlFor="pickup-input"
-                  className="text-xs font-bold text-[#344054] tracking-wide"
+                  className="text-xs font-bold text-[#344054] dark:text-zinc-300 tracking-wide"
                 >
                   Pickup point{" "}
-                  <span className="font-normal text-[#5B6472]">(optional)</span>
+                  <span className="font-normal text-[#5B6472] dark:text-zinc-400">(optional)</span>
                 </label>
                 <Input
                   id="pickup-input"
@@ -253,10 +253,10 @@ export default function OfferRidePage() {
               <div className="space-y-1">
                 <label
                   htmlFor="notes-input"
-                  className="text-xs font-bold text-[#344054] tracking-wide"
+                  className="text-xs font-bold text-[#344054] dark:text-zinc-300 tracking-wide"
                 >
                   Notes{" "}
-                  <span className="font-normal text-[#5B6472]">(optional)</span>
+                  <span className="font-normal text-[#5B6472] dark:text-zinc-400">(optional)</span>
                 </label>
                 <Input
                   id="notes-input"
@@ -269,7 +269,7 @@ export default function OfferRidePage() {
           </main>
 
           {/* Submit Action */}
-          <div className="p-4 border-t border-[#E4E7EC] bg-white flex-none">
+          <div className="p-4 border-t border-[#E4E7EC] dark:border-zinc-800 bg-white dark:bg-[#121215] flex-none">
             <Button
               type="submit"
               disabled={isSubmitting}

@@ -201,6 +201,19 @@ export default function RedditCommunitiesPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [copyFeedback, setCopyFeedback] = React.useState<string | null>(null);
 
+  // Pagination & Infinite Scroll States (Initial 3 items requirement)
+  const [postsPage, setPostsPage] = React.useState(1);
+  const [hasMorePosts, setHasMorePosts] = React.useState(true);
+  const [isLoadingMorePosts, setIsLoadingMorePosts] = React.useState(false);
+
+  const [communitiesPage, setCommunitiesPage] = React.useState(1);
+  const [hasMoreCommunities, setHasMoreCommunities] = React.useState(true);
+  const [isLoadingMoreCommunities, setIsLoadingMoreCommunities] = React.useState(false);
+  const [dropdownCommunities, setDropdownCommunities] = React.useState<Community[]>([]);
+
+  const postsObserverTarget = React.useRef<HTMLDivElement | null>(null);
+  const commObserverTarget = React.useRef<HTMLDivElement | null>(null);
+
   // Modals & Panels
   const [showCreatePost, setShowCreatePost] = React.useState(false);
   const [showCreateCommunity, setShowCreateCommunity] = React.useState(false);
@@ -235,24 +248,55 @@ export default function RedditCommunitiesPage() {
     } catch {}
   }, []);
 
-  // Fetch Communities List
+  // Fetch initial 3 Communities
   const fetchCommunities = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/community/list");
+      const res = await fetch("/api/community/list?page=1&limit=3");
       const data = await res.json();
       if (data.success && data.communities) {
         setCommunities(data.communities);
+        setCommunitiesPage(1);
+        setHasMoreCommunities(Boolean(data.hasMore));
       }
     } catch (err) {
       console.warn("Failed to load communities:", err);
     }
   }, []);
 
-  // Fetch Posts using deferred search query
+  // Infinite Scroll: Load More Communities (3 per batch)
+  const loadMoreCommunities = React.useCallback(async () => {
+    if (isLoadingMoreCommunities || !hasMoreCommunities) return;
+    setIsLoadingMoreCommunities(true);
+    try {
+      const nextPage = communitiesPage + 1;
+      const res = await fetch(`/api/community/list?page=${nextPage}&limit=3`);
+      const data = await res.json();
+      if (data.success && data.communities && data.communities.length > 0) {
+        setCommunities((prev) => {
+          const existingIds = new Set(prev.map((c) => c.name));
+          const newUnique = data.communities.filter((c: Community) => !existingIds.has(c.name));
+          return [...prev, ...newUnique];
+        });
+        setCommunitiesPage(nextPage);
+        setHasMoreCommunities(Boolean(data.hasMore));
+      } else {
+        setHasMoreCommunities(false);
+      }
+    } catch (err) {
+      console.warn("Failed to load more communities:", err);
+    } finally {
+      setIsLoadingMoreCommunities(false);
+    }
+  }, [communitiesPage, hasMoreCommunities, isLoadingMoreCommunities]);
+
+  // Fetch initial 3 Posts (resets page to 1)
   const fetchPosts = React.useCallback(async () => {
     setIsLoading(true);
+    setPostsPage(1);
     try {
       const params = new URLSearchParams();
+      params.set("page", "1");
+      params.set("limit", "3");
       if (selectedCommunity && selectedCommunity !== "all") {
         params.set("community", selectedCommunity);
       }
@@ -268,6 +312,7 @@ export default function RedditCommunitiesPage() {
       const data = await res.json();
       if (data.success && data.posts) {
         setPosts(data.posts);
+        setHasMorePosts(Boolean(data.hasMore));
       }
     } catch (err) {
       console.warn("Failed to load posts:", err);
@@ -276,6 +321,55 @@ export default function RedditCommunitiesPage() {
     }
   }, [selectedCommunity, activeSort, deferredSearchQuery, user?.campusId]);
 
+  // Infinite Scroll: Load More Posts (3 per batch)
+  const loadMorePosts = React.useCallback(async () => {
+    if (isLoading || isLoadingMorePosts || !hasMorePosts) return;
+    setIsLoadingMorePosts(true);
+    try {
+      const nextPage = postsPage + 1;
+      const params = new URLSearchParams();
+      params.set("page", String(nextPage));
+      params.set("limit", "3");
+      if (selectedCommunity && selectedCommunity !== "all") {
+        params.set("community", selectedCommunity);
+      }
+      params.set("sort", activeSort);
+      if (deferredSearchQuery.trim()) {
+        params.set("query", deferredSearchQuery.trim());
+      }
+      if (user?.campusId) {
+        params.set("campusId", user.campusId);
+      }
+
+      const res = await fetch(`/api/community/posts?${params.toString()}`);
+      const data = await res.json();
+      if (data.success && data.posts && data.posts.length > 0) {
+        setPosts((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newUnique = data.posts.filter((p: Post) => !existingIds.has(p.id));
+          return [...prev, ...newUnique];
+        });
+        setPostsPage(nextPage);
+        setHasMorePosts(Boolean(data.hasMore));
+      } else {
+        setHasMorePosts(false);
+      }
+    } catch (err) {
+      console.warn("Failed to load more posts:", err);
+    } finally {
+      setIsLoadingMorePosts(false);
+    }
+  }, [
+    isLoading,
+    isLoadingMorePosts,
+    hasMorePosts,
+    postsPage,
+    selectedCommunity,
+    activeSort,
+    deferredSearchQuery,
+    user?.campusId,
+  ]);
+
   React.useEffect(() => {
     fetchCommunities();
   }, [fetchCommunities]);
@@ -283,6 +377,56 @@ export default function RedditCommunitiesPage() {
   React.useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  // IntersectionObserver for Posts infinite scroll
+  React.useEffect(() => {
+    const target = postsObserverTarget.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMorePosts && !isLoading && !isLoadingMorePosts) {
+          loadMorePosts();
+        }
+      },
+      { threshold: 0.1, rootMargin: "300px" }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadMorePosts, hasMorePosts, isLoading, isLoadingMorePosts]);
+
+  // IntersectionObserver for Communities infinite scroll
+  React.useEffect(() => {
+    const target = commObserverTarget.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreCommunities && !isLoadingMoreCommunities) {
+          loadMoreCommunities();
+        }
+      },
+      { threshold: 0.1, rootMargin: "150px" }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadMoreCommunities, hasMoreCommunities, isLoadingMoreCommunities]);
+
+  // Load full community list for modal dropdown when modal is opened
+  React.useEffect(() => {
+    if (showCreatePost && dropdownCommunities.length === 0) {
+      fetch("/api/community/list?all=true")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.communities) {
+            setDropdownCommunities(data.communities);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [showCreatePost, dropdownCommunities.length]);
 
   // Handle Voting on Posts (Modern React 19 Optimistic UI + Server sync + Auto-rollback)
   const handleVote = (postId: string, direction: 1 | -1, e: React.MouseEvent) => {
@@ -699,6 +843,27 @@ export default function RedditCommunitiesPage() {
                   </div>
                 );
               })}
+
+              {/* Communities Infinite Scroll Sentinel */}
+              {hasMoreCommunities && (
+                <div ref={commObserverTarget} className="pt-2 pb-1">
+                  <button
+                    type="button"
+                    onClick={loadMoreCommunities}
+                    disabled={isLoadingMoreCommunities}
+                    className="w-full py-2 px-3 text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white bg-zinc-100 dark:bg-zinc-850 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {isLoadingMoreCommunities ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin text-black dark:text-white" />
+                        <span>Loading more...</span>
+                      </>
+                    ) : (
+                      <span>Load more communities</span>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Bottom Create Community Button */}
@@ -1199,6 +1364,23 @@ export default function RedditCommunitiesPage() {
                   );
                 })
               )}
+
+              {/* Posts Infinite Scroll Sentinel & Loader */}
+              {!isLoading && filteredPosts.length > 0 && (
+                <div ref={postsObserverTarget} className="py-2">
+                  {isLoadingMorePosts && (
+                    <div className="py-4 text-center text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-center gap-2">
+                      <Loader2 size={16} className="animate-spin text-black dark:text-white" />
+                      <span>Loading more posts...</span>
+                    </div>
+                  )}
+                  {!hasMorePosts && (
+                    <div className="py-6 text-center text-xs text-zinc-500 dark:text-zinc-400 font-medium border-t border-zinc-200 dark:border-zinc-800">
+                      You&apos;re all caught up! No more posts to load.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </main>
 
@@ -1440,7 +1622,7 @@ export default function RedditCommunitiesPage() {
                   onChange={(e) => setPostFormCommunity(e.target.value)}
                   className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-bold text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                 >
-                  {communities.map((c) => (
+                  {(dropdownCommunities.length > 0 ? dropdownCommunities : communities).map((c) => (
                     <option key={c.name} value={c.name} className="dark:bg-[#121215] dark:text-white">
                       {c.name} &mdash; {c.title}
                     </option>

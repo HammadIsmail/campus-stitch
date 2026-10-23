@@ -79,27 +79,27 @@ export default function OfferServicePage() {
 
   return (
     <MobileShell>
-      <div className="w-full h-full flex flex-col bg-[#F9F9FB] text-zinc-900 select-none">
+      <div className="w-full h-full flex flex-col bg-[#F9F9FB] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 select-none transition-colors">
         {/* Header */}
-        <header className="flex items-center gap-2 px-4 py-3 flex-none bg-white border-b border-zinc-200">
+        <header className="flex items-center gap-2 px-4 py-3 flex-none bg-white dark:bg-[#121215] border-b border-zinc-200 dark:border-zinc-800 transition-colors">
           <Link
             href="/hostel"
             aria-label="Back"
-            className="w-9 h-9 -ml-1 flex items-center justify-center text-zinc-800 hover:bg-zinc-100 rounded-full transition-colors"
+            className="w-9 h-9 -ml-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
           >
             <ArrowLeft size={20} className="stroke-[2px]" />
           </Link>
-          <div className="flex-1 font-bold text-base tracking-tight text-black">
+          <div className="flex-1 font-bold text-base tracking-tight text-black dark:text-white">
             Offer Campus Service
           </div>
-          <span className="text-[11px] text-zinc-500 font-medium">Hostel Hub</span>
+          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Hostel Hub</span>
         </header>
 
         {/* Scrollable Form */}
         <main className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 max-w-xl mx-auto w-full">
           {/* Quick Presets */}
           <div className="space-y-1.5">
-            <span className="text-xs font-bold text-black uppercase tracking-wider">
+            <span className="text-xs font-bold text-black dark:text-white uppercase tracking-wider">
               Quick Service Templates
             </span>
             <div className="grid grid-cols-2 gap-2">
@@ -113,14 +113,14 @@ export default function OfferServicePage() {
                     onClick={() => handleSelectPreset(p)}
                     className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2 ${
                       isSelected
-                        ? "bg-black text-white border-black shadow-2xs"
-                        : "bg-white border-zinc-200 text-zinc-800 hover:border-black"
+                        ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white shadow-2xs"
+                        : "bg-white dark:bg-[#121215] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 hover:border-black dark:hover:border-white"
                     }`}
                   >
-                    <Icon size={16} className={isSelected ? "text-white" : "text-black"} />
+                    <Icon size={16} className={isSelected ? "text-white dark:text-black" : "text-black dark:text-white"} />
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-bold leading-snug truncate">{p.name}</div>
-                      <div className={`text-[10px] mt-0.5 ${isSelected ? "text-zinc-300" : "text-zinc-500"}`}>
+                      <div className={`text-[10px] mt-0.5 ${isSelected ? "text-zinc-300 dark:text-zinc-700" : "text-zinc-500 dark:text-zinc-400"}`}>
                         {p.defaultRate}
                       </div>
                     </div>
@@ -131,9 +131,9 @@ export default function OfferServicePage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-2xs space-y-3.5">
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-2xs space-y-3.5 transition-colors">
             <div>
-              <label className="text-xs font-bold text-black block mb-1">
+              <label className="text-xs font-bold text-black dark:text-white block mb-1">
                 Service Title
               </label>
               <input
@@ -142,13 +142,13 @@ export default function OfferServicePage() {
                 value={serviceName}
                 onChange={(e) => setServiceName(e.target.value)}
                 placeholder="e.g. Desert Cooler Cleaning & Pump Setup"
-                className="w-full h-10 px-3 border border-zinc-300 rounded-lg text-xs outline-none focus:border-black"
+                className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="text-xs font-bold text-black block mb-1">
+                <label className="text-xs font-bold text-black dark:text-white block mb-1">
                   Pricing / Rate
                 </label>
                 <input
@@ -157,12 +157,12 @@ export default function OfferServicePage() {
                   value={rate}
                   onChange={(e) => setRate(e.target.value)}
                   placeholder="e.g. Rs. 200 visit"
-                  className="w-full h-10 px-3 border border-zinc-300 rounded-lg text-xs outline-none focus:border-black"
+                  className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-black block mb-1">
+                <label className="text-xs font-bold text-black dark:text-white block mb-1">
                   Provider Name
                 </label>
                 <input
@@ -171,14 +171,14 @@ export default function OfferServicePage() {
                   value={providerName}
                   onChange={(e) => setProviderName(e.target.value)}
                   placeholder="Your Name"
-                  className="w-full h-10 px-3 border border-zinc-300 rounded-lg text-xs outline-none focus:border-black"
+                  className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="text-xs font-bold text-black block mb-1">
+                <label className="text-xs font-bold text-black dark:text-white block mb-1">
                   Hostel / Area
                 </label>
                 <input
@@ -187,12 +187,12 @@ export default function OfferServicePage() {
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Hostel Block A & B"
-                  className="w-full h-10 px-3 border border-zinc-300 rounded-lg text-xs outline-none focus:border-black"
+                  className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-black block mb-1">
+                <label className="text-xs font-bold text-black dark:text-white block mb-1">
                   Availability Hours
                 </label>
                 <input
@@ -201,13 +201,13 @@ export default function OfferServicePage() {
                   value={schedule}
                   onChange={(e) => setSchedule(e.target.value)}
                   placeholder="Daily 6 PM – 10 PM"
-                  className="w-full h-10 px-3 border border-zinc-300 rounded-lg text-xs outline-none focus:border-black"
+                  className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-black block mb-1">
+              <label className="text-xs font-bold text-black dark:text-white block mb-1">
                 WhatsApp / Phone (for bookings)
               </label>
               <input
@@ -215,12 +215,12 @@ export default function OfferServicePage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="0300-1234567"
-                className="w-full h-10 px-3 border border-zinc-300 rounded-lg text-xs outline-none focus:border-black"
+                className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-black block mb-1">
+              <label className="text-xs font-bold text-black dark:text-white block mb-1">
                 Service Details & Notes
               </label>
               <textarea
@@ -228,7 +228,7 @@ export default function OfferServicePage() {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Turnaround time, what tools you bring, room delivery details..."
                 rows={2}
-                className="w-full p-2.5 border border-zinc-300 rounded-lg text-xs outline-none focus:border-black"
+                className="w-full p-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
               />
             </div>
 
@@ -236,7 +236,7 @@ export default function OfferServicePage() {
               <Button
                 type="submit"
                 disabled={loading || !serviceName.trim() || !rate.trim()}
-                className="w-full h-11 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -250,8 +250,8 @@ export default function OfferServicePage() {
             </div>
           </form>
 
-          <div className="p-3 bg-zinc-100 rounded-xl text-[11px] text-zinc-600 flex items-center gap-1.5 border border-zinc-200">
-            <ShieldCheck size={14} className="text-black shrink-0" />
+          <div className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl text-[11px] text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5 border border-zinc-200 dark:border-zinc-800 transition-colors">
+            <ShieldCheck size={14} className="text-black dark:text-white shrink-0" />
             <span>All student services are linked to verified campus ID profiles.</span>
           </div>
         </main>

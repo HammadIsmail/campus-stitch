@@ -92,20 +92,20 @@ export default function SellSomethingPage() {
 
   return (
     <MobileShell>
-      <div className="w-full h-full flex flex-col bg-white text-zinc-900 select-none">
+      <div className="w-full h-full flex flex-col bg-white dark:bg-[#121215] text-zinc-900 dark:text-zinc-100 select-none">
         {/* Header */}
-        <header className="flex items-center gap-2 px-4 py-3 flex-none border-b border-zinc-200">
+        <header className="flex items-center gap-2 px-4 py-3 flex-none border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215]">
           <Link
             href="/market"
             aria-label="Back"
-            className="w-9 h-9 -ml-1 flex items-center justify-center text-zinc-800 hover:bg-zinc-100 rounded-full transition-colors"
+            className="w-9 h-9 -ml-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
           >
             <ArrowLeft size={20} className="stroke-[2px]" />
           </Link>
-          <div className="flex-1 font-bold text-base tracking-tight text-black">
+          <div className="flex-1 font-bold text-base tracking-tight text-black dark:text-white">
             Sell an item
           </div>
-          <span className="text-[11px] text-zinc-500 font-medium">
+          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
             Marketplace
           </span>
         </header>
@@ -118,7 +118,7 @@ export default function SellSomethingPage() {
           <main className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
             {/* Photos Upload with Cloudinary WebP */}
             <div className="space-y-1.5">
-              <span className="text-xs font-bold text-zinc-900 tracking-wide">
+              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide">
                 Item Photos
               </span>
 
@@ -132,7 +132,7 @@ export default function SellSomethingPage() {
 
               <div className="flex gap-2.5 overflow-x-auto pb-1">
                 {imageUrl ? (
-                  <div className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden border border-zinc-300 group">
+                  <div className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden border border-zinc-300 dark:border-zinc-700 group">
                     <img
                       src={imageUrl}
                       alt="Uploaded item"
@@ -151,26 +151,26 @@ export default function SellSomethingPage() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploadingImage}
-                    className="w-24 h-24 shrink-0 rounded-xl border border-dashed border-zinc-400 bg-zinc-50 text-zinc-800 flex flex-col items-center justify-center gap-1 text-xs font-semibold hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-50"
+                    className="w-24 h-24 shrink-0 rounded-xl border border-dashed border-zinc-400 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 flex flex-col items-center justify-center gap-1 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {isUploadingImage ? (
                       <>
                         <Loader2
                           size={18}
-                          className="animate-spin text-black"
+                          className="animate-spin text-black dark:text-white"
                         />
                         <span className="text-[10px]">Uploading...</span>
                       </>
                     ) : (
                       <>
-                        <Plus size={18} className="text-black" />
+                        <Plus size={18} className="text-black dark:text-white" />
                         <span>Add photo</span>
                       </>
                     )}
                   </button>
                 )}
 
-                <div className="w-24 h-24 shrink-0 rounded-xl bg-zinc-100 border border-zinc-200 flex flex-col items-center justify-center text-xs text-zinc-400">
+                <div className="w-24 h-24 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 flex flex-col items-center justify-center text-xs text-zinc-400 dark:text-zinc-500">
                   <Camera size={18} />
                   <span className="text-[10px] mt-1">Photo 2</span>
                 </div>
@@ -181,7 +181,7 @@ export default function SellSomethingPage() {
             <div className="space-y-1">
               <label
                 htmlFor="sell-title"
-                className="text-xs font-bold text-zinc-900 tracking-wide"
+                className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
               >
                 Title
               </label>
@@ -190,14 +190,14 @@ export default function SellSomethingPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Phone cooler, Study table, Books"
-                className="h-10 text-xs rounded-lg border-zinc-300 focus:border-black"
+                className="h-10 text-xs rounded-lg border-zinc-300 dark:border-zinc-700 focus:border-black dark:focus:border-white"
                 required
               />
             </div>
 
             {/* Category */}
             <div className="space-y-1.5">
-              <span className="text-xs font-bold text-zinc-900 tracking-wide">
+              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide">
                 Category
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -208,8 +208,8 @@ export default function SellSomethingPage() {
                     onClick={() => setCategory(cat)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                       category === cat
-                        ? "bg-black text-white"
-                        : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                        ? "bg-black dark:bg-white text-white dark:text-black font-bold"
+                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                     }`}
                   >
                     {cat}
@@ -222,12 +222,12 @@ export default function SellSomethingPage() {
             <div className="space-y-1">
               <label
                 htmlFor="sell-price"
-                className="text-xs font-bold text-zinc-900 tracking-wide"
+                className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
               >
                 Price (PKR)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-2.5 text-xs font-bold text-zinc-500">
+                <span className="absolute left-3 top-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 z-10">
                   Rs.
                 </span>
                 <Input
@@ -236,7 +236,7 @@ export default function SellSomethingPage() {
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="1500"
-                  className="pl-9 h-10 text-xs rounded-lg border-zinc-300 focus:border-black"
+                  className="pl-9 h-10 text-xs rounded-lg border-zinc-300 dark:border-zinc-700 focus:border-black dark:focus:border-white"
                   required
                 />
               </div>
@@ -244,7 +244,7 @@ export default function SellSomethingPage() {
 
             {/* Condition */}
             <div className="space-y-1.5">
-              <span className="text-xs font-bold text-zinc-900 tracking-wide">
+              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide">
                 Condition
               </span>
               <div className="grid grid-cols-2 gap-2">
@@ -255,13 +255,13 @@ export default function SellSomethingPage() {
                     onClick={() => setCondition(cond)}
                     className={`h-9 px-3 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors cursor-pointer ${
                       condition === cond
-                        ? "border-black bg-zinc-100 text-black font-bold"
-                        : "border-zinc-200 text-zinc-600 hover:border-zinc-400"
+                        ? "border-black dark:border-white bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white font-bold"
+                        : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600"
                     }`}
                   >
                     <span>{cond}</span>
                     {condition === cond && (
-                      <Check size={14} className="text-black" />
+                      <Check size={14} className="text-black dark:text-white" />
                     )}
                   </button>
                 ))}
@@ -272,7 +272,7 @@ export default function SellSomethingPage() {
             <div className="space-y-1">
               <label
                 htmlFor="sell-location"
-                className="text-xs font-bold text-zinc-900 tracking-wide"
+                className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
               >
                 Pickup Location
               </label>
@@ -281,17 +281,17 @@ export default function SellSomethingPage() {
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. Hostel Block B, Main Gate"
-                className="h-10 text-xs rounded-lg border-zinc-300 focus:border-black"
+                className="h-10 text-xs rounded-lg border-zinc-300 dark:border-zinc-700 focus:border-black dark:focus:border-white"
               />
             </div>
           </main>
 
           {/* Fixed Bottom Action */}
-          <div className="p-4 border-t border-zinc-200 bg-white flex-none">
+          <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] flex-none">
             <Button
               type="submit"
               disabled={isSubmitting || isUploadingImage || !title || !price}
-              className="w-full h-11 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-bold"
+              className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-lg text-xs font-bold"
             >
               {isSubmitting ? (
                 <>

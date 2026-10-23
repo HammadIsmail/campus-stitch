@@ -8,15 +8,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-black text-white hover:bg-zinc-800 shadow-sm border border-black",
-        destructive: "bg-zinc-900 text-white hover:bg-red-700 shadow-sm",
+          "bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm border border-black dark:border-white",
+        destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
         outline:
-          "border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-100 hover:border-zinc-400 shadow-xs",
+          "border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-xs",
         secondary:
-          "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 border border-zinc-200/80",
-        ghost: "hover:bg-zinc-100 text-zinc-700 hover:text-black",
+          "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200/80 dark:border-zinc-700",
+        ghost: "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-black dark:hover:text-white",
         dark: "bg-black text-white hover:bg-zinc-900 shadow-sm",
-        link: "text-black underline-offset-4 hover:underline",
+        link: "text-black dark:text-white underline-offset-4 hover:underline",
       },
       size: {
         default: "h-11 px-4 py-2 text-sm",

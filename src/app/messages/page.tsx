@@ -154,8 +154,8 @@ function VoiceMessageBubble({ message, isMe }: { message: Message; isMe: boolean
     <div
       className={`p-3 rounded-2xl flex items-center gap-3 min-w-[220px] ${
         isMe
-          ? "bg-black text-white rounded-tr-xs shadow-xs"
-          : "bg-white text-zinc-900 border border-zinc-200 rounded-tl-xs shadow-2xs"
+          ? "bg-black text-white dark:bg-white dark:text-black rounded-tr-xs shadow-xs"
+          : "bg-white text-zinc-900 border border-zinc-200 dark:bg-zinc-850 dark:text-zinc-100 dark:border-zinc-750 rounded-tl-xs shadow-2xs"
       }`}
     >
       <audio
@@ -170,7 +170,9 @@ function VoiceMessageBubble({ message, isMe }: { message: Message; isMe: boolean
         type="button"
         onClick={togglePlay}
         className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-90 cursor-pointer shrink-0 ${
-          isMe ? "bg-white text-black" : "bg-black text-white"
+          isMe
+            ? "bg-white text-black dark:bg-black dark:text-white"
+            : "bg-black text-white dark:bg-white dark:text-black"
         }`}
       >
         {isPlaying ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
@@ -182,7 +184,9 @@ function VoiceMessageBubble({ message, isMe }: { message: Message; isMe: boolean
           <span
             key={i}
             className={`w-1 rounded-full transition-all duration-150 ${
-              isMe ? "bg-white/80" : "bg-black/80"
+              isMe
+                ? "bg-white/80 dark:bg-black/80"
+                : "bg-black/80 dark:bg-white/80"
             }`}
             style={{
               height: `${isPlaying ? Math.max(25, h * (i % 2 === 0 ? 1 : 0.5) * (0.8 + 0.4 * Math.sin(i))) : h}%`,
@@ -515,18 +519,18 @@ function MessagesContent() {
   };
 
   return (
-    <div className="w-full h-full min-h-0 flex flex-col bg-[#F9F9FB] text-zinc-900 select-none overflow-hidden">
+    <div className="w-full h-full min-h-0 flex flex-col bg-[#F9F9FB] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 select-none overflow-hidden">
       {/* Header - Fixed Top */}
-      <header className="flex items-center justify-between px-4 py-3 flex-none bg-white border-b border-zinc-200">
+      <header className="flex items-center justify-between px-4 py-3 flex-none bg-white dark:bg-[#121215] border-b border-zinc-200 dark:border-zinc-800">
         <div>
-          <div className="font-bold text-lg tracking-tight text-black">
+          <div className="font-bold text-lg tracking-tight text-black dark:text-white">
             Messages
           </div>
-          <div className="text-[11px] text-zinc-500 font-medium">
+          <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
             Text & Voice Chat with Verified Students
           </div>
         </div>
-        <span className="text-[11px] text-zinc-600 font-semibold bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-md">
+        <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-semibold bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-md">
           Verified Only
         </span>
       </header>
@@ -534,21 +538,21 @@ function MessagesContent() {
       {/* Main Content Area */}
       {conversations.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
-          <MessageSquare size={36} className="text-zinc-400 stroke-[1.5px]" />
-          <div className="text-sm font-bold text-black">No active conversations</div>
-          <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">
+          <MessageSquare size={36} className="text-zinc-400 dark:text-zinc-600 stroke-[1.5px]" />
+          <div className="text-sm font-bold text-black dark:text-white">No active conversations</div>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs leading-relaxed">
             When you contact a ride organizer, bike owner, or marketplace seller, your chat will automatically appear here.
           </p>
           <div className="flex gap-2 pt-1">
             <Link
               href="/commute"
-              className="h-8 px-3.5 bg-black text-white rounded-lg text-xs font-semibold flex items-center hover:bg-zinc-800 transition-colors"
+              className="h-8 px-3.5 bg-black dark:bg-white text-white dark:text-black rounded-lg text-xs font-semibold flex items-center hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow-2xs"
             >
               Browse Rides
             </Link>
             <Link
               href="/market"
-              className="h-8 px-3.5 border border-zinc-300 rounded-lg text-xs font-semibold text-black hover:bg-zinc-100 flex items-center transition-colors"
+              className="h-8 px-3.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs font-semibold text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center transition-colors"
             >
               Explore Market
             </Link>
@@ -559,14 +563,14 @@ function MessagesContent() {
           {/* Conversation List (Sidebar) */}
           <aside
             className={cn(
-              "w-full md:w-80 border-r border-zinc-200 bg-white flex flex-col shrink-0 overflow-y-auto h-full",
+              "w-full md:w-80 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] flex flex-col shrink-0 overflow-y-auto h-full",
               selectedId ? "hidden md:flex" : "flex"
             )}
           >
-            <div className="p-3 border-b border-zinc-100 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+            <div className="p-3 border-b border-zinc-100 dark:border-zinc-800 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Active Chats ({conversations.length})
             </div>
-            <div className="divide-y divide-zinc-100">
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {conversations.map((conv) => {
                 const isSelected = conv.id === selectedId;
                 return (
@@ -575,30 +579,30 @@ function MessagesContent() {
                     onClick={() => setSelectedId(conv.id)}
                     className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors ${
                       isSelected
-                        ? "bg-zinc-100/80 border-l-4 border-black"
-                        : "hover:bg-zinc-50"
+                        ? "bg-zinc-100/90 dark:bg-zinc-800/80 border-l-4 border-black dark:border-white"
+                        : "hover:bg-zinc-50 dark:hover:bg-zinc-850"
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-black text-white font-bold flex items-center justify-center text-sm shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold flex items-center justify-center text-sm shrink-0 shadow-2xs">
                       {conv.contactName.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <div className="text-xs font-bold text-black flex items-center gap-1">
+                        <div className="text-xs font-bold text-black dark:text-white flex items-center gap-1">
                           <span>{conv.contactName}</span>
                           <ShieldCheck
                             size={12}
-                            className="stroke-[2.5px] text-black"
+                            className="stroke-[2.5px] text-black dark:text-white"
                           />
                         </div>
-                        <span className="text-[10px] text-zinc-400 font-medium">
+                        <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
                           {conv.lastTime}
                         </span>
                       </div>
-                      <div className="text-[11px] text-zinc-600 font-semibold truncate mt-0.5">
+                      <div className="text-[11px] text-zinc-600 dark:text-zinc-300 font-semibold truncate mt-0.5">
                         {conv.contextTitle}
                       </div>
-                      <div className="text-xs text-zinc-500 truncate mt-0.5">
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
                         {conv.lastMessage}
                       </div>
                     </div>
@@ -612,39 +616,39 @@ function MessagesContent() {
           {activeConv ? (
             <main
               className={cn(
-                "flex-1 min-h-0 flex flex-col bg-[#F9F9FB] h-full overflow-hidden",
+                "flex-1 min-h-0 flex flex-col bg-[#F9F9FB] dark:bg-[#09090b] h-full overflow-hidden",
                 !selectedId ? "hidden md:flex" : "flex"
               )}
             >
               {/* Context Banner - Fixed Header */}
-              <div className="p-3 bg-white border-b border-zinc-200 flex items-center justify-between flex-none">
+              <div className="p-3 bg-white dark:bg-[#121215] border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between flex-none">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <button
                     type="button"
                     onClick={() => setSelectedId(null)}
-                    className="md:hidden p-1.5 -ml-1 text-zinc-600 hover:text-black rounded-lg hover:bg-zinc-100 transition-colors shrink-0"
+                    className="md:hidden p-1.5 -ml-1 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
                     title="Back to chats"
                   >
                     <ArrowLeft size={18} />
                   </button>
-                  <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-black shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-black dark:text-white shrink-0">
                     {activeConv.contextType === "ride" && <Compass size={16} />}
                     {activeConv.contextType === "listing" && <Tag size={16} />}
                     {activeConv.contextType === "bike" && <Bike size={16} />}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-black flex items-center gap-1.5 truncate">
+                    <div className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5 truncate">
                       <span>{activeConv.contactName}</span>
-                      <ShieldCheck size={12} className="stroke-[2.5px] text-black shrink-0" />
+                      <ShieldCheck size={12} className="stroke-[2.5px] text-black dark:text-white shrink-0" />
                     </div>
-                    <div className="text-[11px] text-zinc-500 truncate">
+                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
                       {activeConv.contextTitle} &middot; {activeConv.contextSubtitle}
                     </div>
                   </div>
                 </div>
                 <Link
                   href={activeConv.contextLink}
-                  className="text-xs font-semibold text-black hover:underline shrink-0 ml-2"
+                  className="text-xs font-semibold text-black dark:text-white hover:underline shrink-0 ml-2"
                 >
                   View Details →
                 </Link>
@@ -656,7 +660,7 @@ function MessagesContent() {
                 className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 overscroll-contain"
               >
                 {activeConv.messages.length === 0 ? (
-                  <div className="py-12 text-center text-xs text-zinc-400">
+                  <div className="py-12 text-center text-xs text-zinc-400 dark:text-zinc-500">
                     Send a text or voice note to start chatting with {activeConv.contactName}.
                   </div>
                 ) : (
@@ -673,17 +677,17 @@ function MessagesContent() {
                           <div
                             className={`p-3 rounded-2xl text-xs leading-relaxed ${
                               isMe
-                                ? "bg-black text-white rounded-tr-xs shadow-xs font-medium"
-                                : "bg-white text-zinc-900 border border-zinc-200 rounded-tl-xs shadow-2xs"
+                                ? "bg-black text-white dark:bg-white dark:text-black rounded-tr-xs shadow-xs font-medium"
+                                : "bg-white text-zinc-900 border border-zinc-200 dark:bg-zinc-850 dark:text-zinc-100 dark:border-zinc-750 rounded-tl-xs shadow-2xs"
                             }`}
                           >
                             {m.text}
                           </div>
                         )}
-                        <span className="text-[10px] text-zinc-400 mt-1 px-1 flex items-center gap-1 font-medium">
+                        <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 px-1 flex items-center gap-1 font-medium">
                           <span>{m.time}</span>
                           {isMe && (
-                            <CheckCheck size={12} className="text-black" />
+                            <CheckCheck size={12} className="text-black dark:text-white" />
                           )}
                         </span>
                       </div>
@@ -695,12 +699,12 @@ function MessagesContent() {
               </div>
 
               {/* Chat Input Bar - Pinned to Bottom, Always Visible */}
-              <div className="p-3 bg-white border-t border-zinc-200 flex-none shrink-0 sticky bottom-0 z-10">
+              <div className="p-3 bg-white dark:bg-[#121215] border-t border-zinc-200 dark:border-zinc-800 flex-none shrink-0 sticky bottom-0 z-10">
                 {isRecording ? (
-                  <div className="flex items-center justify-between gap-3 h-10 px-3 bg-zinc-100 rounded-xl border border-zinc-300">
+                  <div className="flex items-center justify-between gap-3 h-10 px-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl border border-zinc-300 dark:border-zinc-700">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
-                      <span className="text-xs font-bold text-black font-mono">
+                      <span className="text-xs font-bold text-black dark:text-white font-mono">
                         Recording 0:{recordingSeconds < 10 ? "0" + recordingSeconds : recordingSeconds}
                       </span>
                     </div>
@@ -709,7 +713,7 @@ function MessagesContent() {
                       <button
                         type="button"
                         onClick={() => stopVoiceRecording(false)}
-                        className="p-1.5 text-zinc-500 hover:text-black transition-colors"
+                        className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors"
                         title="Cancel recording"
                       >
                         <Trash2 size={16} />
@@ -717,7 +721,7 @@ function MessagesContent() {
                       <button
                         type="button"
                         onClick={() => stopVoiceRecording(true)}
-                        className="px-3 py-1 rounded-lg bg-black text-white text-xs font-bold hover:bg-zinc-800 transition-colors flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-1 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-bold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors flex items-center gap-1 cursor-pointer"
                       >
                         <span>Send Audio</span>
                         <Send size={12} />
@@ -730,7 +734,7 @@ function MessagesContent() {
                       type="button"
                       onClick={startVoiceRecording}
                       title="Record Voice Note"
-                      className="w-10 h-10 shrink-0 rounded-lg border border-zinc-300 hover:border-black bg-white hover:bg-zinc-50 text-black flex items-center justify-center transition-all cursor-pointer"
+                      className="w-10 h-10 shrink-0 rounded-lg border border-zinc-300 dark:border-zinc-700 hover:border-black dark:hover:border-white bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-black dark:text-white flex items-center justify-center transition-all cursor-pointer"
                     >
                       <Mic size={17} />
                     </button>
@@ -740,14 +744,14 @@ function MessagesContent() {
                       placeholder={`Message ${activeConv.contactName}...`}
                       value={inputMsg}
                       onChange={(e) => setInputMsg(e.target.value)}
-                      className="flex-1 min-w-0 h-10 px-3 border border-zinc-300 rounded-lg text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-black"
+                      className="flex-1 min-w-0 h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-black dark:focus:border-white"
                     />
 
                     <button
                       type="submit"
                       aria-label="Send message"
                       disabled={!inputMsg.trim()}
-                      className="w-10 h-10 shrink-0 rounded-lg bg-black hover:bg-zinc-800 disabled:opacity-40 text-white flex items-center justify-center transition-colors active:scale-95 cursor-pointer"
+                      className="w-10 h-10 shrink-0 rounded-lg bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-40 text-white dark:text-black flex items-center justify-center transition-colors active:scale-95 cursor-pointer shadow-2xs"
                     >
                       <Send size={15} />
                     </button>
@@ -756,7 +760,7 @@ function MessagesContent() {
               </div>
             </main>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-xs text-zinc-500">
+            <div className="flex-1 flex items-center justify-center text-xs text-zinc-500 dark:text-zinc-400">
               Select a conversation to start chatting.
             </div>
           )}

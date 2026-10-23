@@ -279,7 +279,7 @@ export default function HostelPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setShowPostModal(false)}
-                    className="flex-1 text-xs border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                    className="flex-1 text-xs border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-750 cursor-pointer font-semibold"
                   >
                     Cancel
                   </Button>
