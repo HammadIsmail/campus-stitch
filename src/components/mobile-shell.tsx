@@ -86,9 +86,11 @@ export function MobileShell({
           {/* Classic Monogram Logo */}
           <div className="flex items-center gap-3 shrink-0">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <span className="w-8 h-8 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-sm tracking-widest shadow-xs group-hover:bg-zinc-800 dark:group-hover:bg-zinc-200 transition-colors">
-                CS
-              </span>
+              <img
+                src="/logo.png"
+                alt="CampuStitch"
+                className="w-9 h-9 rounded-xl object-cover shadow-xs group-hover:scale-105 transition-transform"
+              />
               <div className="flex flex-col">
                 <span className="font-bold text-[18px] tracking-tight text-black dark:text-white leading-none">
                   CampuStitch

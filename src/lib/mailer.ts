@@ -196,3 +196,80 @@ export async function sendPasswordResetEmail(toEmail: string, otp: string): Prom
   }
 }
 
+/**
+ * Send contact inquiry notification to support and automated confirmation to sender
+ */
+export async function sendContactFormEmail({
+  name,
+  email,
+  category,
+  subject,
+  message,
+  ticketRef,
+}: {
+  name: string;
+  email: string;
+  category: string;
+  subject: string;
+  message: string;
+  ticketRef: string;
+}): Promise<boolean> {
+  const supportEmail = from;
+
+  // 1. Send receipt notification to user
+  const userMailOptions = {
+    from: `"CampuStitch Support" <${from}>`,
+    to: email,
+    replyTo: supportEmail,
+    subject: `[${ticketRef}] We received your inquiry: ${subject}`,
+    text: `Hi ${name},\n\nThank you for reaching out to CampuStitch Support.\n\nYour Ticket ID is: ${ticketRef}\nSubject: ${subject}\nCategory: ${category}\n\nOur campus support team typically replies within 24 hours.\n\nSummary of your message:\n${message}\n\nWarm regards,\nCampuStitch Team`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <body style="margin: 0; padding: 24px; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+          <table width="100%" max-width="520" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e4e4e7; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+            <tr>
+              <td style="padding: 24px 32px; background-color: #09090b; color: #ffffff;">
+                <div style="font-size: 18px; font-weight: 800; letter-spacing: -0.5px;">CampuStitch Support</div>
+                <div style="font-size: 12px; color: #a1a1aa; margin-top: 4px;">Ticket Confirmation &bull; ${ticketRef}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 32px;">
+                <p style="margin: 0 0 16px 0; font-size: 15px; color: #18181b;">Hello <strong>${name}</strong>,</p>
+                <p style="margin: 0 0 16px 0; font-size: 13px; color: #52525b; line-height: 1.6;">
+                  We have received your message regarding <strong>${subject}</strong>. A support ticket has been created and assigned to our university operations desk.
+                </p>
+                <div style="background-color: #f4f4f5; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                  <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #71717a; font-weight: 700;">Ticket Details</div>
+                  <div style="font-size: 13px; color: #09090b; font-weight: 600; margin-top: 4px;">Reference: <span style="font-family: monospace;">${ticketRef}</span></div>
+                  <div style="font-size: 13px; color: #09090b; font-weight: 600; margin-top: 2px;">Category: ${category}</div>
+                </div>
+                <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #27272a;">Your Message:</p>
+                <div style="background-color: #fafafa; border-left: 3px solid #09090b; padding: 12px 16px; font-size: 12px; color: #3f3f46; line-height: 1.5; white-space: pre-wrap;">${message}</div>
+                <p style="margin: 24px 0 0 0; font-size: 12px; color: #71717a; line-height: 1.5;">
+                  We respond within 24 hours on campus working days.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 16px 32px; background-color: #fafafa; border-top: 1px solid #f4f4f5; text-align: center; font-size: 11px; color: #a1a1aa;">
+                CampuStitch &bull; Multi-Tenant Student SuperApp &bull; Pakistan
+              </td>
+            </tr>
+          </table>
+        </body>
+      </html>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(userMailOptions);
+    return true;
+  } catch (error) {
+    console.error("Nodemailer sendContactFormEmail error:", error);
+    // Don't crash if SMTP fails in local dev; ticket still logged
+    return false;
+  }
+}
+

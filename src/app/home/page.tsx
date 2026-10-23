@@ -152,12 +152,12 @@ export default function LandingHomePage() {
     },
     {
       id: "kyc" as const,
-      name: "Dual-Factor Student KYC",
-      tagline: "Physical Student Card + Live Camera Selfie Check",
+      name: "Verified Student Identity",
+      tagline: "Student ID Card + Live Camera Verification",
       icon: ShieldCheck,
       color: "from-emerald-500/20 to-green-500/10",
       description:
-        "We maintain a zero-tolerance policy against fake accounts and outsiders. Every student undergoes automated facial comparison and manual validation by designated campus moderators before unlocking ride coordinates or posting.",
+        "We maintain a zero-tolerance policy against fake accounts and outsiders. Every student undergoes automated facial comparison and validation by designated campus moderators before unlocking ride coordinates or posting.",
       highlights: [
         "Official student card verification",
         "Live camera snapshot selfie comparison",
@@ -169,7 +169,7 @@ export default function LandingHomePage() {
     },
     {
       id: "voice" as const,
-      name: "Smart Urdu Voice AI",
+      name: "Smart Urdu Voice Assistant",
       tagline: "Search Your Campus Naturally in Urdu or English",
       icon: Mic,
       color: "from-rose-500/20 to-red-500/10",
@@ -179,7 +179,7 @@ export default function LandingHomePage() {
         "Bilingual Urdu & English natural language understanding",
         "Instant query execution for rides, market, and hostels",
         "Hands-free accessibility for walking across campus",
-        "Powered by modern generative AI models",
+        "Built specifically for university campus life",
       ],
       previewBadge: "Roman Urdu & English",
       stat: "< 1s Instant Query Match",
@@ -228,14 +228,13 @@ export default function LandingHomePage() {
               >
                 Browse with Web
               </button>
-              <button
-                type="button"
-                onClick={handleChooseDownloadApp}
+              <a
+                href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
                 className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-zinc-950 dark:bg-zinc-900 dark:text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Download size={13} />
                 <span>Download App</span>
-              </button>
+              </a>
               <button
                 type="button"
                 onClick={() => setShowMobilePrompt(false)}
@@ -294,14 +293,13 @@ export default function LandingHomePage() {
               <ArrowRight size={15} />
             </Link>
 
-            <button
-              type="button"
-              onClick={() => setShowDownloadModal(true)}
+            <a
+              href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
               className="w-full sm:w-auto h-12 px-6 rounded-xl bg-white dark:bg-[#121215] text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 hover:border-zinc-950 dark:hover:border-zinc-300 font-bold text-sm shadow-2xs flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <Download size={16} />
               <span>Download Android App</span>
-            </button>
+            </a>
           </div>
 
           {/* Trust Metrics Bar */}
@@ -335,7 +333,7 @@ export default function LandingHomePage() {
                 100%
               </div>
               <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">
-                Student KYC Verified
+                Verified Students
               </div>
             </div>
           </div>
@@ -469,7 +467,7 @@ export default function LandingHomePage() {
                             Leaving 07:45 AM &bull; Toyota Corolla (White)
                           </div>
                           <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                            Driver: Ahmed (2022-EE-104 &bull; Verified KYC)
+                            Driver: Ahmed (2022-EE-104 &bull; Verified Student)
                           </div>
                         </div>
                         <div className="text-right">
@@ -676,10 +674,10 @@ export default function LandingHomePage() {
                 2
               </span>
               <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
-                Complete Student KYC
+                Verify Student ID
               </h3>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Upload a snapshot of your physical student ID card and take a live camera selfie. Your campus moderator validates your credentials.
+                Upload a snapshot of your physical student ID card and take a quick live camera selfie. Your campus moderator validates your credentials.
               </p>
             </div>
 
@@ -725,14 +723,13 @@ export default function LandingHomePage() {
                 <Globe size={15} />
                 <span>Launch Web Portal</span>
               </Link>
-              <button
-                type="button"
-                onClick={() => setShowDownloadModal(true)}
+              <a
+                href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
                 className="w-full sm:w-auto px-6 py-3 rounded-xl border border-white/30 dark:border-black/30 font-bold text-xs flex items-center justify-center gap-2 hover:bg-white/10 dark:hover:bg-black/10 transition-colors cursor-pointer"
               >
                 <Download size={15} />
-                <span>Get Android APK / Play</span>
-              </button>
+                <span>Download Android APK</span>
+              </a>
             </div>
           </div>
         </div>
@@ -743,90 +740,32 @@ export default function LandingHomePage() {
       {/* ======================================================== */}
       {showDownloadModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-white dark:bg-[#121215] rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 space-y-6 shadow-2xl relative animate-in zoom-in-95">
+          <div className="w-full max-w-sm bg-white dark:bg-[#121215] rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-5 shadow-2xl relative animate-in zoom-in-95">
             <button
               type="button"
               onClick={() => setShowDownloadModal(false)}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-950 dark:hover:text-white cursor-pointer"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-950 dark:hover:text-white cursor-pointer"
               aria-label="Close dialog"
             >
               <X size={16} />
             </button>
 
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                <CheckCircle2 size={12} />
-                <span>Google Play Certified</span>
-              </div>
-              <h3 className="text-xl font-bold text-zinc-950 dark:text-white">
-                Download CampuStitch App
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-zinc-950 dark:text-white">
+                Download CampuStitch APK
               </h3>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Install the official CampuStitch client for Android (Flutter 3.47 release). Experience instant notifications, camera KYC scanning, and live rides.
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Official Android Release (v1.0.0 &bull; 50.2 MB)
               </p>
             </div>
 
-            {/* Download Options */}
-            <div className="space-y-3">
-              {/* Option A: Google Play Store */}
-              <a
-                href="https://play.google.com/store/apps"
-                target="_blank"
-                rel="noreferrer"
-                className="p-3.5 rounded-2xl border border-zinc-300 dark:border-zinc-700 hover:border-zinc-950 dark:hover:border-zinc-300 flex items-center justify-between transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-lg">
-                    ▶
-                  </div>
-                  <div className="text-left">
-                    <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
-                      Get it on
-                    </div>
-                    <div className="text-xs font-bold text-zinc-950 dark:text-white">
-                      Google Play Store
-                    </div>
-                  </div>
-                </div>
-                <ExternalLink size={15} className="text-zinc-400 group-hover:text-zinc-950 dark:group-hover:text-white" />
-              </a>
-
-              {/* Option B: Direct APK Download */}
-              <a
-                href="/campus-stitch-release.apk"
-                download
-                className="p-3.5 rounded-2xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 flex items-center justify-between hover:opacity-90 transition-opacity"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-950 flex items-center justify-center">
-                    <Download size={18} />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-[10px] opacity-75 font-semibold">
-                      Direct APK (Fast Download)
-                    </div>
-                    <div className="text-xs font-bold">
-                      Download APK v1.0.0 (28.4 MB)
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight size={15} />
-              </a>
-            </div>
-
-            {/* Quick Web Option */}
-            <div className="pt-2 text-center border-t border-zinc-100 dark:border-zinc-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDownloadModal(false);
-                  window.location.href = "/";
-                }}
-                className="text-xs font-semibold text-zinc-500 hover:text-zinc-950 dark:hover:text-white transition-colors cursor-pointer"
-              >
-                Prefer to continue in browser? <span className="font-bold underline">Launch Web App</span>
-              </button>
-            </div>
+            <a
+              href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
+              className="w-full h-12 px-4 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md"
+            >
+              <Download size={16} />
+              <span>Download APK</span>
+            </a>
           </div>
         </div>
       )}

@@ -5,9 +5,20 @@ export async function POST(req: NextRequest) {
   try {
     const { postId, voteType, userId = "u_student" } = await req.json();
 
-    if (!postId || ![1, -1, 0].includes(voteType)) {
+    let numericVote: number = 0;
+    if (voteType === 1 || voteType === "upvote") numericVote = 1;
+    else if (voteType === -1 || voteType === "downvote") numericVote = -1;
+    else if (voteType === 0 || voteType === "cancel") numericVote = 0;
+    else {
       return NextResponse.json(
-        { success: false, error: "Invalid vote parameters" },
+        { success: false, error: "Invalid vote parameters. Expected 1, -1, 0, 'upvote', or 'downvote'" },
+        { status: 400 }
+      );
+    }
+
+    if (!postId) {
+      return NextResponse.json(
+        { success: false, error: "Post ID is required" },
         { status: 400 }
       );
     }
@@ -24,21 +35,21 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       let scoreDelta = 0;
-      let newUserVote: number = voteType;
+      let newUserVote: number = numericVote;
 
       if (existingVote) {
-        if (existingVote.vote_type === voteType) {
+        if (existingVote.vote_type === numericVote) {
           // Cancel vote
           await supabase.from("post_votes").delete().eq("id", existingVote.id);
-          scoreDelta = -voteType;
+          scoreDelta = -numericVote;
           newUserVote = 0;
         } else {
           // Reverse vote (-1 to 1 or 1 to -1)
           await supabase
             .from("post_votes")
-            .update({ vote_type: voteType })
+            .update({ vote_type: numericVote })
             .eq("id", existingVote.id);
-          scoreDelta = voteType * 2;
+          scoreDelta = numericVote * 2;
         }
       } else {
         // New vote
@@ -46,10 +57,10 @@ export async function POST(req: NextRequest) {
           {
             post_id: postId,
             user_id: userId,
-            vote_type: voteType,
+            vote_type: numericVote,
           },
         ]);
-        scoreDelta = voteType;
+        scoreDelta = numericVote;
       }
 
       // Fetch current post score
@@ -82,8 +93,8 @@ export async function POST(req: NextRequest) {
     // Fallback response for offline/client state
     return NextResponse.json({
       success: true,
-      newScore: 42 + voteType,
-      userVote: voteType,
+      newScore: 42 + numericVote,
+      userVote: numericVote,
     });
   } catch (error: any) {
     return NextResponse.json(

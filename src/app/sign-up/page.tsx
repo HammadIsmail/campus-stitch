@@ -111,6 +111,7 @@ export default function SignUpPage() {
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [isFinalizing, setIsFinalizing] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const isEmailExisting = Boolean(errorMsg?.toLowerCase().includes("already exists"));
 
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -311,9 +312,11 @@ export default function SignUpPage() {
       <div className="min-h-screen px-4 py-8 max-w-md mx-auto flex flex-col justify-center">
         {/* Header / Brand (Unified Black & White Theme) */}
         <div className="text-center mb-6">
-          <div className="w-13 h-13 rounded-2xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center mx-auto mb-3 border border-black dark:border-white shadow-xs">
-            <GraduationCap className="w-6 h-6" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="CampuStitch"
+            className="w-14 h-14 rounded-2xl mx-auto mb-3 shadow-md object-cover"
+          />
           <h1 className="text-2xl font-black tracking-tight text-black dark:text-white">
             {step === 1 ? "Create Student Account" : "Verify Your Email"}
           </h1>
@@ -340,9 +343,34 @@ export default function SignUpPage() {
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="mb-5 p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-black dark:text-white flex items-start gap-2.5 text-xs animate-in fade-in">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <div className="flex-1 font-medium">{errorMsg}</div>
+          <div
+            className={`mb-5 p-3.5 rounded-xl border flex items-start gap-2.5 text-xs animate-in fade-in ${
+              isEmailExisting
+                ? "bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200"
+                : "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/50 text-red-900 dark:text-red-200"
+            }`}
+          >
+            <AlertCircle
+              className={`w-4 h-4 shrink-0 mt-0.5 ${
+                isEmailExisting
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-red-600 dark:text-red-400"
+              }`}
+            />
+            <div className="flex-1 space-y-2">
+              <div className="font-semibold leading-relaxed">{errorMsg}</div>
+              {isEmailExisting && (
+                <div className="pt-0.5">
+                  <Link
+                    href="/sign-in"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 hover:opacity-90 transition-opacity"
+                  >
+                    <span>Sign In to Your Account</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -515,13 +543,29 @@ export default function SignUpPage() {
                   required
                   placeholder="e.g. yourname@gmail.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errorMsg) setErrorMsg(null);
+                  }}
+                  className={`w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border rounded-xl text-sm text-black dark:text-white focus:outline-none transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500 ${
+                    isEmailExisting
+                      ? "border-amber-500 focus:border-amber-600 dark:border-amber-500 ring-2 ring-amber-500/20"
+                      : "border-zinc-300 dark:border-zinc-700 focus:border-black dark:focus:border-white"
+                  }`}
                 />
               </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                You can use any valid email (Gmail, Outlook, Yahoo, etc.). A 6-digit code will be sent to verify.
-              </p>
+              {isEmailExisting ? (
+                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1.5">
+                  <span>This email is already registered.</span>
+                  <Link href="/sign-in" className="underline font-black hover:text-black dark:hover:text-white">
+                    Sign in here &rarr;
+                  </Link>
+                </p>
+              ) : (
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
+                  You can use any valid email (Gmail, Outlook, Yahoo, etc.). A 6-digit code will be sent to verify.
+                </p>
+              )}
             </div>
 
             {/* Password */}

@@ -163,8 +163,8 @@ export default function AdminVerificationPage() {
               <ShieldCheck className="w-5 h-5 text-black dark:text-white" />
               <span>
                 {isSuperAdmin
-                  ? "Global Student KYC Verification Portal"
-                  : `Campus KYC Portal · ${user?.campusName || "Campus Moderator"}`}
+                  ? "Global Student Identity Review Portal"
+                  : `Student Verification Portal · ${user?.campusName || "Campus Moderator"}`}
               </span>
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
@@ -249,7 +249,7 @@ export default function AdminVerificationPage() {
 
                 {/* SIDE-BY-SIDE COMPARISON: Live Selfie & Student ID Card */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Live Selfie (Binance KYC) */}
+                  {/* Live Selfie Identity Check */}
                   <div className="space-y-1.5">
                     <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
                       <Camera className="w-3.5 h-3.5 text-black dark:text-white" />
@@ -308,7 +308,7 @@ export default function AdminVerificationPage() {
                   </div>
                   <div>
                     <span className="text-[10px] text-muted-foreground block">Verification Type</span>
-                    <span className="font-bold text-foreground">KYC Live Face + ID</span>
+                    <span className="font-bold text-foreground">Live Face + Student ID</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-muted-foreground block">University</span>

@@ -120,6 +120,11 @@ export default function RedditCommunitiesPage() {
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [communitySearch, setCommunitySearch] = React.useState<string>("");
 
+  // Modern React 19 useDeferredValue: Keep typing responsive and prevent query flood
+  // Official doc: https://react.dev/reference/react/useDeferredValue
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
+  const deferredCommunitySearch = React.useDeferredValue(communitySearch);
+
   // Mobile sidebar drawer
   const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
   const [activeMenuPostId, setActiveMenuPostId] = React.useState<string | null>(null);
@@ -127,6 +132,65 @@ export default function RedditCommunitiesPage() {
   // Data states
   const [communities, setCommunities] = React.useState<Community[]>([]);
   const [posts, setPosts] = React.useState<Post[]>([]);
+
+  // Modern React 19 useOptimistic: Instant upvote/downvote feedback with guaranteed auto-rollback
+  // Official doc: https://react.dev/reference/react/useOptimistic
+  const [optimisticPosts, setOptimisticVote] = React.useOptimistic<
+    Post[],
+    { postId: string; direction: 1 | -1 }
+  >(posts, (currentPosts, { postId, direction }) => {
+    return currentPosts.map((post) => {
+      if (post.id !== postId) return post;
+
+      const currentVote = post.userVote || 0;
+      let newVote: number = 0;
+      let newUpvotes = post.upvotes ?? 0;
+      let newDownvotes = post.downvotes ?? 0;
+
+      if (direction === 1) {
+        if (currentVote === 1) {
+          // Untoggle upvote
+          newVote = 0;
+          newUpvotes = Math.max(0, newUpvotes - 1);
+        } else if (currentVote === -1) {
+          // Switch from downvote to upvote
+          newVote = 1;
+          newUpvotes += 1;
+          newDownvotes = Math.max(0, newDownvotes - 1);
+        } else {
+          // New upvote
+          newVote = 1;
+          newUpvotes += 1;
+        }
+      } else {
+        if (currentVote === -1) {
+          // Untoggle downvote
+          newVote = 0;
+          newDownvotes = Math.max(0, newDownvotes - 1);
+        } else if (currentVote === 1) {
+          // Switch from upvote to downvote
+          newVote = -1;
+          newDownvotes += 1;
+          newUpvotes = Math.max(0, newUpvotes - 1);
+        } else {
+          // New downvote
+          newVote = -1;
+          newDownvotes += 1;
+        }
+      }
+
+      return {
+        ...post,
+        userVote: newVote,
+        upvotes: newUpvotes,
+        downvotes: newDownvotes,
+        score: newUpvotes - newDownvotes,
+      };
+    });
+  });
+
+  const [isPendingVote, startVoteTransition] = React.useTransition();
+
   const [joinedCommunities, setJoinedCommunities] = React.useState<Record<string, boolean>>({
     "r/cs-uet": true,
     "r/commute-splits": true,
@@ -184,7 +248,7 @@ export default function RedditCommunitiesPage() {
     }
   }, []);
 
-  // Fetch Posts
+  // Fetch Posts using deferred search query
   const fetchPosts = React.useCallback(async () => {
     setIsLoading(true);
     try {
@@ -193,8 +257,8 @@ export default function RedditCommunitiesPage() {
         params.set("community", selectedCommunity);
       }
       params.set("sort", activeSort);
-      if (searchQuery.trim()) {
-        params.set("query", searchQuery.trim());
+      if (deferredSearchQuery.trim()) {
+        params.set("query", deferredSearchQuery.trim());
       }
       if (user?.campusId) {
         params.set("campusId", user.campusId);
@@ -210,7 +274,7 @@ export default function RedditCommunitiesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCommunity, activeSort, searchQuery, user?.campusId]);
+  }, [selectedCommunity, activeSort, deferredSearchQuery, user?.campusId]);
 
   React.useEffect(() => {
     fetchCommunities();
@@ -220,74 +284,48 @@ export default function RedditCommunitiesPage() {
     fetchPosts();
   }, [fetchPosts]);
 
-  // Handle Voting on Posts (Reddit Upvote / Downvote logic with separate counters)
-  const handleVote = async (postId: string, direction: 1 | -1, e: React.MouseEvent) => {
+  // Handle Voting on Posts (Modern React 19 Optimistic UI + Server sync + Auto-rollback)
+  const handleVote = (postId: string, direction: 1 | -1, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    setPosts((prevPosts) =>
-      prevPosts.map((post) => {
-        if (post.id !== postId) return post;
+    startVoteTransition(async () => {
+      // 1. Optimistic instant response
+      setOptimisticVote({ postId, direction });
 
-        const currentVote = post.userVote || 0;
-        let newVote: number = 0;
-        let newUpvotes = post.upvotes ?? 0;
-        let newDownvotes = post.downvotes ?? 0;
+      try {
+        const res = await fetch("/api/community/posts/vote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            postId,
+            voteType: direction,
+            userId: user?.userId || "u_student",
+          }),
+        });
 
-        if (direction === 1) {
-          if (currentVote === 1) {
-            // Untoggle upvote
-            newVote = 0;
-            newUpvotes = Math.max(0, newUpvotes - 1);
-          } else if (currentVote === -1) {
-            // Switch from downvote to upvote
-            newVote = 1;
-            newUpvotes += 1;
-            newDownvotes = Math.max(0, newDownvotes - 1);
-          } else {
-            // New upvote
-            newVote = 1;
-            newUpvotes += 1;
-          }
-        } else {
-          if (currentVote === -1) {
-            // Untoggle downvote
-            newVote = 0;
-            newDownvotes = Math.max(0, newDownvotes - 1);
-          } else if (currentVote === 1) {
-            // Switch from upvote to downvote
-            newVote = -1;
-            newDownvotes += 1;
-            newUpvotes = Math.max(0, newUpvotes - 1);
-          } else {
-            // New downvote
-            newVote = -1;
-            newDownvotes += 1;
-          }
+        if (!res.ok) {
+          throw new Error("Failed to record vote on server");
         }
 
-        return {
-          ...post,
-          userVote: newVote,
-          upvotes: newUpvotes,
-          downvotes: newDownvotes,
-          score: newUpvotes - newDownvotes,
-        };
-      })
-    );
-
-    try {
-      await fetch("/api/community/vote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          postId,
-          voteType: direction === 1 ? "upvote" : "downvote",
-          userId: user?.userId || "u_student",
-        }),
-      });
-    } catch (err) {
-      console.warn("Vote sync notice:", err);
-    }
+        const data = await res.json();
+        if (data.success) {
+          setPosts((prevPosts) =>
+            prevPosts.map((post) => {
+              if (post.id !== postId) return post;
+              const serverScore = data.newScore ?? post.score;
+              const serverUserVote = data.userVote ?? post.userVote;
+              return {
+                ...post,
+                score: serverScore,
+                userVote: serverUserVote,
+              };
+            })
+          );
+        }
+      } catch (err) {
+        console.warn("Vote sync notice: rolled back by useOptimistic", err);
+      }
+    });
   };
 
   // Handle Join / Leave Community
@@ -436,8 +474,8 @@ export default function RedditCommunitiesPage() {
     (c) => c.name === selectedCommunity
   );
 
-  // Filter posts by feedFilter (joined only vs all) and flair
-  const filteredPosts = posts.filter((post) => {
+  // Filter posts by feedFilter (joined only vs all) and flair (using optimisticPosts)
+  const filteredPosts = optimisticPosts.filter((post) => {
     if (feedFilter === "joined" && !joinedCommunities[post.community_name]) {
       return false;
     }
@@ -447,10 +485,10 @@ export default function RedditCommunitiesPage() {
     return true;
   });
 
-  // Filter communities for sidebar search
+  // Filter communities for sidebar search using deferred query
   const visibleCommunities = communities.filter((c) => {
-    if (!communitySearch.trim()) return true;
-    const q = communitySearch.toLowerCase();
+    if (!deferredCommunitySearch.trim()) return true;
+    const q = deferredCommunitySearch.toLowerCase();
     return c.name.toLowerCase().includes(q) || c.title.toLowerCase().includes(q);
   });
 

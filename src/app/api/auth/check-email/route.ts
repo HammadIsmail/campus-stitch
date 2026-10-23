@@ -13,6 +13,20 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = String(email).trim().toLowerCase();
 
+    // Check pre-registered/demo accounts
+    const knownEmails = [
+      "ranahammadismail@gmail.com",
+      "student@uet.edu.pk",
+      "admin@uet.edu.pk",
+    ];
+
+    if (knownEmails.includes(cleanEmail)) {
+      return NextResponse.json({
+        exists: true,
+        message: "An account with this email already exists. Please sign in instead.",
+      });
+    }
+
     try {
       const supabase = await createClient();
       const { data, error } = await supabase
@@ -22,7 +36,10 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (data && !error) {
-        return NextResponse.json({ exists: true });
+        return NextResponse.json({
+          exists: true,
+          message: "An account with this email already exists. Please sign in instead.",
+        });
       }
     } catch (err) {
       console.warn("DB check email notice:", err);
@@ -31,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ exists: false });
   } catch (error: any) {
     return NextResponse.json(
-      { exists: false, error: error.message },
+      { exists: false, error: error.message || "Failed to check email" },
       { status: 500 }
     );
   }

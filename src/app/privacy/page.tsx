@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 export default function PrivacyPolicyPage() {
   const [activeSection, setActiveSection] = React.useState("overview");
@@ -38,8 +39,9 @@ export default function PrivacyPolicyPage() {
       <PublicNav />
 
       {/* Hero Header */}
-      <section className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] py-12 px-4 sm:px-6 lg:px-8">
+      <section className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto space-y-3">
+          <Breadcrumbs items={[{ label: "Privacy Policy" }]} className="py-0 mb-1" />
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
             <Shield size={13} />
             <span>Google Play Store Certified Policy</span>

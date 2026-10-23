@@ -94,6 +94,16 @@ export function NotificationsSlider({
   const [selectedFilter, setSelectedFilter] = React.useState("All");
   const [isLoading, setIsLoading] = React.useState(true);
 
+  // Compute unread count safely
+  const unreadCount = React.useMemo(() => {
+    return notifications.filter((n) => !n.read).length;
+  }, [notifications]);
+
+  // Synchronize unread count with parent component in an effect to prevent setState-in-render errors
+  React.useEffect(() => {
+    onUnreadCountChange?.(unreadCount);
+  }, [unreadCount, onUnreadCountChange]);
+
   // Load notifications from local storage and DB
   const loadNotifications = React.useCallback(async () => {
     try {
@@ -102,7 +112,6 @@ export function NotificationsSlider({
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setNotifications(parsed);
-          onUnreadCountChange?.(parsed.filter((n) => !n.read).length);
         }
       }
     } catch {}
@@ -125,19 +134,12 @@ export function NotificationsSlider({
           read: n.is_read ?? false,
         }));
         setNotifications(mapped);
-        onUnreadCountChange?.(mapped.filter((n) => !n.read).length);
         try {
           localStorage.setItem("campus_stitch_notifications", JSON.stringify(mapped));
         } catch {}
       } else {
         // If DB returned empty, populate with fallback
-        setNotifications((prev) => {
-          if (prev.length === 0) {
-            onUnreadCountChange?.(DEFAULT_FALLBACK_NOTIFICATIONS.filter((n) => !n.read).length);
-            return DEFAULT_FALLBACK_NOTIFICATIONS;
-          }
-          return prev;
-        });
+        setNotifications((prev) => (prev.length === 0 ? DEFAULT_FALLBACK_NOTIFICATIONS : prev));
       }
     } catch (err) {
       console.warn("Notifications DB fetch notice:", err);
@@ -145,7 +147,7 @@ export function NotificationsSlider({
     } finally {
       setIsLoading(false);
     }
-  }, [onUnreadCountChange]);
+  }, []);
 
   React.useEffect(() => {
     loadNotifications();
@@ -168,12 +170,9 @@ export function NotificationsSlider({
     }
   }, [isOpen, onClose]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
   const markAllAsRead = async () => {
     const updated = notifications.map((n) => ({ ...n, read: true }));
     setNotifications(updated);
-    onUnreadCountChange?.(0);
     try {
       localStorage.setItem("campus_stitch_notifications", JSON.stringify(updated));
     } catch {}
@@ -193,7 +192,6 @@ export function NotificationsSlider({
         n.id === item.id ? { ...n, read: true } : n
       );
       setNotifications(updated);
-      onUnreadCountChange?.(updated.filter((n) => !n.read).length);
       try {
         localStorage.setItem("campus_stitch_notifications", JSON.stringify(updated));
       } catch {}

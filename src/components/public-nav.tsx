@@ -42,9 +42,11 @@ export function PublicNav({ onDownloadClick }: PublicNavProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <Link href="/home" className="flex items-center gap-2.5 group">
-          <span className="w-8 h-8 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-sm tracking-widest shadow-xs group-hover:scale-105 transition-transform">
-            CS
-          </span>
+          <img
+            src="/logo.png"
+            alt="CampuStitch"
+            className="w-9 h-9 rounded-xl object-cover shadow-xs group-hover:scale-105 transition-transform"
+          />
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-[18px] tracking-tight text-zinc-950 dark:text-white leading-none">
@@ -97,17 +99,14 @@ export function PublicNav({ onDownloadClick }: PublicNavProps) {
             )}
           </button>
 
-          {/* Download App trigger (if passed or opens modal) */}
-          {onDownloadClick && (
-            <button
-              type="button"
-              onClick={onDownloadClick}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-            >
-              <Smartphone size={13} />
-              <span>Get Mobile App</span>
-            </button>
-          )}
+          {/* Direct Download App */}
+          <a
+            href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+          >
+            <Smartphone size={13} />
+            <span>Download App</span>
+          </a>
 
           {/* Sign In */}
           <Link
@@ -180,6 +179,14 @@ export function PublicNav({ onDownloadClick }: PublicNavProps) {
           </div>
 
           <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 flex flex-col gap-2">
+            <a
+              href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full py-2.5 text-center text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center justify-center gap-1.5"
+            >
+              <Smartphone size={14} />
+              <span>Download Android APK (50.2 MB)</span>
+            </a>
             <Link
               href="/sign-up"
               onClick={() => setMobileMenuOpen(false)}

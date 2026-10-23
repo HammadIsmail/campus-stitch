@@ -56,8 +56,17 @@ export function PublicFooter() {
               </li>
               <li>
                 <Link href="/verify" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
-                  Student KYC Portal
+                  Student Verification Portal
                 </Link>
+              </li>
+              <li>
+                <a
+                  href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
+                  className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                >
+                  <span>Download Android APK (50.2 MB)</span>
+                  <ArrowUpRight size={12} />
+                </a>
               </li>
             </ul>
           </div>

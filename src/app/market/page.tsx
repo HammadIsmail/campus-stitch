@@ -13,6 +13,7 @@ import {
   X,
   MessageSquare,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
@@ -28,6 +29,12 @@ export default function MarketPage() {
   const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = React.useState("All");
   const [searchQuery, setSearchQuery] = React.useState("");
+
+  // Modern React 19 useDeferredValue for responsive keystroke handling
+  // Official doc: https://react.dev/reference/react/useDeferredValue
+  const deferredSearch = React.useDeferredValue(searchQuery);
+  const isSearchPending = searchQuery !== deferredSearch;
+
   const [listings, setListings] = React.useState<Listing[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedItem, setSelectedItem] = React.useState<Listing | null>(null);
@@ -44,15 +51,18 @@ export default function MarketPage() {
     loadListings();
   }, [user?.campusId]);
 
-  const filteredItems = listings.filter((item) => {
-    const matchesCat =
-      selectedCategory === "All" || item.category === selectedCategory;
-    const matchesSearch =
-      !searchQuery.trim() ||
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesSearch;
-  });
+  const filteredItems = React.useMemo(() => {
+    const query = deferredSearch.trim().toLowerCase();
+    return listings.filter((item) => {
+      const matchesCat =
+        selectedCategory === "All" || item.category === selectedCategory;
+      const matchesSearch =
+        !query ||
+        item.title.toLowerCase().includes(query) ||
+        item.location.toLowerCase().includes(query);
+      return matchesCat && matchesSearch;
+    });
+  }, [listings, selectedCategory, deferredSearch]);
 
   const handleSendOffer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +102,11 @@ export default function MarketPage() {
         <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
           {/* Search bar */}
           <div className="flex items-center gap-2.5 h-10 px-3 bg-white dark:bg-[#121215] border border-zinc-300 dark:border-zinc-700 rounded-xl shadow-2xs focus-within:border-black dark:focus-within:border-white">
-            <Search size={16} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
+            {isSearchPending ? (
+              <Loader2 size={16} className="text-zinc-400 dark:text-zinc-500 animate-spin shrink-0" />
+            ) : (
+              <Search size={16} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
+            )}
             <input
               aria-label="Search marketplace"
               placeholder="Search items at UET (coolers, desks, calculators...)"
@@ -100,6 +114,15 @@ export default function MarketPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 min-w-0 border-0 outline-none bg-transparent text-xs text-black dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           {/* Category Chips Scroll */}
@@ -167,7 +190,7 @@ export default function MarketPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 pb-4">
+            <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 pb-4 transition-opacity duration-150 ${isSearchPending ? "opacity-60" : "opacity-100"}`}>
               {filteredItems.map((item) => (
                 <div
                   key={item.id}

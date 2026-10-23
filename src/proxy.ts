@@ -10,12 +10,16 @@ const PUBLIC_PREFIXES = [
   "/api/auth",
   "/auth",
   "/api/upload",
+  "/api/contact",
   "/home",
+  "/download",
   "/terms",
   "/privacy",
   "/safety",
   "/contact",
   "/delete-account",
+  "/robots.txt",
+  "/sitemap.xml",
 ];
 
 // Routes that require admin role authorization
@@ -29,12 +33,13 @@ export async function proxy(request: NextRequest) {
 
   // 1. Handle API Routes: Never redirect API requests to HTML pages!
   if (pathname.startsWith("/api/")) {
-    // Public API endpoints (auth, upload, departments, universities)
+    // Public API endpoints (auth, upload, departments, universities, contact)
     if (
       pathname.startsWith("/api/auth") ||
       pathname.startsWith("/api/upload") ||
       pathname.startsWith("/api/departments") ||
-      pathname.startsWith("/api/universities")
+      pathname.startsWith("/api/universities") ||
+      pathname.startsWith("/api/contact")
     ) {
       return NextResponse.next();
     }
@@ -102,12 +107,17 @@ export async function proxy(request: NextRequest) {
 
   // 3. Handle Public Landing, Legal & Compliance Pages
   const isPublicInfoPage =
+    pathname === "/" ||
     pathname === "/home" ||
+    pathname === "/download" ||
     pathname === "/terms" ||
     pathname === "/privacy" ||
     pathname === "/safety" ||
     pathname === "/contact" ||
     pathname === "/delete-account" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname.startsWith("/download/") ||
     pathname.startsWith("/terms/") ||
     pathname.startsWith("/privacy/") ||
     pathname.startsWith("/safety/") ||
@@ -182,6 +192,6 @@ export const config = {
      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
      * - public static images / icons
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

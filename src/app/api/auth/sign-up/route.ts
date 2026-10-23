@@ -3,10 +3,33 @@ import { signJwtToken, setJwtCookie, JwtUserPayload } from "@/lib/jwt";
 import { createClient } from "@/lib/supabase/server";
 import { hashPassword } from "@/lib/password";
 import { verifyOtp } from "@/lib/otp-store";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limiter";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
+    // OWASP A04: Rate Limiting on Sign Up / OTP validation
+    const clientIp = getClientIp(request.headers);
+    const rateLimit = checkRateLimit(`signup_${clientIp}`, {
+      limit: 5,
+      windowMs: 2 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Too many sign-up attempts. Please wait ${rateLimit.retryAfterSeconds} seconds.`,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds || 60),
+          },
+        }
+      );
+    }
+
     const body = await request.json();
     const {
       name,
@@ -33,6 +56,13 @@ export async function POST(request: NextRequest) {
     const cleanEmail = String(email).trim().toLowerCase();
     const cleanStudentId = studentId ? String(studentId).trim().toUpperCase() : null;
     const cleanName = String(name).trim();
+
+    if (password && String(password).trim().length < 6) {
+      return NextResponse.json(
+        { success: false, message: "Password must be at least 6 characters long." },
+        { status: 400 }
+      );
+    }
 
     const supabase = await createClient();
 
@@ -79,10 +109,15 @@ export async function POST(request: NextRequest) {
 
     const { TenantsStore } = await import("@/lib/tenants-store");
 
-    const isSuperAdmin =
-      cleanEmail === "ranahammadismail@gmail.com" ||
-      cleanEmail.includes("superadmin") ||
-      cleanEmail === "superadmin@campusstitch.com";
+    // OWASP A01: Secure role assignment (no client-forged role by email substring)
+    const isSuperAdmin = cleanEmail === "ranahammadismail@gmail.com";
+    const campusAdminInfo = TenantsStore.getCampusAdminForUser(cleanEmail);
+
+    const role: "student" | "campus_admin" | "super_admin" = isSuperAdmin
+      ? "super_admin"
+      : campusAdminInfo
+      ? "campus_admin"
+      : "student";
 
     // Resolve university & campus
     let uId = body.universityId;
@@ -112,12 +147,6 @@ export async function POST(request: NextRequest) {
       uName = "UET Lahore";
       cName = "Main Campus (Lahore)";
     }
-
-    const role: "student" | "campus_admin" | "super_admin" = isSuperAdmin
-      ? "super_admin"
-      : cleanEmail.includes("admin")
-      ? "campus_admin"
-      : "student";
 
     // 3. Hash password if provided
     const passwordHash = password ? hashPassword(password) : null;

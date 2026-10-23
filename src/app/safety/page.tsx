@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 export default function SafetyPage() {
   return (
@@ -22,8 +23,9 @@ export default function SafetyPage() {
       <PublicNav />
 
       {/* Hero Header */}
-      <section className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] py-12 px-4 sm:px-6 lg:px-8">
+      <section className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto space-y-3">
+          <Breadcrumbs items={[{ label: "Safety & Guidelines" }]} className="py-0 mb-1" />
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
             <ShieldCheck size={13} className="text-emerald-500" />
             <span>Campus Community Guidelines</span>

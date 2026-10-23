@@ -14,25 +14,54 @@ import {
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 export default function ContactPage() {
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [university, setUniversity] = React.useState("UET Lahore");
-  const [subject, setSubject] = React.useState("general");
+  const [subject, setSubject] = React.useState("General Student Inquiries");
   const [message, setMessage] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [sent, setSent] = React.useState(false);
+  const [ticketId, setTicketId] = React.useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !message.trim()) return;
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      setErrorMsg("Please fill out all required fields.");
+      return;
+    }
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          university: university.trim(),
+          subject,
+          message: message.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.message || "Failed to submit support request. Please try again.");
+      } else {
+        setTicketId(data.ticketId || null);
+        setSent(true);
+      }
+    } catch {
+      setErrorMsg("Network error. Please check your internet connection.");
+    } finally {
       setIsSubmitting(false);
-      setSent(true);
-    }, 1000);
+    }
   };
 
   return (
@@ -40,8 +69,9 @@ export default function ContactPage() {
       <PublicNav />
 
       {/* Header */}
-      <section className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] py-12 px-4 sm:px-6 lg:px-8">
+      <section className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto space-y-3">
+          <Breadcrumbs items={[{ label: "Contact Support" }]} className="py-0 mb-1" />
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
             <Mail size={13} />
             <span>Developer & Platform Support</span>
@@ -118,8 +148,13 @@ export default function ContactPage() {
               <h2 className="text-lg font-bold text-zinc-950 dark:text-white">
                 Message Sent Successfully
               </h2>
+              {ticketId && (
+                <div className="inline-block px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono text-xs font-bold border border-zinc-200 dark:border-zinc-700">
+                  Ticket Ref: {ticketId}
+                </div>
+              )}
               <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-sm mx-auto leading-relaxed">
-                Thank you for contacting CampuStitch. Our support team has received your ticket and will respond to <strong>{email}</strong> shortly.
+                Thank you for contacting CampuStitch. Our support team has logged your inquiry and will respond to <strong>{email}</strong> within 24 to 48 hours.
               </p>
               <div className="pt-2">
                 <button
@@ -127,8 +162,9 @@ export default function ContactPage() {
                   onClick={() => {
                     setSent(false);
                     setMessage("");
+                    setTicketId(null);
                   }}
-                  className="px-4 py-2 text-xs font-bold rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  className="px-4 py-2 text-xs font-bold rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
                   Send Another Message
                 </button>
@@ -139,6 +175,12 @@ export default function ContactPage() {
               <h2 className="text-base font-bold text-zinc-950 dark:text-white">
                 Send a Message
               </h2>
+
+              {errorMsg && (
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-900 dark:text-red-300 text-xs font-medium">
+                  {errorMsg}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -193,12 +235,12 @@ export default function ContactPage() {
                     onChange={(e) => setSubject(e.target.value)}
                     className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors cursor-pointer"
                   >
-                    <option value="general">General Student Inquiries</option>
-                    <option value="kyc">Student KYC Verification Issue</option>
-                    <option value="commute">Carpool / Commute Dispute</option>
-                    <option value="marketplace">Marketplace Fraud / Safety Report</option>
-                    <option value="partnership">University Onboarding / Partnership</option>
-                    <option value="bug">Bug Report / Technical Issue</option>
+                    <option value="General Student Inquiries">General Student Inquiries</option>
+                    <option value="Student Identity Verification Issue">Student Identity Verification Issue</option>
+                    <option value="Carpool / Commute Dispute">Carpool / Commute Dispute</option>
+                    <option value="Marketplace Fraud / Safety Report">Marketplace Fraud / Safety Report</option>
+                    <option value="University Onboarding / Partnership">University Onboarding / Partnership</option>
+                    <option value="Bug Report / Technical Issue">Bug Report / Technical Issue</option>
                   </select>
                 </div>
               </div>

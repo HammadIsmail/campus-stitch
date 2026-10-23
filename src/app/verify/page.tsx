@@ -37,7 +37,7 @@ export default function VerifyKycPage() {
   const [program, setProgram] = React.useState(authUser?.program || "BS Computer Science");
   const [department, setDepartment] = React.useState("Computer Science");
 
-  // Step 1: Live Selfie (Binance style KYC) | Step 2: Student Card Upload | Step 3: Confirmation
+  // Step 1: Live Selfie Verification | Step 2: Student Card Upload | Step 3: Confirmation
   const [step, setStep] = React.useState<1 | 2>(1);
 
   // Live Camera Selfie State
@@ -72,7 +72,7 @@ export default function VerifyKycPage() {
     }
   }, [authUser, name, studentId, program]);
 
-  // Start Webcam stream for Binance KYC
+  // Start Webcam stream for identity verification
   const startCamera = async () => {
     setCameraError(null);
     try {
@@ -276,7 +276,7 @@ export default function VerifyKycPage() {
             </Link>
             <div className="flex items-center gap-1.5 font-bold text-sm text-foreground">
               <ShieldCheck className="w-4 h-4 text-black dark:text-white" />
-              <span>Identity Verification (KYC)</span>
+              <span>Student Identity Verification</span>
             </div>
             <div className="w-8" />
           </div>
@@ -316,9 +316,9 @@ export default function VerifyKycPage() {
               {/* Introduction */}
               <div>
                 <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
-                  <span>Student KYC Verification</span>
+                  <span>Student Identity Verification</span>
                   <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700">
-                    Binance-Style Face Scan
+                    Official Student Badge
                   </span>
                 </h1>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
@@ -335,7 +335,7 @@ export default function VerifyKycPage() {
                 </div>
               )}
 
-              {/* STEP 1: Live Selfie KYC Frame */}
+              {/* STEP 1: Live Face Verification Frame */}
               <div className="p-4 rounded-2xl bg-card border border-border space-y-3.5 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

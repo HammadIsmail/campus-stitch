@@ -225,7 +225,7 @@ export default function DynamicPostPage({
       score: newUpvotes - newDownvotes,
     });
 
-    fetch("/api/community/vote", {
+    fetch("/api/community/posts/vote", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
