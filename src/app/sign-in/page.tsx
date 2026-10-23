@@ -41,8 +41,21 @@ export default function SignInPage() {
         });
 
         const params = new URLSearchParams(window.location.search);
-        const redirectTarget = params.get("redirect") || "/";
-        window.location.href = redirectTarget;
+        let redirectTarget = params.get("redirect");
+
+        if (!redirectTarget || redirectTarget === "/") {
+          try {
+            const userStr = localStorage.getItem("campus_stitch_current_user");
+            if (userStr) {
+              const u = JSON.parse(userStr);
+              if (u.role === "super_admin") redirectTarget = "/admin/super";
+              else if (u.role === "campus_admin") redirectTarget = "/admin";
+              else redirectTarget = "/commute";
+            }
+          } catch {}
+        }
+
+        window.location.href = redirectTarget || "/commute";
         return { error: null };
       } catch (err: any) {
         return {

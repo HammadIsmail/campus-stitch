@@ -95,11 +95,17 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    // If user is already authenticated with a valid JWT and visits login/signup, redirect to home
+    // If user is already authenticated with a valid JWT and visits login/signup, redirect to their role dashboard
     if (token) {
       const payload = await verifyJwtToken(token);
       if (payload) {
-        return NextResponse.redirect(new URL("/", request.url));
+        if (payload.role === "super_admin") {
+          return NextResponse.redirect(new URL("/admin/super", request.url));
+        } else if (payload.role === "campus_admin") {
+          return NextResponse.redirect(new URL("/admin", request.url));
+        } else {
+          return NextResponse.redirect(new URL("/commute", request.url));
+        }
       }
     }
     return NextResponse.next();

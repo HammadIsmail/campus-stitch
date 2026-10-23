@@ -56,11 +56,17 @@ export async function GET(request: NextRequest) {
         const { createClient } = await import("@/lib/supabase/server");
         const supabase = await createClient();
         
-        const { data: profile } = await supabase
+        const profilePromise = supabase
           .from("profiles")
           .select("avatar_url, bio, full_name, is_verified, verification_status, campus_id, campus_name, university_id, university, role")
           .eq("email", cleanEmail)
           .maybeSingle();
+
+        const timeoutPromise = new Promise<{ data: null }>((resolve) =>
+          setTimeout(() => resolve({ data: null }), 1500)
+        );
+
+        const { data: profile } = (await Promise.race([profilePromise, timeoutPromise])) as any;
 
         if (profile) {
           if (profile.avatar_url) payload.avatarUrl = profile.avatar_url;

@@ -15,8 +15,11 @@ import {
   Moon,
   ArrowRight,
   Smartphone,
+  LogOut,
+  User,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 interface PublicNavProps {
@@ -26,6 +29,7 @@ interface PublicNavProps {
 export function PublicNav({ onDownloadClick }: PublicNavProps) {
   const pathname = usePathname();
   const { resolvedTheme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   const links = [
@@ -36,6 +40,20 @@ export function PublicNav({ onDownloadClick }: PublicNavProps) {
     { name: "Community", href: "/community", icon: Users },
     { name: "Safety", href: "/safety", icon: Shield },
   ];
+
+  const getDashboardHref = () => {
+    if (!user) return "/sign-in";
+    if (user.role === "super_admin") return "/admin/super";
+    if (user.role === "campus_admin") return "/admin";
+    return "/commute";
+  };
+
+  const getDashboardLabel = () => {
+    if (!user) return "Enter App";
+    if (user.role === "super_admin") return "Super Admin Console";
+    if (user.role === "campus_admin") return "Campus Admin";
+    return "Enter App";
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/85 dark:bg-[#0c0c0e]/85 backdrop-blur-xl border-b border-zinc-200/80 dark:border-zinc-800/80 transition-colors">
@@ -108,22 +126,46 @@ export function PublicNav({ onDownloadClick }: PublicNavProps) {
             <span>Download App</span>
           </a>
 
-          {/* Sign In */}
-          <Link
-            href="/sign-in"
-            className="px-3.5 py-1.5 text-xs font-semibold rounded-lg text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white transition-colors"
-          >
-            Sign In
-          </Link>
-
-          {/* Create Account CTA */}
-          <Link
-            href="/sign-up"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all shadow-xs"
-          >
-            <span>Join Campus</span>
-            <ArrowRight size={13} />
-          </Link>
+          {user ? (
+            // Logged In Actions
+            <>
+              <Link
+                href={getDashboardHref()}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all shadow-xs"
+              >
+                {user.role === "super_admin" && <Shield size={13} className="text-amber-400" />}
+                {user.role === "campus_admin" && <Shield size={13} className="text-blue-400" />}
+                <span>{getDashboardLabel()}</span>
+                <ArrowRight size={13} />
+              </Link>
+              <button
+                type="button"
+                onClick={() => logout()}
+                title="Sign out of active session"
+                aria-label="Sign Out"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
+              >
+                <LogOut size={15} />
+              </button>
+            </>
+          ) : (
+            // Logged Out Actions
+            <>
+              <Link
+                href="/sign-in"
+                className="px-3.5 py-1.5 text-xs font-semibold rounded-lg text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all shadow-xs"
+              >
+                <span>Join Campus</span>
+                <ArrowRight size={13} />
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu & Theme button */}
@@ -187,20 +229,46 @@ export function PublicNav({ onDownloadClick }: PublicNavProps) {
               <Smartphone size={14} />
               <span>Download Android APK (50.2 MB)</span>
             </a>
-            <Link
-              href="/sign-up"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-2.5 text-center text-xs font-bold rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs"
-            >
-              Create Student Account
-            </Link>
-            <Link
-              href="/sign-in"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-2 text-center text-xs font-semibold rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
-            >
-              Sign In to Your Campus
-            </Link>
+
+            {user ? (
+              <>
+                <Link
+                  href={getDashboardHref()}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-2.5 text-center text-xs font-bold rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  <span>{getDashboardLabel()}</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="w-full py-2 text-center text-xs font-semibold rounded-xl border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400"
+                >
+                  Sign Out ({user.name})
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/sign-up"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-2.5 text-center text-xs font-bold rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs"
+                >
+                  Create Student Account
+                </Link>
+                <Link
+                  href="/sign-in"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-2 text-center text-xs font-semibold rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
+                >
+                  Sign In to Your Campus
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

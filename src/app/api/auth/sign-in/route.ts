@@ -48,15 +48,21 @@ export async function POST(request: NextRequest) {
     const cleanEmail = String(email).trim().toLowerCase();
     const cleanPassword = String(password).trim();
 
-    // 1. Look up user profile from database
+    // 1. Look up user profile from database with timeout protection
     let userProfile: any = null;
     try {
       const supabase = await createClient();
-      const { data } = await supabase
+      const profilePromise = supabase
         .from("profiles")
         .select("*")
         .eq("email", cleanEmail)
         .maybeSingle();
+
+      const timeoutPromise = new Promise<{ data: null }>((resolve) =>
+        setTimeout(() => resolve({ data: null }), 2500)
+      );
+
+      const { data } = (await Promise.race([profilePromise, timeoutPromise])) as any;
       if (data) {
         userProfile = data;
       }
