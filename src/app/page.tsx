@@ -304,6 +304,34 @@ export default function HomePage() {
                 <ChevronRight size={18} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
               </Link>
             </section>
+
+            {/* Campus Platform & Legal Footer */}
+            <div className="pt-6 pb-8 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-2">
+              <div className="flex items-center justify-center gap-3 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
+                <Link href="/home" className="hover:text-black dark:hover:text-white font-semibold">
+                  About Platform
+                </Link>
+                <span>&bull;</span>
+                <Link href="/terms" className="hover:text-black dark:hover:text-white">
+                  Terms of Service
+                </Link>
+                <span>&bull;</span>
+                <Link href="/privacy" className="hover:text-black dark:hover:text-white">
+                  Privacy Policy
+                </Link>
+                <span>&bull;</span>
+                <Link href="/delete-account" className="hover:text-black dark:hover:text-white text-red-500">
+                  Data Safety
+                </Link>
+                <span>&bull;</span>
+                <Link href="/safety" className="hover:text-black dark:hover:text-white">
+                  Campus Guidelines
+                </Link>
+              </div>
+              <div className="text-[11px] text-zinc-400">
+                &copy; {new Date().getFullYear()} CampuStitch &bull; Multi-Tenant University Network
+              </div>
+            </div>
           </div>
         </main>
 

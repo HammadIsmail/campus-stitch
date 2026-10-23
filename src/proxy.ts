@@ -10,6 +10,12 @@ const PUBLIC_PREFIXES = [
   "/api/auth",
   "/auth",
   "/api/upload",
+  "/home",
+  "/terms",
+  "/privacy",
+  "/safety",
+  "/contact",
+  "/delete-account",
 ];
 
 // Routes that require admin role authorization
@@ -91,6 +97,24 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL("/", request.url));
       }
     }
+    return NextResponse.next();
+  }
+
+  // 3. Handle Public Landing, Legal & Compliance Pages
+  const isPublicInfoPage =
+    pathname === "/home" ||
+    pathname === "/terms" ||
+    pathname === "/privacy" ||
+    pathname === "/safety" ||
+    pathname === "/contact" ||
+    pathname === "/delete-account" ||
+    pathname.startsWith("/terms/") ||
+    pathname.startsWith("/privacy/") ||
+    pathname.startsWith("/safety/") ||
+    pathname.startsWith("/contact/") ||
+    pathname.startsWith("/delete-account/");
+
+  if (isPublicInfoPage) {
     return NextResponse.next();
   }
 

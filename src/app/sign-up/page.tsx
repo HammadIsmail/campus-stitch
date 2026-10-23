@@ -669,14 +669,37 @@ export default function SignUpPage() {
         )}
 
         {/* Sign In link */}
-        <div className="mt-8 text-center text-xs text-zinc-500 dark:text-zinc-400">
-          Already have an account?{" "}
-          <Link
-            href="/sign-in"
-            className="text-black dark:text-white font-bold hover:underline"
-          >
-            Sign In
-          </Link>
+        <div className="mt-8 text-center text-xs text-zinc-500 dark:text-zinc-400 space-y-3">
+          <div>
+            Already have an account?{" "}
+            <Link
+              href="/sign-in"
+              className="text-black dark:text-white font-bold hover:underline"
+            >
+              Sign In
+            </Link>
+          </div>
+
+          <div className="text-[11px] text-zinc-500 max-w-sm mx-auto leading-relaxed">
+            By registering, you agree to CampuStitch&apos;s{" "}
+            <Link href="/terms" className="underline font-bold text-black dark:text-white">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline font-bold text-black dark:text-white">
+              Privacy Policy
+            </Link>
+            .
+          </div>
+
+          <div>
+            <Link
+              href="/home"
+              className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white"
+            >
+              &larr; Back to CampuStitch Homepage
+            </Link>
+          </div>
         </div>
       </div>
     </MobileShell>

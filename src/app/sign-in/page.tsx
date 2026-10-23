@@ -155,10 +155,25 @@ export default function SignInPage() {
             </div>
           </div>
 
-          {/* Trust Footnote */}
-          <div className="mt-5 text-center text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center justify-center gap-1.5">
-            <ShieldCheck size={14} className="text-zinc-950 dark:text-zinc-300" />
-            <span>Campus card verification required for all students.</span>
+          {/* Back to Home & Legal Links */}
+          <div className="mt-5 text-center space-y-2">
+            <Link
+              href="/home"
+              className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors"
+            >
+              &larr; Back to CampuStitch Homepage
+            </Link>
+
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center justify-center gap-1.5 flex-wrap">
+              <span>By signing in, you agree to our</span>
+              <Link href="/terms" className="underline hover:text-black dark:hover:text-white">
+                Terms
+              </Link>
+              <span>&amp;</span>
+              <Link href="/privacy" className="underline hover:text-black dark:hover:text-white">
+                Privacy Policy
+              </Link>
+            </div>
           </div>
         </div>
       </div>
