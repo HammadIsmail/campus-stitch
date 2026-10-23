@@ -24,6 +24,7 @@ import {
   Loader2,
   ArrowLeft,
   Crown,
+  LogOut,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,7 @@ interface CandidateUser {
 }
 
 export default function SuperAdminPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = React.useState<"universities" | "admins">("universities");
   const [loading, setLoading] = React.useState(true);
   const [feedback, setFeedback] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -346,10 +347,29 @@ export default function SuperAdminPage() {
             <button
               onClick={loadData}
               disabled={loading}
-              className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer"
               title="Refresh Data"
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            </button>
+            <Link
+              href="/"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
+              title="Exit to public website"
+            >
+              Exit to App
+            </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                await logout();
+                window.location.href = "/sign-in";
+              }}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Log out of Super Admin session"
+            >
+              <LogOut size={13} />
+              <span>Log Out</span>
             </button>
           </div>
         </header>

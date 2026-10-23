@@ -60,3 +60,26 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #a1a1aa;
 }
+
+/* Fix native HTML select and option dropdown styling in dark mode */
+select {
+  color-scheme: light;
+}
+
+.dark select {
+  color-scheme: dark;
+  background-color: #121215;
+  color: #fafafa;
+}
+
+select option,
+select optgroup {
+  background-color: #ffffff;
+  color: #09090b;
+}
+
+.dark select option,
+.dark select optgroup {
+  background-color: #18181b !important;
+  color: #fafafa !important;
+}

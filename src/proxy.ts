@@ -33,6 +33,19 @@ export async function proxy(request: NextRequest) {
 
   // 1. Handle API Routes: Never redirect API requests to HTML pages!
   if (pathname.startsWith("/api/")) {
+    // Handle CORS preflight OPTIONS requests
+    if (request.method === "OPTIONS") {
+      return new NextResponse(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-campus-id, x-user-university-id, x-user-role, x-user-name, Accept",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
     // Public API endpoints (auth, upload, departments, universities, contact)
     if (
       pathname.startsWith("/api/auth") ||
@@ -46,23 +59,55 @@ export async function proxy(request: NextRequest) {
 
     // Protected API endpoints require token
     if (!token) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        {
+          status: 401,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
     }
 
     const payload = await verifyJwtToken(token);
     if (!payload) {
-      return NextResponse.json({ error: "Invalid or expired session" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid or expired session" },
+        {
+          status: 401,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
     }
 
     const isSuperAdmin = payload.role === "super_admin";
     const isCampusAdmin = payload.role === "campus_admin" || isSuperAdmin || payload.role === "admin";
 
     if (pathname.startsWith("/api/admin/super") && !isSuperAdmin) {
-      return NextResponse.json({ error: "Super Admin access required" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Super Admin access required" },
+        {
+          status: 403,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
     }
 
     if (pathname.startsWith("/api/admin") && !isCampusAdmin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Admin access required" },
+        {
+          status: 403,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
     }
 
     const requestHeaders = new Headers(request.headers);

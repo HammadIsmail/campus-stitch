@@ -45,7 +45,7 @@ interface VerificationItem {
 }
 
 export default function AdminVerificationPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [queue, setQueue] = React.useState<VerificationItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedIdx, setSelectedIdx] = React.useState(0);
@@ -178,11 +178,17 @@ export default function AdminVerificationPage() {
               <select
                 value={campusFilter}
                 onChange={(e) => setCampusFilter(e.target.value)}
-                className="h-9 px-2.5 rounded-xl border border-border bg-card text-xs text-foreground font-semibold focus:outline-none"
+                className="h-9 px-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs text-zinc-900 dark:text-zinc-100 font-semibold focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-colors shadow-2xs cursor-pointer"
               >
-                <option value="all">All Campuses ({campusesList.length})</option>
+                <option value="all" className="bg-white dark:bg-[#18181b] text-zinc-900 dark:text-zinc-100 py-1.5">
+                  All Campuses ({campusesList.length})
+                </option>
                 {campusesList.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option
+                    key={c.id}
+                    value={c.id}
+                    className="bg-white dark:bg-[#18181b] text-zinc-900 dark:text-zinc-100 py-1.5"
+                  >
                     {c.name} ({c.city})
                   </option>
                 ))}
@@ -198,11 +204,23 @@ export default function AdminVerificationPage() {
             </button>
             <Link
               href="/"
-              className="text-xs font-semibold px-3 py-2 rounded-xl bg-muted/60 hover:bg-muted text-foreground flex items-center gap-1.5 transition-colors"
+              className="text-xs font-semibold px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
+              title="Exit to public website"
+            >
+              Exit to App
+            </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                await logout();
+                window.location.href = "/sign-in";
+              }}
+              className="text-xs font-semibold px-3 py-2 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Log out of admin session"
             >
               <LogOut size={13} />
-              <span>Exit Admin</span>
-            </Link>
+              <span>Log Out</span>
+            </button>
           </div>
         </header>
 
