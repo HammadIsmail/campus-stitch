@@ -1,44 +1,57 @@
-# campus-stitch
+# CampuStitch - Web Application
 
-> **A verified, hyperlocal student platform for UET Lahore** connecting students for daily commutes, bike rentals, peer marketplace, shared ownership, hostel living, and campus community with multilingual voice AI assistance.
+> **Live Production**: [https://campus-stitch.vercel.app](https://campus-stitch.vercel.app)  
+> **Official Web Repository**: [https://github.com/HammadIsmail/campus-stitch](https://github.com/HammadIsmail/campus-stitch)  
+> **Flutter Mobile App Repository**: [https://github.com/HammadIsmail/campus-stitch-mobile-app](https://github.com/HammadIsmail/campus-stitch-mobile-app)  
+> **Documentation Hub**: [Master Project Documentation](../docs/README.md)
+
+**CampuStitch** is a verified, multi-tenant university SuperApp built for Pakistani campuses. It connects verified university students for daily rickshaw/carpool commute splits, peer bike rentals, student-to-student marketplace, shared hostel items, and campus communities with native Web & Mobile push notifications.
 
 ---
 
-## 🚀 Key Features & Pillars
+## 🚀 Key Features
 
-### 1. 🚗 Student Commute & Carpooling
-- **Rickshaw Cost Splits:** Fixed daily routes (e.g. Khurrialwala ⇄ UET Lahore) splitting fares evenly among verified students.
-- **Fair-Share Calculator:** Automatic calculation as students join or leave seats.
-- **Bike Rentals:** Peer-to-peer motorcycle and bicycle rentals between classes with daily rates and deposit tracking.
+### 1. 🚗 Hyperlocal Commute & Carpooling (`/commute`)
+- **Rickshaw Cost Splits:** Fixed daily routes (e.g. Khurrianwala ⇄ UET Lahore) splitting fares evenly among students.
+- **Fair-Share Splitter:** Dynamic fare-per-person recalculation when seats fill or free up.
+- **Bike & Cycle Rentals:** Peer-to-peer bike rentals with student ID verification and deposit escrow rules.
+- **Post a Ride Offer (`/commute/offer`):** Instant ride offering with seats, departure time, and fair pricing.
 
-### 2. 🛍️ Student Marketplace & Co-Ownership
-- **Verified Peer Market:** Textbooks, lab coats, electronics, coolers, and hostel furniture sold directly student-to-student.
-- **Shared Ownership:** Group co-ownership of expensive hostel items (refrigerators, desert coolers). Auto-calculates fair payouts and resale shares when roommates graduate.
-- **Graduation Pass-Out Bundles:** Seniors can group room items into single bundles for juniors with real-time status toggles.
+### 2. 🛍️ Student Marketplace & Co-Ownership (`/market`)
+- **Verified Peer Market:** Textbooks, lab coats, electronics, coolers, and hostel furniture.
+- **Post Items for Sale (`/market/sell`):** Upload photos, select conditions, and categorize gear.
+- **Graduation Pass-Out Bundles:** Seniors can bundle full hostel room inventory for incoming juniors.
 
-### 3. 🏢 Hostel Hub
-- **Roommate Finder:** Listings for shared rooms, AC attachments, and hostel vacancies across university blocks.
-- **Student Services:** Door-to-door hostel services (laundry pickup, electrical repairs, past-paper printing deliveries).
+### 3. 🏢 Hostel Hub (`/hostel`)
+- **Roommate Vacancy Finder:** Listings for shared rooms, AC attachments, and hostel vacancies across campus blocks.
+- **Offer Student Services (`/hostel/offer`):** Student-run services (laundry pickup, cooler repair, past paper printout delivery).
 
-### 4. 👥 Campus Community & Safety
-- **Official Societies & Study Groups:** Event schedules, society workshops, and batch networks.
-- **Student Help Board:** Hyperlocal campus Q&A for academic questions, lost calculators, and study materials.
-- **Institutional Verification:** Student ID card verification system with AI optical checks and moderation queues.
+### 4. 👥 Reddit-Style Campus Community (`/community`)
+- **3-Item Initial Load & Infinite Scroll:** Initial load fetches exactly 3 posts and 3 communities for maximum page speed.
+- **Automatic Feed Pagination:** `IntersectionObserver` triggers seamless background fetching of 3-post batches.
+- **React 19 Optimistic Voting:** Instant 0ms upvote/downvote transitions with automated rollback on network drop.
+- **Scoped Subreddits:** Multi-campus isolation (`r/general`, `r/exams`, `r/commute-splits`, `r/cs-uet`).
 
-### 5. 🎙️ AI & Voice Assistance
-- **Urdu & English Voice AI:** Speech-to-text powered voice assistant capable of parsing student queries in natural Urdu and Roman Urdu.
-- **Agentic Tool Calling:** Powered by Vercel AI SDK and Google Gemini for dynamic ride searching, seat booking, and item lookups.
+### 5. 🔔 Firebase Push Notifications (`/api/notifications/*`)
+- **Web Push Service Worker (`public/firebase-messaging-sw.js`):** Receives background notifications even when the browser tab is closed.
+- **Firebase Admin Multicast (`src/lib/firebase/admin.ts`):** Automatically dispatches alerts to student devices.
+- **Device Token Store (`user_push_tokens`):** Supabase table managing active tokens for Web, Android, and iOS.
+
+### 6. 🛡️ Multi-Tenant Institutional Governance
+- **Super Admin Console (`/admin/super`):** Create universities, manage campuses, and delegate/revoke campus admins.
+- **Campus Admin Console (`/admin`):** Side-by-side student ID card vs. live webcam selfie review queue with one-click approve/reject.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Framework:** [Next.js 15 (App Router)](https://nextjs.org/)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS & Radix UI primitives with a classic unified monochrome aesthetic
-- **Database & Auth:** [Supabase](https://supabase.com/) PostgreSQL with RLS and realtime subscriptions
-- **AI & LLM:** Vercel AI SDK (`ai`), `@ai-sdk/google` (Google Gemini)
-- **Voice STT:** Uplift Urdu Voice AI / Web Speech API
+- **Framework:** [Next.js 16.3](https://nextjs.org/) (App Router + Turbopack)
+- **Library:** [React 19](https://react.dev/) (`useActionState`, `useOptimistic`, `useTransition`, `useFormStatus`)
+- **Language:** TypeScript 5
+- **Styling:** Tailwind CSS v4 with bespoke Dark/Light theme mode tokens
+- **Database & Auth:** [Supabase](https://supabase.com/) PostgreSQL with Row-Level Security (RLS)
+- **Push Notifications:** [Firebase Cloud Messaging (FCM)](https://firebase.google.com/docs/cloud-messaging) + Firebase Admin SDK
+- **Email & OTP:** Nodemailer (Gmail SMTP) with 6-digit cryptographic verification
 - **Icons:** Lucide React
 
 ---
@@ -48,19 +61,30 @@
 ### 1. Clone & Install
 ```bash
 git clone https://github.com/HammadIsmail/campus-stitch.git
-cd campus-stitch
+cd campus-stitch/web
 npm install
 ```
 
-### 2. Environment Setup
-Create a `.env.local` file in the root directory:
+### 2. Configure Environment Variables
+Create `.env.local` in the `web/` directory:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-DATABASE_URL=postgresql://postgres:...@...pooler.supabase.com:6543/postgres
-GOOGLE_GENERATIVE_AI_API_KEY=your-gemini-key
-GEMINI_API_KEY=your-gemini-key
-UPLIFT_API_KEY=your-uplift-key
+NEXT_PUBLIC_SUPABASE_URL="https://your-supabase.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sb_publishable_..."
+DATABASE_URL="postgresql://postgres:...@...pooler.supabase.com:6543/postgres"
+
+# Firebase Web Client (Notifications)
+NEXT_PUBLIC_FIREBASE_API_KEY="..."
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="campus-stitch.firebaseapp.com"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="campus-stitch"
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="campus-stitch.firebasestorage.app"
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="551202613453"
+NEXT_PUBLIC_FIREBASE_APP_ID="1:551202613453:web:..."
+NEXT_PUBLIC_FIREBASE_VAPID_KEY="..."
+
+# Firebase Admin Service Account (Server-side)
+FIREBASE_PROJECT_ID="campus-stitch"
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk-fbsvc@campus-stitch.iam.gserviceaccount.com"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
 ### 3. Run Development Server
@@ -69,7 +93,16 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### 4. Build & Validate
+```bash
+npx tsc --noEmit    # Validates TypeScript types (0 errors)
+npm run build       # Production bundle build
+```
+
 ---
 
-## 📱 Mobile-First PWA Experience
-Designed specifically for mobile devices with pinned bottom navigation tabs, quick Urdu voice button, and responsive desktop layout.
+## 📱 Cross-Platform Ecosystem
+This web application works in concert with the **Flutter Mobile App**:
+- Repository: [https://github.com/HammadIsmail/campus-stitch-mobile-app](https://github.com/HammadIsmail/campus-stitch-mobile-app)
+- API Reference: [docs/API_REFERENCE.md](../docs/API_REFERENCE.md)
+- Database Schema: [docs/DATABASE_SCHEMA.md](../docs/DATABASE_SCHEMA.md)
