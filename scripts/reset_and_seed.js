@@ -11,9 +11,22 @@ function hashPassword(password) {
   return `${salt}:${hash}`;
 }
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  "postgresql://postgres.ccxtfbytfrffewpuscak:voFMFcWkHwR0yLzW@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres";
+let DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  try {
+    const envPath = path.join(__dirname, "../.env.local");
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, "utf-8");
+      const match = envContent.match(/DATABASE_URL=["']?([^"'\r\n]+)["']?/);
+      if (match) DATABASE_URL = match[1];
+    }
+  } catch (_) {}
+}
+
+if (!DATABASE_URL) {
+  console.error("Error: DATABASE_URL is not set. Please provide it in your environment or in .env.local");
+  process.exit(1);
+}
 
 async function run() {
   console.log("==================================================");

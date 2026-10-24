@@ -18,8 +18,10 @@ if (!DATABASE_URL) {
 }
 
 if (!DATABASE_URL) {
-  DATABASE_URL =
-    "postgresql://postgres.ccxtfbytfrffewpuscak:voFMFcWkHwR0yLzW@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres";
+  console.error(
+    "Error: DATABASE_URL is not set. Please provide it in your environment or in .env.local"
+  );
+  process.exit(1);
 }
 
 function hashPassword(password) {

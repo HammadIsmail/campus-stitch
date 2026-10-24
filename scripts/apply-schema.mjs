@@ -19,10 +19,9 @@ async function run() {
   const schemaSql = fs.readFileSync("supabase/schema.sql", "utf8");
 
   // Also construct pooler fallback URL just in case ISP doesn't support IPv6
-  const poolerUrl = directUrl.replace(
-    "postgres:voFMFcWkHwR0yLzW@db.ccxtfbytfrffewpuscak.supabase.co:5432/postgres",
-    "postgres.ccxtfbytfrffewpuscak:voFMFcWkHwR0yLzW@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres",
-  );
+  const poolerUrl = directUrl.includes("pooler.supabase.com")
+    ? directUrl
+    : directUrl.replace(/@db\.[^.]+\.supabase\.co:5432/, "@aws-0-ap-northeast-1.pooler.supabase.com:6543");
 
   let client;
   let connected = false;
