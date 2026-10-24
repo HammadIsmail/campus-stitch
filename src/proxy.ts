@@ -11,6 +11,7 @@ const PUBLIC_PREFIXES = [
   "/auth",
   "/api/upload",
   "/api/contact",
+  "/api/app/version",
   "/home",
   "/download",
   "/terms",
@@ -46,13 +47,14 @@ export async function proxy(request: NextRequest) {
       });
     }
 
-    // Public API endpoints (auth, upload, departments, universities, contact)
+    // Public API endpoints (auth, upload, departments, universities, contact, app version)
     if (
       pathname.startsWith("/api/auth") ||
       pathname.startsWith("/api/upload") ||
       pathname.startsWith("/api/departments") ||
       pathname.startsWith("/api/universities") ||
-      pathname.startsWith("/api/contact")
+      pathname.startsWith("/api/contact") ||
+      pathname.startsWith("/api/app/version")
     ) {
       return NextResponse.next();
     }
