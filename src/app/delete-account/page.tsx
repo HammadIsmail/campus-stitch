@@ -12,34 +12,92 @@ import {
   Loader2,
   Smartphone,
   ExternalLink,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
+import { useAuth } from "@/lib/auth-context";
 
 export default function DeleteAccountPage() {
-  const [email, setEmail] = React.useState("");
-  const [studentId, setStudentId] = React.useState("");
+  const { user: authUser, logout } = useAuth();
+
+  const [email, setEmail] = React.useState(authUser?.email || "");
+  const [studentId, setStudentId] = React.useState(authUser?.studentId || "");
+  const [password, setPassword] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [confirmUnderstood, setConfirmUnderstood] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
+  // Sync if auth state changes
+  React.useEffect(() => {
+    if (authUser?.email && !email) setEmail(authUser.email);
+    if (authUser?.studentId && !studentId) setStudentId(authUser.studentId);
+  }, [authUser]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !studentId.trim() || !confirmUnderstood) {
-      setErrorMsg("Please complete all required fields and confirm acknowledgement.");
+    if (!email.trim() || !studentId.trim() || !password.trim() || !confirmUnderstood) {
+      setErrorMsg("Please complete all required fields, enter your account password, and confirm acknowledgement.");
       return;
     }
 
     setIsSubmitting(true);
     setErrorMsg(null);
 
-    // Simulate sending deletion request to backend queue
-    setTimeout(() => {
+    try {
+      // 1. Security Check: Verify that the password belongs to this account
+      const authRes = await fetch("/api/auth/sign-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+        }),
+      });
+
+      const authData = await authRes.json().catch(() => ({}));
+
+      if (!authRes.ok || authData.success === false) {
+        setIsSubmitting(false);
+        setErrorMsg("Security Verification Failed: The password provided is incorrect. For student safety, unauthorized deletion of someone else's account is strictly prevented.");
+        return;
+      }
+
+      // 2. Perform permanent deletion
+      const deleteRes = await fetch("/api/profile", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          userId: authData.user?.userId || studentId,
+        }),
+      });
+
+      if (deleteRes.ok) {
+        if (authUser) {
+          try {
+            await logout();
+            localStorage.clear();
+          } catch {}
+        }
+        setIsSubmitting(false);
+        setSubmitted(true);
+      } else {
+        const delData = await deleteRes.json().catch(() => ({}));
+        setIsSubmitting(false);
+        setErrorMsg(delData.error || "Failed to process deletion request. Please try again.");
+      }
+    } catch (err) {
+      console.error("Deletion error:", err);
       setIsSubmitting(false);
-      setSubmitted(true);
-    }, 1200);
+      setErrorMsg("A network error occurred. Please verify your connection and try again.");
+    }
   };
 
   return (
@@ -153,12 +211,51 @@ export default function DeleteAccountPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Account Password <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                    Required to verify account ownership
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder="Enter your account password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-11 pl-10 pr-10 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors"
+                  />
+                  <div className="absolute left-3.5 top-3 text-zinc-400">
+                    <KeyRound size={16} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Security Notice: Anti-Tampering */}
+              <div className="p-3 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-[11px] text-zinc-600 dark:text-zinc-400 flex items-start gap-2">
+                <ShieldCheck size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Anti-Tampering Protection:</strong> For your security, account deletion strictly requires password authentication. A third party cannot delete your account simply by entering your public email or student roll number.
+                </span>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-zinc-900 dark:text-zinc-100 mb-1.5">
                   Reason for Leaving (Optional)
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   placeholder="Graduated, transferred to another university, or no longer needing campus services..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
