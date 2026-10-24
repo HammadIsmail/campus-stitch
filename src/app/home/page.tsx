@@ -256,17 +256,7 @@ export default function LandingHomePage() {
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-emerald-500/10 via-zinc-400/10 to-blue-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
-          {/* Top Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white dark:bg-[#121215] border border-zinc-300/80 dark:border-zinc-700/80 shadow-2xs mb-6 animate-in fade-in zoom-in duration-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-zinc-800 dark:text-zinc-200">
-              🇵🇰 Pakistan&apos;s Multi-Tenant University SuperApp
-            </span>
-            <span className="text-zinc-400">&bull;</span>
-            <span className="text-zinc-600 dark:text-zinc-400 font-semibold">
-              100% Student Verified
-            </span>
-          </div>
+
 
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-zinc-950 dark:text-white max-w-4xl leading-[1.08]">
@@ -279,7 +269,7 @@ export default function LandingHomePage() {
 
           {/* Subtitle */}
           <p className="mt-6 text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed font-normal">
-            Safe campus carpooling, zero-commission peer marketplace, verified hostel discovery, and Reddit-style university feeds. Partitioned strictly to your university campus.
+A platform that makes university life easier. Students can share rides and split fares, buy and sell hostel items, find services like printing and repairing, and join campus communities to share updates, discuss topics, and stay updated about events. Anyone can create their own community and connect with students who share the same interests. Each university has its own space for students.
           </p>
 
           {/* Action Button Row */}

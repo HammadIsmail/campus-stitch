@@ -81,7 +81,7 @@ export default function SignInPage() {
               Sign In to CampuStitch
             </h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs leading-relaxed">
-              UET Lahore Student Platform. Enter your email and password to access your account.
+              Enter your email and password to access your account.
             </p>
           </div>
 

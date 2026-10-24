@@ -42,10 +42,7 @@ export default function PrivacyPolicyPage() {
       <section className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto space-y-3">
           <Breadcrumbs items={[{ label: "Privacy Policy" }]} className="py-0 mb-1" />
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-            <Shield size={13} />
-            <span>Google Play Store Certified Policy</span>
-          </div>
+
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-950 dark:text-white">
             Privacy Policy & Data Safety
           </h1>
@@ -73,11 +70,10 @@ export default function PrivacyPolicyPage() {
                 key={sec.id}
                 href={`#${sec.id}`}
                 onClick={() => setActiveSection(sec.id)}
-                className={`text-xs px-3 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors ${
-                  activeSection === sec.id
+                className={`text-xs px-3 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors ${activeSection === sec.id
                     ? "bg-black text-white dark:bg-white dark:text-black font-bold"
                     : "text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                }`}
+                  }`}
               >
                 <sec.icon size={13} className="shrink-0" />
                 <span className="truncate">{sec.title}</span>
@@ -111,7 +107,7 @@ export default function PrivacyPolicyPage() {
             <p>
               To provide authentic campus services and fulfill Google Play Developer requirements, we collect the following categories of data:
             </p>
-            
+
             <div className="space-y-3">
               <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
                 <h3 className="text-xs font-bold text-zinc-950 dark:text-white mb-1">
@@ -239,7 +235,7 @@ export default function PrivacyPolicyPage() {
             <p>
               In accordance with Google Play&apos;s Account Deletion Policy, users have the absolute right to delete their account and all associated personal data permanently without hindrance:
             </p>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-bold text-zinc-950 dark:text-white">
