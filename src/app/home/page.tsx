@@ -229,7 +229,7 @@ export default function LandingHomePage() {
                 Browse with Web
               </button>
               <a
-                href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
+                href="https://drive.google.com/drive/folders/1fLQR6pBwKDlY_3XzuoMBBwWs2CE6CaFD"
                 className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-zinc-950 dark:bg-zinc-900 dark:text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Download size={13} />
@@ -269,7 +269,7 @@ export default function LandingHomePage() {
 
           {/* Subtitle */}
           <p className="mt-6 text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed font-normal">
-A platform that makes university life easier. Students can share rides and split fares, buy and sell hostel items, find services like printing and repairing, and join campus communities to share updates, discuss topics, and stay updated about events. Anyone can create their own community and connect with students who share the same interests. Each university has its own space for students.
+            A platform that makes university life easier. Students can share rides and split fares, buy and sell hostel items, find services like printing and repairing, and join campus communities to share updates, discuss topics, and stay updated about events. Anyone can create their own community and connect with students who share the same interests. Each university has its own space for students.
           </p>
 
           {/* Action Button Row */}
@@ -358,11 +358,10 @@ A platform that makes university life easier. Students can share rides and split
                   key={f.id}
                   type="button"
                   onClick={() => setSelectedFeatureTab(f.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                    isSelected
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${isSelected
                       ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs"
                       : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
-                  }`}
+                    }`}
                 >
                   <Icon size={14} />
                   <span>{f.name}</span>
@@ -409,14 +408,14 @@ A platform that makes university life easier. Students can share rides and split
                         active.id === "commute"
                           ? "/commute"
                           : active.id === "market"
-                          ? "/market"
-                          : active.id === "hostel"
-                          ? "/hostel"
-                          : active.id === "community"
-                          ? "/community"
-                          : active.id === "voice"
-                          ? "/voice"
-                          : "/verify"
+                            ? "/market"
+                            : active.id === "hostel"
+                              ? "/hostel"
+                              : active.id === "community"
+                                ? "/community"
+                                : active.id === "voice"
+                                  ? "/voice"
+                                  : "/verify"
                       }
                       className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 text-xs font-bold hover:opacity-90 transition-opacity"
                     >
