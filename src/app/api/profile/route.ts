@@ -143,3 +143,84 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    let targetId: string | null = null;
+    let targetEmail: string | null = null;
+
+    // 1. Try reading from JWT token
+    const token = getJwtFromRequest(req);
+    if (token) {
+      const payload = await verifyJwtToken(token);
+      if (payload) {
+        targetId = payload.userId || null;
+        targetEmail = payload.email?.toLowerCase().trim() || null;
+      }
+    }
+
+    // 2. Fallback to request body or query params if provided
+    try {
+      const body = await req.json().catch(() => ({}));
+      if (body?.userId) targetId = body.userId;
+      if (body?.email) targetEmail = body.email.toLowerCase().trim();
+    } catch {}
+
+    const { searchParams } = new URL(req.url);
+    if (!targetId && searchParams.get("userId")) targetId = searchParams.get("userId");
+    if (!targetEmail && searchParams.get("email")) targetEmail = searchParams.get("email")?.toLowerCase().trim() || null;
+
+    if (!targetId && !targetEmail) {
+      return NextResponse.json(
+        { success: false, error: "Missing user identification for account deletion" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createClient();
+
+    // Delete associated verification records
+    if (targetEmail) {
+      await supabase.from("verifications").delete().eq("email", targetEmail);
+    }
+    if (targetId) {
+      await supabase.from("verifications").delete().or(`student_id.eq.${targetId},id.eq.${targetId}`);
+    }
+
+    // Delete from profiles
+    const isUuid = targetId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+    let deleteQuery;
+    if (isUuid) {
+      deleteQuery = supabase.from("profiles").delete().eq("id", targetId);
+    } else if (targetEmail) {
+      deleteQuery = supabase.from("profiles").delete().eq("email", targetEmail);
+    } else {
+      deleteQuery = supabase.from("profiles").delete().or(`student_id.eq.${targetId},email.ilike.%${targetId}%`);
+    }
+
+    await deleteQuery;
+
+    // Delete push tokens
+    if (targetId || targetEmail) {
+      try {
+        await supabase.from("push_tokens").delete().or(`user_id.eq.${targetId || ""},user_email.eq.${targetEmail || ""}`);
+      } catch {}
+    }
+
+    const res = NextResponse.json({
+      success: true,
+      message: "Account and associated student personal data have been permanently deleted.",
+    });
+
+    res.cookies.delete("campus_stitch_token");
+    res.cookies.delete("auth_token");
+
+    return res;
+  } catch (error: any) {
+    console.error("Account deletion route error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}

@@ -8,19 +8,11 @@ import {
   ShieldAlert,
   Clock,
   ArrowRight,
-  Compass,
   LogOut,
   ChevronRight,
-  Plus,
-  Package,
-  Star,
-  MessageSquare,
-  Award,
-  ThumbsUp,
   Loader2,
   X,
   CreditCard,
-  UserCheck,
   Camera,
   Edit3,
   Sun,
@@ -29,28 +21,18 @@ import {
   Settings,
   Check,
   Upload,
-  User,
-  Sparkles,
   Bell,
   Eye,
+  Trash2,
+  AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
-import { DataService, Listing, SharedItem } from "@/lib/data-service";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
-
-interface ProfileReview {
-  id: string;
-  rater_name: string;
-  rater_student_id: string;
-  rating: number;
-  category: string;
-  comment: string;
-  created_at: string;
-}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -89,43 +71,19 @@ export default function ProfilePage() {
   const [isSavingProfile, setIsSavingProfile] = React.useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = React.useState<string | null>(null);
 
-  const [myBookings, setMyBookings] = React.useState<any[]>([]);
-  const [myListings, setMyListings] = React.useState<Listing[]>([]);
-  const [myShared, setMyShared] = React.useState<SharedItem[]>([]);
-
-  // Ratings State
-  const [reviews, setReviews] = React.useState<ProfileReview[]>([]);
-  const [averageRating, setAverageRating] = React.useState<number>(5.0);
-  const [totalReviews, setTotalReviews] = React.useState<number>(3);
-  const [breakdown, setBreakdown] = React.useState<Record<number, number>>({
-    5: 3,
-    4: 0,
-    3: 0,
-    2: 0,
-    1: 0,
-  });
+  // Account Deletion State
+  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   // Preferences toggles
   const [pushNotifs, setPushNotifs] = React.useState(true);
   const [publicProfile, setPublicProfile] = React.useState(true);
 
-  // Rate Modal State
-  const [showRateModal, setShowRateModal] = React.useState(false);
-  const [ratingInput, setRatingInput] = React.useState(5);
-  const [categoryInput, setCategoryInput] = React.useState("commute");
-  const [commentInput, setCommentInput] = React.useState("");
-  const [isSubmittingRating, setIsSubmittingRating] = React.useState(false);
-
-  // Load Profile & Ratings Data
+  // Load Profile Data
   React.useEffect(() => {
     async function loadData() {
-      try {
-        const storedBookings = JSON.parse(
-          localStorage.getItem("campus_stitch_my_bookings") || "[]"
-        );
-        setMyBookings(storedBookings);
-      } catch {}
-
       // Check current user cache
       try {
         const storedUser = localStorage.getItem("campus_stitch_current_user");
@@ -141,12 +99,6 @@ export default function ProfilePage() {
           }
         }
       } catch {}
-
-      const allListings = await DataService.getListings();
-      setMyListings(allListings);
-
-      const allShared = await DataService.getSharedItems();
-      setMyShared(allShared);
 
       // Fetch Profile Details (Bio and Avatar) with userId, email, and studentId
       try {
@@ -179,20 +131,6 @@ export default function ProfilePage() {
         }
       } catch (err) {
         console.warn("Failed to load user profile:", err);
-      }
-
-      // Fetch Profile Ratings
-      try {
-        const res = await fetch(`/api/profile/ratings?userId=${user.userId}`);
-        const data = await res.json();
-        if (data.success) {
-          setReviews(data.reviews || []);
-          setAverageRating(data.averageRating || 5.0);
-          setTotalReviews(data.totalReviews || 0);
-          if (data.breakdown) setBreakdown(data.breakdown);
-        }
-      } catch (err) {
-        console.warn("Failed to load ratings:", err);
       }
     }
     loadData();
@@ -275,36 +213,43 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePostRating = async (e: React.FormEvent) => {
+  // Permanent Account & Data Deletion
+  const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmittingRating(true);
+    if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
+      setDeleteError('Please type "DELETE" to confirm.');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    setDeleteError(null);
 
     try {
-      const res = await fetch("/api/profile/ratings", {
-        method: "POST",
+      const res = await fetch("/api/profile", {
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.userId,
-          rating: ratingInput,
-          category: categoryInput,
-          comment: commentInput.trim(),
-          raterName: "Verified Peer",
-          raterStudentId: "2022-CS-012",
+          email: user.email,
         }),
       });
 
-      const data = await res.json();
-      if (data.success && data.review) {
-        setReviews((prev) => [data.review, ...prev]);
-        setAverageRating(data.averageRating);
-        setTotalReviews(data.totalReviews);
-        setShowRateModal(false);
-        setCommentInput("");
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        setShowDeleteModal(false);
+        try {
+          localStorage.clear();
+        } catch {}
+        await logout();
+        router.push("/auth/sign-in?deleted=true");
+      } else {
+        setDeleteError(data.error || data.message || "Failed to delete account. Please try again.");
       }
-    } catch (err) {
-      console.error("Submit rating error:", err);
+    } catch (err: any) {
+      console.error("Account deletion failed:", err);
+      setDeleteError("Network error occurred during account deletion.");
     } finally {
-      setIsSubmittingRating(false);
+      setIsDeletingAccount(false);
     }
   };
 
@@ -422,16 +367,16 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Star Rating Badge */}
+              {/* Member Tag */}
               <div className="text-right shrink-0">
                 <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-xl">
-                  <Star size={14} className="fill-black dark:fill-white text-black dark:text-white" />
-                  <span className="text-sm font-black text-black dark:text-white">
-                    {averageRating.toFixed(1)}
+                  <ShieldCheck size={14} className="text-black dark:text-white" />
+                  <span className="text-xs font-black text-black dark:text-white">
+                    {user.verified || verificationStatus === "verified" ? "Verified" : "Active"}
                   </span>
                 </div>
                 <span className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 block">
-                  {totalReviews} peer {totalReviews === 1 ? "review" : "reviews"}
+                  Campus Member
                 </span>
               </div>
             </div>
@@ -535,217 +480,57 @@ export default function ProfilePage() {
           ) : null}
 
           {/* ======================================================== */}
-          {/* PROFILE RATINGS & PEER REVIEWS SECTION                  */}
           {/* ======================================================== */}
-          <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs space-y-4 transition-colors">
-            <div className="flex items-center justify-between">
+          {/* DANGER ZONE / ACCOUNT & PERSONAL DATA DELETION          */}
+          {/* ======================================================== */}
+          <div className="bg-white dark:bg-[#121214] border border-red-200 dark:border-red-950/70 rounded-2xl p-5 shadow-2xs space-y-4 transition-colors">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                  Campus Trust & Ratings
+                <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-extrabold text-[11px] uppercase tracking-wider">
+                  <Trash2 size={13} />
+                  <span>Account Management &bull; Google Play Compliant</span>
+                </div>
+                <h2 className="text-base font-extrabold text-black dark:text-white mt-1">
+                  Delete Student Account & Purge Data
                 </h2>
-                <div className="text-base font-extrabold text-black dark:text-white mt-0.5">
-                  Peer Feedback & Reputation
-                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                  Permanently delete your CampuStitch student profile and expunge all student ID cards, live face scans, marketplace listings, carpools, and peer messages.
+                </p>
               </div>
-              <Button
+            </div>
+
+            <div className="p-3.5 bg-red-50/70 dark:bg-red-950/20 border border-red-200/80 dark:border-red-900/40 rounded-xl space-y-2 text-xs">
+              <div className="font-bold text-red-700 dark:text-red-400 flex items-center gap-1.5">
+                <AlertTriangle size={14} />
+                <span>Permanent & Irreversible Student Account Deletion</span>
+              </div>
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                Deleting your account will immediately revoke all campus services, invalidate your verified student identity badge, and delete all records across our servers within 30 days.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+              <button
                 type="button"
-                onClick={() => setShowRateModal(true)}
-                className="h-8 px-3 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
+                onClick={() => {
+                  setDeleteConfirmText("");
+                  setDeleteError(null);
+                  setShowDeleteModal(true);
+                }}
+                className="h-10 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-2xs"
               >
-                <Star size={12} className="fill-white dark:fill-black" />
-                <span>Rate Student</span>
-              </Button>
-            </div>
+                <Trash2 size={14} />
+                <span>Delete Account & Personal Data</span>
+              </button>
 
-            {/* Ratings Summary Card */}
-            <div className="p-3.5 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center gap-4">
-              <div className="text-center shrink-0 pr-3 border-r border-zinc-200 dark:border-zinc-800">
-                <div className="text-3xl font-black text-black dark:text-white leading-none">
-                  {averageRating.toFixed(1)}
-                </div>
-                <div className="flex items-center justify-center gap-0.5 my-1 text-black dark:text-white">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star
-                      key={s}
-                      size={12}
-                      className={
-                        s <= Math.round(averageRating)
-                          ? "fill-black dark:fill-white text-black dark:text-white"
-                          : "text-zinc-300 dark:text-zinc-700"
-                      }
-                    />
-                  ))}
-                </div>
-                <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">
-                  {totalReviews} Ratings
-                </div>
-              </div>
-
-              {/* Breakdown Bars */}
-              <div className="flex-1 space-y-1">
-                {[5, 4, 3, 2, 1].map((stars) => {
-                  const count = breakdown[stars] || 0;
-                  const pct = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
-                  return (
-                    <div key={stars} className="flex items-center gap-2 text-[10px]">
-                      <span className="w-4 font-mono font-bold text-zinc-600 dark:text-zinc-400">
-                        {stars}★
-                      </span>
-                      <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-black dark:bg-white rounded-full"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="w-3 text-right font-mono text-zinc-500 dark:text-zinc-400">
-                        {count}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Verified Reviews List */}
-            <div className="space-y-2.5">
-              <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                Recent Reviews from Peers
-              </div>
-
-              {reviews.length === 0 ? (
-                <div className="text-center py-4 text-xs text-zinc-500 dark:text-zinc-400">
-                  No peer reviews yet. Complete your first ride or trade to get rated!
-                </div>
-              ) : (
-                reviews.map((rev) => (
-                  <div
-                    key={rev.id}
-                    className="p-3 bg-zinc-50/70 dark:bg-zinc-900/40 border border-zinc-200/80 dark:border-zinc-800 rounded-xl space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-black dark:text-white">
-                          {rev.rater_name}
-                        </span>
-                        <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
-                          ({rev.rater_student_id})
-                        </span>
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 uppercase">
-                          {rev.category}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-black dark:text-white">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star
-                            key={s}
-                            size={10}
-                            className={
-                              s <= rev.rating
-                                ? "fill-black dark:fill-white text-black dark:text-white"
-                                : "text-zinc-300 dark:text-zinc-700"
-                            }
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                      &ldquo;{rev.comment}&rdquo;
-                    </p>
-                    <div className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                      {new Date(rev.created_at).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-center shadow-2xs">
-              <div className="text-lg font-extrabold text-black dark:text-white">
-                {myBookings.length}
-              </div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Active Rides
-              </div>
-            </div>
-            <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-center shadow-2xs">
-              <div className="text-lg font-extrabold text-black dark:text-white">
-                {myListings.length}
-              </div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Market Listings
-              </div>
-            </div>
-            <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-center shadow-2xs">
-              <div className="text-lg font-extrabold text-black dark:text-white">
-                {myShared.length}
-              </div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Shared Items
-              </div>
-            </div>
-          </div>
-
-          {/* My Commute Bookings */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                My Upcoming Commute
-              </div>
               <Link
-                href="/commute"
-                className="text-xs font-semibold text-black dark:text-white hover:underline"
+                href="/delete-account"
+                className="h-10 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
-                Find more
+                <span>Google Play Deletion Portal</span>
+                <ExternalLink size={13} />
               </Link>
             </div>
-
-            {myBookings.length === 0 ? (
-              <div className="p-5 bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xs text-center space-y-2">
-                <Compass size={24} className="mx-auto text-zinc-400 stroke-[1.5px]" />
-                <div className="text-xs font-bold text-black dark:text-white">No active rides booked</div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                  You haven&apos;t joined any commute carpools or rickshaw splits yet.
-                </p>
-                <Link
-                  href="/commute"
-                  className="inline-block mt-1 text-xs font-bold text-black dark:text-white hover:underline"
-                >
-                  Browse Available Commutes &rarr;
-                </Link>
-              </div>
-            ) : (
-              myBookings.map((b: any, idx: number) => (
-                <div
-                  key={b.id || idx}
-                  className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-2xs space-y-2.5"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="text-sm font-bold text-black dark:text-white flex items-center gap-2">
-                        <span>{b.route || `${b.from_location} → ${b.to_location}`}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-bold">
-                          Confirmed
-                        </span>
-                      </div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                        {b.departure_time || "Tomorrow 8:00 AM"} &bull; Organizer:{" "}
-                        {b.organizer_name || "Student"}
-                      </div>
-                    </div>
-                    <div className="text-sm font-extrabold text-black dark:text-white">
-                      Rs. {b.price_per_seat || b.cost || 50}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
           </div>
 
           {/* ======================================================== */}
@@ -1068,84 +853,53 @@ export default function ProfilePage() {
         )}
 
         {/* ======================================================== */}
-        {/* MODAL 2: RATE STUDENT PEER                              */}
+        {/* MODAL 2: PERMANENT ACCOUNT DELETION CONFIRMATION        */}
         {/* ======================================================== */}
-        {showRateModal && (
+        {showDeleteModal && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-[#18181b] rounded-3xl w-full max-w-md p-5 shadow-2xl border border-zinc-200 dark:border-zinc-700 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="bg-white dark:bg-[#18181b] rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl border border-red-200 dark:border-red-900/60 space-y-4 animate-in fade-in zoom-in-95">
               <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-                <div className="font-extrabold text-base text-black dark:text-white flex items-center gap-1.5">
-                  <Star size={16} className="fill-black dark:fill-white text-black dark:text-white" />
-                  <span>Rate Student Peer</span>
+                <div className="font-extrabold text-base text-red-600 dark:text-red-400 flex items-center gap-2">
+                  <Trash2 size={18} />
+                  <span>Confirm Account Deletion</span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowRateModal(false)}
+                  onClick={() => setShowDeleteModal(false)}
                   className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-500 cursor-pointer"
                 >
                   <X size={16} />
                 </button>
               </div>
 
-              <form onSubmit={handlePostRating} className="space-y-3.5">
-                {/* Star Selector */}
-                <div>
-                  <label className="text-xs font-bold text-black dark:text-white block mb-2">
-                    Rating Score
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setRatingInput(s)}
-                        className="p-1 cursor-pointer transition-transform hover:scale-110"
-                      >
-                        <Star
-                          size={24}
-                          className={
-                            s <= ratingInput
-                              ? "fill-black dark:fill-white text-black dark:text-white"
-                              : "text-zinc-300 dark:text-zinc-700 hover:text-zinc-500"
-                          }
-                        />
-                      </button>
-                    ))}
-                    <span className="text-sm font-extrabold text-black dark:text-white ml-2">
-                      {ratingInput} out of 5
-                    </span>
+              <form onSubmit={handleDeleteAccount} className="space-y-4">
+                <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl space-y-1.5 text-xs">
+                  <div className="font-bold text-red-700 dark:text-red-400 flex items-center gap-1.5">
+                    <AlertTriangle size={14} />
+                    <span>Permanent Data Removal</span>
                   </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                    This will permanently delete your student profile for <strong>{user.email}</strong>, all ID card scans, webcam selfies, carpool bookings, and peer messages.
+                  </p>
                 </div>
 
-                {/* Context Selector */}
-                <div>
-                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                    Interaction Category
-                  </label>
-                  <select
-                    value={categoryInput}
-                    onChange={(e) => setCategoryInput(e.target.value)}
-                    className="w-full h-10 px-3 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
-                  >
-                    <option value="commute">Commute / Ride-Sharing</option>
-                    <option value="marketplace">Marketplace Item / Trade</option>
-                    <option value="hostel">Hostel Living / Maintenance</option>
-                    <option value="community">Campus Society / Study Group</option>
-                  </select>
-                </div>
+                {deleteError && (
+                  <div className="p-3 bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-900 rounded-xl text-xs text-red-700 dark:text-red-300 font-medium">
+                    {deleteError}
+                  </div>
+                )}
 
-                {/* Comment Box */}
                 <div>
-                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                    Your Feedback & Review
+                  <label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 block mb-1.5">
+                    Type <span className="font-mono text-red-600 dark:text-red-400 font-extrabold">DELETE</span> to confirm
                   </label>
-                  <textarea
-                    rows={3}
+                  <input
+                    type="text"
                     required
-                    placeholder="Describe your experience (punctuality, item condition, helpfulness)..."
-                    value={commentInput}
-                    onChange={(e) => setCommentInput(e.target.value)}
-                    className="w-full p-3 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl text-xs text-black dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-black dark:focus:border-white"
+                    placeholder="Type DELETE"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 rounded-xl text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-red-600 dark:focus:border-red-400"
                   />
                 </div>
 
@@ -1153,23 +907,26 @@ export default function ProfilePage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowRateModal(false)}
+                    onClick={() => setShowDeleteModal(false)}
                     className="text-xs h-10 px-4 rounded-xl cursor-pointer"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    disabled={isSubmittingRating || !commentInput.trim()}
-                    className="bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black text-xs font-bold h-10 px-5 rounded-xl cursor-pointer"
+                    disabled={isDeletingAccount || deleteConfirmText.trim().toUpperCase() !== "DELETE"}
+                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold h-10 px-5 rounded-xl cursor-pointer disabled:opacity-50 flex items-center gap-2"
                   >
-                    {isSubmittingRating ? (
+                    {isDeletingAccount ? (
                       <>
-                        <Loader2 size={14} className="animate-spin mr-1" />
-                        Submitting...
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Deleting Account...</span>
                       </>
                     ) : (
-                      "Submit Rating"
+                      <>
+                        <Trash2 size={14} />
+                        <span>Permanently Delete</span>
+                      </>
                     )}
                   </Button>
                 </div>
