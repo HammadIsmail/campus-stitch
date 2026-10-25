@@ -9,7 +9,8 @@
     "lint": "biome check",
     "format": "biome format --write",
     "db:reset": "node scripts/reset-db.js",
-    "db:admin": "node scripts/create-admin.js"
+    "db:admin": "node scripts/create-admin.js",
+    "create-user": "node scripts/create-user.js"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.87",

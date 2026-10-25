@@ -79,7 +79,7 @@ export default function CommutePage() {
                 </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black dark:text-white">
-                Student Commute & Carpooling
+                Ride Sharing
               </h1>
               <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">
                 Daily ride sharing, rickshaw cost splitting & campus bike rentals

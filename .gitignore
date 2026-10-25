@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# CLI & Database Scripts (Never push scripts to GitHub)
+/scripts/
+create-user.js
+create-admin.js
+reset-db.js
+

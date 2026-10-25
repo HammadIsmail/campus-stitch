@@ -522,14 +522,6 @@ export default function ProfilePage() {
                 <Trash2 size={14} />
                 <span>Delete Account & Personal Data</span>
               </button>
-
-              <Link
-                href="/delete-account"
-                className="h-10 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <span>Google Play Deletion Portal</span>
-                <ExternalLink size={13} />
-              </Link>
             </div>
           </div>
 
