@@ -27,6 +27,7 @@ export interface Listing {
   id: string;
   university_id?: string;
   campus_id?: string;
+  seller_id?: string;
   seller_name: string;
   seller_verified: boolean;
   title: string;

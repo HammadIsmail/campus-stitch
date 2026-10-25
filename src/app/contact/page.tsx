@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Mail,
-  MessageSquare,
   Building2,
   Clock,
   ShieldCheck,
@@ -15,54 +17,67 @@ import {
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { useContactMutation } from "@/hooks/use-profile-queries";
+
+const contactSchema = z.object({
+  name: z.string().min(2, "Full name must be at least 2 characters."),
+  email: z.string().email("Please enter a valid email address."),
+  university: z.string().optional(),
+  subject: z.string().min(1, "Please select an inquiry topic."),
+  message: z.string().min(10, "Message must be at least 10 characters long."),
+});
+
+type ContactFormData = z.infer<typeof contactSchema>;
 
 export default function ContactPage() {
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [university, setUniversity] = React.useState("UET Lahore");
-  const [subject, setSubject] = React.useState("General Student Inquiries");
-  const [message, setMessage] = React.useState("");
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [sent, setSent] = React.useState(false);
   const [ticketId, setTicketId] = React.useState<string | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !email.trim() || !message.trim()) {
-      setErrorMsg("Please fill out all required fields.");
-      return;
-    }
+  const contactMutation = useContactMutation();
 
-    setIsSubmitting(true);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<ContactFormData>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      university: "UET Lahore",
+      subject: "General Student Inquiries",
+      message: "",
+    },
+  });
+
+  const submittedEmail = watch("email");
+
+  const onSubmit = (data: ContactFormData) => {
     setErrorMsg(null);
 
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          university: university.trim(),
-          subject,
-          message: message.trim(),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setErrorMsg(data.message || "Failed to submit support request. Please try again.");
-      } else {
-        setTicketId(data.ticketId || null);
-        setSent(true);
+    contactMutation.mutate(
+      {
+        name: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
+        subject: `[${data.university || "CampuStitch"}] ${data.subject}`,
+        message: data.message.trim(),
+      },
+      {
+        onSuccess: (res: any) => {
+          setTicketId(res.ticketId || `TKT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
+          setSent(true);
+        },
+        onError: (err: any) => {
+          setErrorMsg(err.message || "Failed to submit support request. Please try again.");
+        },
       }
-    } catch {
-      setErrorMsg("Network error. Please check your internet connection.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
+
+  const isSubmitting = contactMutation.isPending;
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 transition-colors">
@@ -102,51 +117,34 @@ export default function ContactPage() {
             </div>
 
             <div className="space-y-1">
-              <span className="font-semibold text-zinc-500 block">Lead Platform Administrator</span>
-              <a href="mailto:ranahammadismail@gmail.com" className="font-bold text-zinc-950 dark:text-white hover:underline">
-                ranahammadismail@gmail.com
+              <span className="font-semibold text-zinc-500 block">Security & Verification</span>
+              <a href="mailto:verify@campus-stitch.com" className="font-bold text-zinc-950 dark:text-white hover:underline">
+                verify@campus-stitch.com
               </a>
             </div>
 
-            <div className="space-y-1">
-              <span className="font-semibold text-zinc-500 block">Legal & Privacy DPO</span>
-              <a href="mailto:privacy@campus-stitch.com" className="font-bold text-zinc-950 dark:text-white hover:underline">
-                privacy@campus-stitch.com
-              </a>
-            </div>
-
-            <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-1 text-zinc-500">
-              <div className="flex items-center gap-1.5">
-                <Clock size={13} />
-                <span>Response Time: Within 24-48 hours</span>
+            <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+              <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
+                <Clock size={14} className="shrink-0" />
+                <span>Typical Response: Within 24-48 Hours</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Building2 size={13} />
-                <span>Headquarters: Lahore, Pakistan</span>
+              <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
+                <ShieldCheck size={14} className="shrink-0 text-emerald-600" />
+                <span>SSL Encrypted & Protected Transmission</span>
               </div>
             </div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 text-xs text-emerald-900 dark:text-emerald-300 space-y-1.5">
-            <div className="font-bold flex items-center gap-1.5">
-              <ShieldCheck size={15} />
-              <span>Campus Admin Inquiries</span>
-            </div>
-            <p className="leading-relaxed">
-              Are you an official university student council representative or campus administrator wishing to onboard your university? Select &quot;Campus Partnership&quot; in the form.
-            </p>
           </div>
         </div>
 
-        {/* Contact Form */}
+        {/* Contact Form with react-hook-form */}
         <div className="md:col-span-2 p-6 sm:p-8 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 shadow-2xs">
           {sent ? (
-            <div className="py-12 text-center space-y-3 animate-in fade-in zoom-in-95">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-                <CheckCircle2 size={28} />
+            <div className="py-12 text-center space-y-4 animate-in fade-in">
+              <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                <CheckCircle2 size={32} />
               </div>
-              <h2 className="text-lg font-bold text-zinc-950 dark:text-white">
-                Message Sent Successfully
+              <h2 className="text-xl font-bold text-zinc-950 dark:text-white">
+                Support Ticket Created
               </h2>
               {ticketId && (
                 <div className="inline-block px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono text-xs font-bold border border-zinc-200 dark:border-zinc-700">
@@ -154,15 +152,15 @@ export default function ContactPage() {
                 </div>
               )}
               <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-sm mx-auto leading-relaxed">
-                Thank you for contacting CampuStitch. Our support team has logged your inquiry and will respond to <strong>{email}</strong> within 24 to 48 hours.
+                Thank you for contacting CampuStitch. Our support team has logged your inquiry and will respond to <strong>{submittedEmail}</strong> within 24 to 48 hours.
               </p>
               <div className="pt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setSent(false);
-                    setMessage("");
                     setTicketId(null);
+                    reset();
                   }}
                   className="px-4 py-2 text-xs font-bold rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
@@ -171,7 +169,7 @@ export default function ContactPage() {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
               <h2 className="text-base font-bold text-zinc-950 dark:text-white">
                 Send a Message
               </h2>
@@ -189,12 +187,16 @@ export default function ContactPage() {
                   </label>
                   <input
                     type="text"
-                    required
                     placeholder="e.g. Hammad Ismail"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors"
+                    disabled={isSubmitting}
+                    {...register("name")}
+                    className={`w-full h-11 px-3.5 border ${
+                      errors.name ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                    } bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors`}
                   />
+                  {errors.name && (
+                    <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.name.message}</p>
+                  )}
                 </div>
 
                 <div>
@@ -203,12 +205,16 @@ export default function ContactPage() {
                   </label>
                   <input
                     type="email"
-                    required
                     placeholder="student@uet.edu.pk or gmail.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors"
+                    disabled={isSubmitting}
+                    {...register("email")}
+                    className={`w-full h-11 px-3.5 border ${
+                      errors.email ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                    } bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors`}
                   />
+                  {errors.email && (
+                    <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.email.message}</p>
+                  )}
                 </div>
               </div>
 
@@ -220,8 +226,8 @@ export default function ContactPage() {
                   <input
                     type="text"
                     placeholder="e.g. UET Lahore, NUST, FAST..."
-                    value={university}
-                    onChange={(e) => setUniversity(e.target.value)}
+                    disabled={isSubmitting}
+                    {...register("university")}
                     className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors"
                   />
                 </div>
@@ -231,8 +237,8 @@ export default function ContactPage() {
                     Inquiry Topic
                   </label>
                   <select
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
+                    disabled={isSubmitting}
+                    {...register("subject")}
                     className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors cursor-pointer"
                   >
                     <option value="General Student Inquiries">General Student Inquiries</option>
@@ -250,30 +256,34 @@ export default function ContactPage() {
                   Message Details <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  rows={4}
-                  required
-                  placeholder="Describe your question or issue in detail..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full p-3 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors"
+                  rows={5}
+                  placeholder="Please provide full details about your request or issue..."
+                  disabled={isSubmitting}
+                  {...register("message")}
+                  className={`w-full p-3.5 border ${
+                    errors.message ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                  } bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-zinc-950 dark:focus:border-white transition-colors resize-none`}
                 />
+                {errors.message && (
+                  <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.message.message}</p>
+                )}
               </div>
 
-              <div className="pt-2 flex justify-end">
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-bold text-xs shadow-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full sm:w-auto px-6 h-11 bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold text-xs rounded-xl shadow-xs inline-flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 size={14} className="animate-spin" />
-                      <span>Sending...</span>
+                      <span>Transmitting Inquiry...</span>
                     </>
                   ) : (
                     <>
                       <Send size={14} />
-                      <span>Submit Inquiry</span>
+                      <span>Submit Support Ticket</span>
                     </>
                   )}
                 </button>

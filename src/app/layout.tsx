@@ -46,6 +46,7 @@ export const metadata: Metadata = {
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
 import { ThemeProvider } from "@/lib/theme-context";
+import { QueryProvider } from "@/components/query-provider";
 
 export default function RootLayout({
   children,
@@ -83,11 +84,13 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col font-sans bg-[#ECEEF2] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
-        <ThemeProvider>
-          <AuthSessionProvider>
-            <AuthProvider>{children}</AuthProvider>
-          </AuthSessionProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            <AuthSessionProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </AuthSessionProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

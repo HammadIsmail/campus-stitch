@@ -120,17 +120,22 @@ export async function POST(request: NextRequest) {
     let universityId = "uni_uet_lahore";
     let universityName = "UET Lahore";
 
+    let city = "Lahore";
+
     if (campusAdminInfo) {
       campusId = campusAdminInfo.campusId;
       campusName = campusAdminInfo.campusName;
       universityId = campusAdminInfo.universityId;
       universityName = campusAdminInfo.universityName;
-    } else if (userProfile?.campus_id) {
-      const campDetails = TenantsStore.getCampus(userProfile.campus_id);
-      campusId = userProfile.campus_id;
-      campusName = campDetails?.campus.name || userProfile.campus_name || "Main Campus";
+      city = campusAdminInfo.campusName;
+    } else if (userProfile?.campus_id || userProfile?.campus_name || userProfile?.city) {
+      const campLookup = userProfile.campus_id || userProfile.campus_name || userProfile.city;
+      const campDetails = TenantsStore.getCampus(campLookup);
+      campusId = campDetails?.campus.id || userProfile.campus_id || "camp_uet_main";
+      campusName = campDetails?.campus.name || userProfile.campus_name || userProfile.city || "Main Campus";
       universityId = campDetails?.university.id || userProfile.university_id || "uni_uet_lahore";
       universityName = campDetails?.university.shortName || userProfile.university || "UET Lahore";
+      city = campDetails?.campus.city || userProfile.city || campusName;
     }
 
     // Build JWT payload

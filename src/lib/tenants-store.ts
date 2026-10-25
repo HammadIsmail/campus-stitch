@@ -432,15 +432,41 @@ export const TenantsStore = {
     return all;
   },
 
-  // 5. Get single campus by ID
-  getCampus(campusId: string): { campus: Campus; university: University } | null {
+  // 5. Get single campus by ID, slug, name, or city
+  getCampus(campusIdOrName: string): { campus: Campus; university: University } | null {
+    if (!campusIdOrName || typeof campusIdOrName !== "string") return null;
     const storage = loadStorage();
+    const clean = campusIdOrName.trim().toLowerCase();
+
+    // 1. Direct match on id or slug
     for (const u of storage.universities) {
-      const camp = u.campuses.find((c) => c.id === campusId || c.slug === campusId);
-      if (camp) {
-        return { campus: camp, university: u };
-      }
+      const camp = u.campuses.find(
+        (c) => c.id.toLowerCase() === clean || c.slug.toLowerCase() === clean
+      );
+      if (camp) return { campus: camp, university: u };
     }
+
+    // 2. Exact match on name or city
+    for (const u of storage.universities) {
+      const camp = u.campuses.find(
+        (c) => c.name.toLowerCase() === clean || c.city.toLowerCase() === clean
+      );
+      if (camp) return { campus: camp, university: u };
+    }
+
+    // 3. Substring match (e.g. 'faisalabad' matching 'Faisalabad Campus')
+    for (const u of storage.universities) {
+      const camp = u.campuses.find(
+        (c) =>
+          c.name.toLowerCase().includes(clean) ||
+          clean.includes(c.name.toLowerCase()) ||
+          c.city.toLowerCase().includes(clean) ||
+          clean.includes(c.city.toLowerCase()) ||
+          c.id.toLowerCase().includes(clean)
+      );
+      if (camp) return { campus: camp, university: u };
+    }
+
     return null;
   },
 
@@ -560,5 +586,107 @@ export const TenantsStore = {
       saveStorage(storage);
     }
     return changed;
+  },
+
+  // 12. Update University details (Super Admin)
+  updateUniversity(
+    id: string,
+    data: {
+      name?: string;
+      shortName?: string;
+      city?: string;
+      province?: string;
+      logoUrl?: string;
+    }
+  ): University | null {
+    const storage = loadStorage();
+    const uni = storage.universities.find((u) => u.id === id);
+    if (!uni) return null;
+
+    if (data.name) uni.name = data.name.trim();
+    if (data.shortName) {
+      uni.shortName = data.shortName.trim();
+      uni.slug = uni.shortName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+    if (data.city) uni.city = data.city.trim();
+    if (data.province) uni.province = data.province.trim();
+    if (data.logoUrl !== undefined) uni.logoUrl = data.logoUrl || undefined;
+
+    // Also update cached universityName on any assigned admins
+    storage.campusAdmins.forEach((admin) => {
+      if (admin.universityId === uni.id) {
+        admin.universityName = uni.shortName;
+      }
+    });
+
+    saveStorage(storage);
+    return uni;
+  },
+
+  // 13. Delete University and its campuses (Super Admin)
+  deleteUniversity(id: string): boolean {
+    const storage = loadStorage();
+    const initialLen = storage.universities.length;
+    storage.universities = storage.universities.filter((u) => u.id !== id);
+
+    if (storage.universities.length === initialLen) {
+      return false;
+    }
+
+    // Remove any campus admins assigned to this university
+    storage.campusAdmins = storage.campusAdmins.filter((a) => a.universityId !== id);
+
+    saveStorage(storage);
+    return true;
+  },
+
+  // 14. Update Campus details (Super Admin)
+  updateCampus(
+    campusId: string,
+    data: { name?: string; city?: string }
+  ): Campus | null {
+    const storage = loadStorage();
+    for (const u of storage.universities) {
+      const camp = u.campuses.find((c) => c.id === campusId);
+      if (camp) {
+        if (data.name) {
+          camp.name = data.name.trim();
+          camp.slug = (u.slug + "-" + camp.name.toLowerCase()).replace(/[^a-z0-9]+/g, "-");
+        }
+        if (data.city) {
+          camp.city = data.city.trim();
+        }
+
+        // Update cached campusName on assigned admins
+        storage.campusAdmins.forEach((admin) => {
+          if (admin.campusId === camp.id) {
+            admin.campusName = camp.name;
+          }
+        });
+
+        saveStorage(storage);
+        return camp;
+      }
+    }
+    return null;
+  },
+
+  // 15. Delete Campus (Super Admin)
+  deleteCampus(campusId: string): boolean {
+    const storage = loadStorage();
+    for (const u of storage.universities) {
+      const initialCampLen = u.campuses.length;
+      u.campuses = u.campuses.filter((c) => c.id !== campusId);
+      if (u.campuses.length !== initialCampLen) {
+        // Also remove admin assignment for this campus
+        storage.campusAdmins = storage.campusAdmins.filter((a) => a.campusId !== campusId);
+        saveStorage(storage);
+        return true;
+      }
+    }
+    return false;
   },
 };

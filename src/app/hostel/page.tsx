@@ -20,6 +20,10 @@ import {
   Zap,
   Plus,
   X,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
@@ -38,6 +42,7 @@ interface RoommateListing {
   program: string;
   verified: boolean;
   amenities: string[];
+  userId?: string;
 }
 
 interface HostelService {
@@ -47,15 +52,45 @@ interface HostelService {
   schedule: string;
   provider: string;
   rate: string;
+  phone?: string;
+  notes?: string;
   verified: boolean;
+  userId?: string;
 }
+
+const getServiceIcon = (name: string) => {
+  const lower = (name || "").toLowerCase();
+  if (lower.includes("laundry") || lower.includes("wash") || lower.includes("iron")) return Shirt;
+  if (lower.includes("cooler") || lower.includes("electric") || lower.includes("fan")) return Zap;
+  if (lower.includes("print") || lower.includes("paper") || lower.includes("scan")) return Printer;
+  if (lower.includes("laptop") || lower.includes("format") || lower.includes("repair") || lower.includes("setup")) return Wrench;
+  return Sparkles;
+};
+
+const getProviderInitials = (name: string) => {
+  const parts = (name || "Student").trim().split(/\s+/);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  return (name?.[0] || "S").toUpperCase();
+};
+
+const HOSTEL_COMMODITY_PRESETS = [
+  "WiFi",
+  "Attached Bath",
+  "Generator / UPS",
+  "AC",
+  "Geyser",
+  "Mess / Food",
+  "Laundry",
+  "Study Table",
+  "Filtered Water",
+  "Cleaning Staff",
+];
 
 export default function HostelPage() {
   const { user } = useAuth();
   const [roommates, setRoommates] = React.useState<RoommateListing[]>([]);
   const [services, setServices] = React.useState<HostelService[]>([]);
   const [requestedId, setRequestedId] = React.useState<string | null>(null);
-  const [contactedService, setContactedService] = React.useState<string | null>(null);
   const [showPostModal, setShowPostModal] = React.useState(false);
 
   // Form states for adding roommate listing
@@ -63,6 +98,175 @@ export default function HostelPage() {
   const [newRent, setNewRent] = React.useState("");
   const [newDetails, setNewDetails] = React.useState("");
   const [newRoomType, setNewRoomType] = React.useState("Shared Room");
+  const [selectedAmenities, setSelectedAmenities] = React.useState<string[]>([]);
+  const [customAmenityInput, setCustomAmenityInput] = React.useState("");
+
+  // Roommate Edit Modal State
+  const [editingRoommate, setEditingRoommate] = React.useState<RoommateListing | null>(null);
+  const [editRoomTitle, setEditRoomTitle] = React.useState("");
+  const [editRoomRent, setEditRoomRent] = React.useState("");
+  const [editRoomDetails, setEditRoomDetails] = React.useState("");
+  const [editRoomType, setEditRoomType] = React.useState("Shared Room");
+  const [editRoomAmenities, setEditRoomAmenities] = React.useState<string[]>([]);
+  const [isUpdatingRoom, setIsUpdatingRoom] = React.useState(false);
+
+  // Service Edit Modal State
+  const [editingService, setEditingService] = React.useState<HostelService | null>(null);
+  const [editServiceName, setEditServiceName] = React.useState("");
+  const [editServiceRate, setEditServiceRate] = React.useState("");
+  const [editServiceLocation, setEditServiceLocation] = React.useState("");
+  const [editServiceSchedule, setEditServiceSchedule] = React.useState("");
+  const [editServicePhone, setEditServicePhone] = React.useState("");
+  const [editServiceNotes, setEditServiceNotes] = React.useState("");
+  const [isUpdatingService, setIsUpdatingService] = React.useState(false);
+
+  const handleAddCustomCommodity = () => {
+    const val = customAmenityInput.trim();
+    if (!val) return;
+    if (!selectedAmenities.includes(val)) {
+      setSelectedAmenities([...selectedAmenities, val]);
+    }
+    setCustomAmenityInput("");
+  };
+
+  const openEditRoommate = (room: RoommateListing, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingRoommate(room);
+    setEditRoomTitle(room.title);
+    setEditRoomRent(room.rent.replace(/[^\d]/g, ""));
+    setEditRoomDetails(room.details);
+    setEditRoomType(room.roomType || "Shared Room");
+    setEditRoomAmenities(room.amenities || []);
+  };
+
+  const handleDeleteRoommate = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this roommate vacancy?")) return;
+    try {
+      const supabase = createClient();
+      await supabase.from("hostel_roommates").delete().eq("id", id);
+      const updated = roommates.filter((r) => r.id !== id);
+      setRoommates(updated);
+      try {
+        localStorage.setItem("campus_stitch_hostel_roommates", JSON.stringify(updated));
+      } catch {}
+    } catch (err) {
+      console.warn("Delete roommate error:", err);
+    }
+  };
+
+  const handleSaveEditRoommate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRoommate || !editRoomTitle.trim() || !editRoomRent.trim()) return;
+    setIsUpdatingRoom(true);
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("hostel_roommates")
+        .update({
+          title: editRoomTitle.trim(),
+          monthly_rent: Number(editRoomRent.trim()),
+          room_type: editRoomType,
+          details: editRoomDetails.trim(),
+          amenities: editRoomAmenities,
+        })
+        .eq("id", editingRoommate.id);
+
+      const updated = roommates.map((r) => {
+        if (r.id === editingRoommate.id) {
+          return {
+            ...r,
+            title: editRoomTitle.trim(),
+            rent: `Rs. ${editRoomRent.trim()}`,
+            details: editRoomDetails.trim(),
+            roomType: editRoomType,
+            amenities: editRoomAmenities,
+          };
+        }
+        return r;
+      });
+      setRoommates(updated);
+      try {
+        localStorage.setItem("campus_stitch_hostel_roommates", JSON.stringify(updated));
+      } catch {}
+    } catch (err) {
+      console.warn("Update roommate error:", err);
+    } finally {
+      setIsUpdatingRoom(false);
+      setEditingRoommate(null);
+    }
+  };
+
+  const openEditService = (srv: HostelService, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingService(srv);
+    setEditServiceName(srv.name);
+    setEditServiceRate(srv.rate);
+    setEditServiceLocation(srv.location);
+    setEditServiceSchedule(srv.schedule);
+    setEditServicePhone(srv.phone || "");
+    setEditServiceNotes(srv.notes || "");
+  };
+
+  const handleDeleteService = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this service listing?")) return;
+    try {
+      const supabase = createClient();
+      await supabase.from("hostel_services").delete().eq("id", id);
+      const updated = services.filter((s) => s.id !== id);
+      setServices(updated);
+      try {
+        localStorage.setItem("campus_stitch_hostel_services", JSON.stringify(updated));
+      } catch {}
+    } catch (err) {
+      console.warn("Delete service error:", err);
+    }
+  };
+
+  const handleSaveEditService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingService || !editServiceName.trim() || !editServiceRate.trim()) return;
+    setIsUpdatingService(true);
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("hostel_services")
+        .update({
+          service_name: editServiceName.trim(),
+          rate: editServiceRate.trim(),
+          location: editServiceLocation.trim(),
+          turnaround_time: editServiceSchedule.trim(),
+          phone: editServicePhone.trim() || null,
+          notes: editServiceNotes.trim() || null,
+        })
+        .eq("id", editingService.id);
+
+      const updated = services.map((s) => {
+        if (s.id === editingService.id) {
+          return {
+            ...s,
+            name: editServiceName.trim(),
+            rate: editServiceRate.trim(),
+            location: editServiceLocation.trim(),
+            schedule: editServiceSchedule.trim(),
+            phone: editServicePhone.trim(),
+            notes: editServiceNotes.trim(),
+          };
+        }
+        return s;
+      });
+      setServices(updated);
+      try {
+        localStorage.setItem("campus_stitch_hostel_services", JSON.stringify(updated));
+      } catch {}
+    } catch (err) {
+      console.warn("Update service error:", err);
+    } finally {
+      setIsUpdatingService(false);
+      setEditingService(null);
+    }
+  };
 
   React.useEffect(() => {
     async function loadHostelData() {
@@ -96,12 +300,13 @@ export default function HostelPage() {
             id: r.id,
             title: r.title,
             rent: `Rs. ${r.monthly_rent}`,
-            details: `${r.room_type} in ${r.hostel_block}. Available from ${r.available_from}.`,
-            roomType: r.room_type,
-            owner: r.user_name,
+            details: r.details || `${r.room_type || "Room"} in ${r.hostel_block || "Hostel"}. Available from ${r.available_from || "Immediate"}.`,
+            roomType: r.room_type || "Shared Room",
+            owner: r.user_name || "Student",
             program: user?.universityName || "University",
             verified: r.is_verified ?? true,
-            amenities: ["WiFi", "Attached Bath"],
+            amenities: Array.isArray(r.amenities) ? r.amenities : [],
+            userId: r.user_id,
           }));
           setRoommates(mappedRooms);
           try {
@@ -112,12 +317,15 @@ export default function HostelPage() {
         if (!servicesRes.error && servicesRes.data !== null) {
           const mappedServices: HostelService[] = servicesRes.data.map((s: any) => ({
             id: s.id,
-            name: s.service_name,
-            location: s.location,
-            schedule: s.turnaround_time,
-            provider: s.provider_name,
-            rate: "Standard rate",
+            name: s.service_name || s.name || "Student Service",
+            location: s.location || "Hostel Block",
+            schedule: s.turnaround_time || s.schedule || "Flexible",
+            provider: s.provider_name || s.provider || "Student",
+            rate: s.rate || "Standard rate",
+            phone: s.phone || "",
+            notes: s.notes || "",
             verified: s.is_verified ?? true,
+            userId: s.user_id,
           }));
           setServices(mappedServices);
           try {
@@ -148,7 +356,7 @@ export default function HostelPage() {
       owner: authorName,
       program: authorProgram,
       verified: user?.isVerified ?? false,
-      amenities: ["WiFi", "Attached Bath"],
+      amenities: selectedAmenities,
     };
 
     const updated = [newListing, ...roommates];
@@ -169,6 +377,10 @@ export default function HostelPage() {
           available_from: "Immediate",
           hostel_block: "Hostel Block A",
           status: "available",
+          amenities: selectedAmenities,
+          details: newDetails.trim() || "Hostel room available for sharing",
+          campus_id: user?.campusId || null,
+          user_id: user?.userId || null,
         },
       ]);
     } catch (err) {
@@ -178,6 +390,8 @@ export default function HostelPage() {
     setNewTitle("");
     setNewRent("");
     setNewDetails("");
+    setSelectedAmenities([]);
+    setCustomAmenityInput("");
     setShowPostModal(false);
   };
 
@@ -265,14 +479,82 @@ export default function HostelPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Details & Amenities</label>
+                  <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Details & Description</label>
                   <textarea
                     value={newDetails}
                     onChange={(e) => setNewDetails(e.target.value)}
-                    placeholder="WiFi, Geyser, quiet study environment..."
+                    placeholder="Describe room condition, roommate preferences, quiet hours..."
                     rows={2}
                     className="w-full p-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
                   />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block">
+                      Commodities & Amenities <span className="font-normal text-zinc-400">(Tap to select)</span>
+                    </label>
+                    {selectedAmenities.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAmenities([])}
+                        className="text-[10px] text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer font-medium"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Preset Quick-Select Pills */}
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {HOSTEL_COMMODITY_PRESETS.map((item) => {
+                      const isSelected = selectedAmenities.includes(item);
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedAmenities(selectedAmenities.filter((a) => a !== item));
+                            } else {
+                              setSelectedAmenities([...selectedAmenities, item]);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors cursor-pointer ${
+                            isSelected
+                              ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white shadow-2xs"
+                              : "bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600"
+                          }`}
+                        >
+                          {isSelected ? `✓ ${item}` : `+ ${item}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Add Custom Commodity */}
+                  <div className="flex gap-1.5">
+                    <input
+                      value={customAmenityInput}
+                      onChange={(e) => setCustomAmenityInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddCustomCommodity();
+                        }
+                      }}
+                      placeholder="Add custom commodity (e.g. Fridge, Balcony)..."
+                      className="flex-1 h-8 px-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddCustomCommodity}
+                      className="h-8 px-3 text-xs font-semibold cursor-pointer border border-zinc-300 dark:border-zinc-700"
+                    >
+                      Add
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button
@@ -332,6 +614,10 @@ export default function HostelPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {roommates.map((item) => {
                     const isConnected = requestedId === item.id;
+                    const isMine =
+                      (user?.userId && item.userId === user.userId) ||
+                      (user?.name && item.owner?.toLowerCase().trim() === user.name.toLowerCase().trim());
+
                     return (
                       <div
                         key={item.id}
@@ -355,16 +641,18 @@ export default function HostelPage() {
                             {item.details}
                           </p>
 
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {item.amenities.map((amenity) => (
-                              <span
-                                key={amenity}
-                                className="text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60 px-2 py-0.5 rounded"
-                              >
-                                {amenity}
-                              </span>
-                            ))}
-                          </div>
+                          {item.amenities && item.amenities.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {item.amenities.map((amenity) => (
+                                <span
+                                  key={amenity}
+                                  className="text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60 px-2 py-0.5 rounded"
+                                >
+                                  {amenity}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex justify-between items-center pt-3 border-t border-zinc-100 dark:border-zinc-800">
@@ -383,22 +671,43 @@ export default function HostelPage() {
                             </div>
                           </div>
 
-                          <Button
-                            size="sm"
-                            variant={isConnected ? "secondary" : "outline"}
-                            onClick={() => setRequestedId(item.id)}
-                            disabled={isConnected}
-                            className="h-8 px-3 rounded-lg text-xs font-semibold cursor-pointer border border-zinc-200 dark:border-zinc-700 text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                          >
-                            {isConnected ? (
-                              <span className="text-black dark:text-white font-bold flex items-center gap-1">
-                                <CheckCircle2 size={12} />
-                                Requested
-                              </span>
-                            ) : (
-                              "Connect"
-                            )}
-                          </Button>
+                          {isMine ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={(e) => openEditRoommate(item, e)}
+                                title="Edit Roommate Vacancy"
+                                className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer transition-colors"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteRoommate(item.id, e)}
+                                title="Delete Vacancy"
+                                className="p-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 cursor-pointer transition-colors"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant={isConnected ? "secondary" : "outline"}
+                              onClick={() => setRequestedId(item.id)}
+                              disabled={isConnected}
+                              className="h-8 px-3 rounded-lg text-xs font-semibold cursor-pointer border border-zinc-200 dark:border-zinc-700 text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            >
+                              {isConnected ? (
+                                <span className="text-black dark:text-white font-bold flex items-center gap-1">
+                                  <CheckCircle2 size={12} />
+                                  Requested
+                                </span>
+                              ) : (
+                                "Connect"
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );
@@ -429,39 +738,111 @@ export default function HostelPage() {
               ) : (
                 <div className="space-y-3">
                   {services.map((srv) => {
-                    const isContacted = contactedService === srv.id;
+                    const ServiceIcon = getServiceIcon(srv.name);
+                    const initials = getProviderInitials(srv.provider);
+                    const isMine =
+                      (user?.userId && srv.userId === user.userId) ||
+                      (user?.name && srv.provider?.toLowerCase().trim() === user.name.toLowerCase().trim());
+
                     return (
                       <div
                         key={srv.id}
-                        className="p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xs hover:border-black dark:hover:border-white transition-all space-y-3"
+                        className="p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xs hover:border-black dark:hover:border-white transition-all space-y-3.5"
                       >
-                        <div className="flex items-start gap-3">
-                          <span className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white shrink-0">
-                            <Zap size={16} />
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-bold text-black dark:text-white">
-                              {srv.name}
-                            </div>
-                            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                              {srv.schedule}
-                            </div>
-                            <div className="text-[11px] font-semibold text-black dark:text-white mt-1 flex items-center gap-1">
-                              <ShieldCheck size={11} className="stroke-[2.2px]" />
-                              {srv.provider} · {srv.rate}
+                        {/* Header: Service Name, Category Icon & Rate */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            <span className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white shrink-0 mt-0.5">
+                              <ServiceIcon size={16} />
+                            </span>
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-bold text-black dark:text-white leading-snug">
+                                {srv.name}
+                              </h3>
+                              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
+                                Student Campus Service
+                              </span>
                             </div>
                           </div>
+                          <span className="shrink-0 px-2.5 py-1 rounded-md text-xs font-extrabold bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700">
+                            {srv.rate}
+                          </span>
                         </div>
 
-                        <Button
-                          onClick={() => {
-                            setContactedService(srv.id);
-                            alert(`Connecting to ${srv.provider} for ${srv.name}.`);
-                          }}
-                          className="w-full h-8 rounded-lg bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black text-xs font-semibold cursor-pointer"
-                        >
-                          {isContacted ? "Contacted ✓" : "Contact Provider"}
-                        </Button>
+                        {/* Complete Provider Info Card */}
+                        <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 space-y-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="w-7 h-7 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold flex items-center justify-center shrink-0">
+                              {initials}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5">
+                                <span className="truncate">{srv.provider}</span>
+                                <VerificationBadge isVerified={srv.verified} size="xs" />
+                              </div>
+                              <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                                Verified Service Provider
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 border-t border-zinc-200/60 dark:border-zinc-800/80 text-[11px] text-zinc-600 dark:text-zinc-300">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <MapPin size={12} className="text-zinc-400 shrink-0" />
+                              <span className="truncate">{srv.location}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Clock size={12} className="text-zinc-400 shrink-0" />
+                              <span className="truncate">{srv.schedule}</span>
+                            </div>
+                            {srv.phone ? (
+                              <div className="flex items-center gap-1.5 min-w-0 sm:col-span-2">
+                                <Phone size={12} className="text-zinc-400 shrink-0" />
+                                <span className="font-mono text-zinc-700 dark:text-zinc-300">{srv.phone}</span>
+                              </div>
+                            ) : null}
+                          </div>
+
+                          {srv.notes ? (
+                            <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/80 text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed italic">
+                              &ldquo;{srv.notes}&rdquo;
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {/* Actions */}
+                        {isMine ? (
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => openEditService(srv, e)}
+                              className="flex-1 h-8.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-black dark:text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                            >
+                              <Pencil size={13} />
+                              <span>Edit Service</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteService(srv.id, e)}
+                              className="h-8.5 px-3 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                            >
+                              <Trash2 size={13} />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <Link
+                            href={`/messages?context=service&id=${encodeURIComponent(srv.id)}&name=${encodeURIComponent(srv.provider)}&title=${encodeURIComponent(srv.name)}`}
+                            className="block w-full"
+                          >
+                            <Button
+                              className="w-full h-8.5 rounded-lg bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                            >
+                              <MessageSquare size={13} className="stroke-[2.2px]" />
+                              <span>Chat with Provider</span>
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                     );
                   })}
@@ -470,6 +851,235 @@ export default function HostelPage() {
             </div>
           </div>
         </main>
+
+        {/* ======================================================== */}
+        {/* EDIT ROOMMATE MODAL                                      */}
+        {/* ======================================================== */}
+        {editingRoommate && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 max-w-md w-full shadow-xl space-y-4 animate-in fade-in duration-150">
+              <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="font-bold text-sm text-black dark:text-white flex items-center gap-2">
+                  <Pencil size={15} />
+                  <span>Edit Roommate Vacancy</span>
+                </div>
+                <button
+                  onClick={() => setEditingRoommate(null)}
+                  className="text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditRoommate} className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                    Title
+                  </label>
+                  <input
+                    value={editRoomTitle}
+                    onChange={(e) => setEditRoomTitle(e.target.value)}
+                    required
+                    className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                    Monthly Rent (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    value={editRoomRent}
+                    onChange={(e) => setEditRoomRent(e.target.value)}
+                    required
+                    className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                    Details & Description
+                  </label>
+                  <textarea
+                    value={editRoomDetails}
+                    onChange={(e) => setEditRoomDetails(e.target.value)}
+                    rows={2}
+                    className="w-full p-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                    Amenities & Commodities
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {HOSTEL_COMMODITY_PRESETS.map((item) => {
+                      const isSel = editRoomAmenities.includes(item);
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => {
+                            if (isSel) {
+                              setEditRoomAmenities(editRoomAmenities.filter((a) => a !== item));
+                            } else {
+                              setEditRoomAmenities([...editRoomAmenities, item]);
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-medium border transition-colors cursor-pointer ${
+                            isSel
+                              ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
+                              : "bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
+                          }`}
+                        >
+                          {isSel ? `✓ ${item}` : `+ ${item}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditingRoommate(null)}
+                    className="flex-1 text-xs border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 cursor-pointer font-semibold"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isUpdatingRoom}
+                    className="flex-1 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold cursor-pointer"
+                  >
+                    {isUpdatingRoom ? <Loader2 size={14} className="animate-spin" /> : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* EDIT SERVICE MODAL                                       */}
+        {/* ======================================================== */}
+        {editingService && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 max-w-md w-full shadow-xl space-y-4 animate-in fade-in duration-150">
+              <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="font-bold text-sm text-black dark:text-white flex items-center gap-2">
+                  <Pencil size={15} />
+                  <span>Edit Service Listing</span>
+                </div>
+                <button
+                  onClick={() => setEditingService(null)}
+                  className="text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditService} className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                    Service Name
+                  </label>
+                  <input
+                    value={editServiceName}
+                    onChange={(e) => setEditServiceName(e.target.value)}
+                    required
+                    className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                      Rate / Pricing
+                    </label>
+                    <input
+                      value={editServiceRate}
+                      onChange={(e) => setEditServiceRate(e.target.value)}
+                      placeholder="e.g. Rs. 200/load"
+                      required
+                      className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                      Hostel Location
+                    </label>
+                    <input
+                      value={editServiceLocation}
+                      onChange={(e) => setEditServiceLocation(e.target.value)}
+                      placeholder="e.g. Block B, Room 22"
+                      required
+                      className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                      Availability / Schedule
+                    </label>
+                    <input
+                      value={editServiceSchedule}
+                      onChange={(e) => setEditServiceSchedule(e.target.value)}
+                      placeholder="e.g. 5:00 PM - 10:00 PM"
+                      required
+                      className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                      Phone (Optional)
+                    </label>
+                    <input
+                      value={editServicePhone}
+                      onChange={(e) => setEditServicePhone(e.target.value)}
+                      placeholder="+92 300 1234567"
+                      className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                    Notes / Description
+                  </label>
+                  <textarea
+                    value={editServiceNotes}
+                    onChange={(e) => setEditServiceNotes(e.target.value)}
+                    rows={2}
+                    className="w-full p-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditingService(null)}
+                    className="flex-1 text-xs border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 cursor-pointer font-semibold"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isUpdatingService}
+                    className="flex-1 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold cursor-pointer"
+                  >
+                    {isUpdatingService ? <Loader2 size={14} className="animate-spin" /> : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Navigation */}
         <BottomNav />

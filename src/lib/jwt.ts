@@ -11,6 +11,7 @@ export interface JwtUserPayload {
   universityName?: string;
   campusId?: string;
   campusName?: string;
+  city?: string;
   program?: string;
   department?: string;
   isVerified: boolean;

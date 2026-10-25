@@ -33,11 +33,18 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
+import {
+  useUpdateProfileMutation,
+  useDeleteAccountMutation,
+} from "@/hooks/use-profile-queries";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user: authUser, logout } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
+
+  const updateProfileMutation = useUpdateProfileMutation();
+  const deleteAccountMutation = useDeleteAccountMutation();
 
   const user = {
     userId: authUser?.userId || "",
@@ -169,51 +176,49 @@ export default function ProfilePage() {
     }
   };
 
-  // Save Profile (Bio & Profile Picture)
+  // Save Profile (Bio & Profile Picture) via React Query Mutation
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingProfile(true);
 
-    try {
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.userId,
-          bio: editBioInput.trim(),
-          avatarUrl: editAvatarUrlInput.trim() || null,
-        }),
-      });
+    updateProfileMutation.mutate(
+      {
+        bio: editBioInput.trim(),
+        avatarUrl: editAvatarUrlInput.trim() || undefined,
+      },
+      {
+        onSuccess: (data) => {
+          if (data.success) {
+            setBio(editBioInput.trim());
+            setAvatarUrl(editAvatarUrlInput.trim() || null);
+            setShowEditProfileModal(false);
+            setSaveSuccessMsg("Profile bio and picture updated successfully!");
+            setTimeout(() => setSaveSuccessMsg(null), 3000);
 
-      const data = await res.json();
-      if (data.success) {
-        setBio(editBioInput.trim());
-        setAvatarUrl(editAvatarUrlInput.trim() || null);
-        setShowEditProfileModal(false);
-        setSaveSuccessMsg("Profile bio and picture updated successfully!");
-        setTimeout(() => setSaveSuccessMsg(null), 3000);
-
-        try {
-          const stored = localStorage.getItem("campus_stitch_current_user");
-          const parsed = stored ? JSON.parse(stored) : {};
-          localStorage.setItem(
-            "campus_stitch_current_user",
-            JSON.stringify({
-              ...parsed,
-              bio: editBioInput.trim(),
-              avatar_url: editAvatarUrlInput.trim() || null,
-            })
-          );
-        } catch {}
+            try {
+              const stored = localStorage.getItem("campus_stitch_current_user");
+              const parsed = stored ? JSON.parse(stored) : {};
+              localStorage.setItem(
+                "campus_stitch_current_user",
+                JSON.stringify({
+                  ...parsed,
+                  bio: editBioInput.trim(),
+                  avatar_url: editAvatarUrlInput.trim() || null,
+                })
+              );
+            } catch {}
+          }
+          setIsSavingProfile(false);
+        },
+        onError: (err) => {
+          console.error("Failed to save profile:", err);
+          setIsSavingProfile(false);
+        },
       }
-    } catch (err) {
-      console.error("Failed to save profile:", err);
-    } finally {
-      setIsSavingProfile(false);
-    }
+    );
   };
 
-  // Permanent Account & Data Deletion
+  // Permanent Account & Data Deletion via React Query Mutation
   const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
@@ -224,33 +229,28 @@ export default function ProfilePage() {
     setIsDeletingAccount(true);
     setDeleteError(null);
 
-    try {
-      const res = await fetch("/api/profile", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.userId,
-          email: user.email,
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success !== false) {
-        setShowDeleteModal(false);
-        try {
-          localStorage.clear();
-        } catch {}
-        await logout();
-        router.push("/auth/sign-in?deleted=true");
-      } else {
-        setDeleteError(data.error || data.message || "Failed to delete account. Please try again.");
+    deleteAccountMutation.mutate(
+      {
+        email: user.email,
+        reason: "User requested permanent deletion from profile settings",
+      },
+      {
+        onSuccess: async () => {
+          setShowDeleteModal(false);
+          try {
+            localStorage.clear();
+          } catch {}
+          await logout();
+          router.push("/sign-in?deleted=true");
+          setIsDeletingAccount(false);
+        },
+        onError: (err: any) => {
+          console.error("Account deletion failed:", err);
+          setDeleteError(err.message || "Failed to delete account. Please try again.");
+          setIsDeletingAccount(false);
+        },
       }
-    } catch (err: any) {
-      console.error("Account deletion failed:", err);
-      setDeleteError("Network error occurred during account deletion.");
-    } finally {
-      setIsDeletingAccount(false);
-    }
+    );
   };
 
   return (

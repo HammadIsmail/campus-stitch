@@ -129,6 +129,21 @@ export async function PATCH(req: NextRequest) {
     if (status !== undefined) updates.status = status;
     if (availableSeats !== undefined) updates.available_seats = Number(availableSeats);
     if (notes !== undefined) updates.notes = notes;
+    if (body.pricePerSeat !== undefined || body.price_per_seat !== undefined) {
+      updates.price_per_seat = Number(body.pricePerSeat ?? body.price_per_seat);
+    }
+    if (body.departureTime !== undefined || body.departure_time !== undefined) {
+      updates.departure_time = body.departureTime ?? body.departure_time;
+    }
+    if (body.fromLocation !== undefined || body.from_location !== undefined) {
+      updates.from_location = body.fromLocation ?? body.from_location;
+    }
+    if (body.toLocation !== undefined || body.to_location !== undefined) {
+      updates.to_location = body.toLocation ?? body.to_location;
+    }
+    if (body.vehicleType !== undefined || body.vehicle_type !== undefined) {
+      updates.vehicle_type = body.vehicleType ?? body.vehicle_type;
+    }
 
     try {
       const supabase = await createClient();

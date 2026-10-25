@@ -123,11 +123,13 @@ export async function POST(request: NextRequest) {
     let uId = body.universityId;
     let cId = body.campusId;
     let uName = university || "UET Lahore";
-    let cName = body.city || "Main Campus (Lahore)";
+    let cName = body.campusName || body.city || "Main Campus (Lahore)";
 
-    if (cId) {
-      const campDetails = TenantsStore.getCampus(cId);
+    const campLookup = cId || body.campusName || body.city;
+    if (campLookup) {
+      const campDetails = TenantsStore.getCampus(campLookup);
       if (campDetails) {
+        cId = campDetails.campus.id;
         cName = campDetails.campus.name;
         uId = campDetails.university.id;
         uName = campDetails.university.shortName;

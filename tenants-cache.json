@@ -10,24 +10,6 @@
       "createdAt": "2026-01-01T00:00:00.000Z",
       "campuses": [
         {
-          "id": "camp_uet_main",
-          "universityId": "uni_uet_lahore",
-          "name": "Main Campus (Lahore)",
-          "city": "Lahore",
-          "slug": "uet-main-lahore",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_uet_ksk",
-          "universityId": "uni_uet_lahore",
-          "name": "Kala Shah Kaku (KSK) Campus",
-          "city": "Kala Shah Kaku",
-          "slug": "uet-ksk",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
           "id": "camp_uet_fsd",
           "universityId": "uni_uet_lahore",
           "name": "Faisalabad Campus",
@@ -35,246 +17,22 @@
           "slug": "uet-faisalabad",
           "isActive": true,
           "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_uet_nrw",
-          "universityId": "uni_uet_lahore",
-          "name": "Narowal Campus",
-          "city": "Narowal",
-          "slug": "uet-narowal",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "id": "uni_fast_nuces",
-      "name": "National University of Computer and Emerging Sciences (FAST-NUCES)",
-      "shortName": "FAST-NUCES",
-      "slug": "fast-nuces",
-      "city": "Lahore",
-      "province": "Punjab",
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "campuses": [
-        {
-          "id": "camp_fast_lhr",
-          "universityId": "uni_fast_nuces",
-          "name": "Lahore Campus",
-          "city": "Lahore",
-          "slug": "fast-lahore",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_fast_isb",
-          "universityId": "uni_fast_nuces",
-          "name": "Islamabad Campus",
-          "city": "Islamabad",
-          "slug": "fast-islamabad",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_fast_khi",
-          "universityId": "uni_fast_nuces",
-          "name": "Karachi Campus",
-          "city": "Karachi",
-          "slug": "fast-karachi",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_fast_pew",
-          "universityId": "uni_fast_nuces",
-          "name": "Peshawar Campus",
-          "city": "Peshawar",
-          "slug": "fast-peshawar",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_fast_cfd",
-          "universityId": "uni_fast_nuces",
-          "name": "Chiniot-Faisalabad Campus",
-          "city": "Chiniot-Faisalabad",
-          "slug": "fast-chiniot",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "id": "uni_nust",
-      "name": "National University of Sciences and Technology (NUST)",
-      "shortName": "NUST",
-      "slug": "nust",
-      "city": "Islamabad",
-      "province": "Islamabad Capital Territory",
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "campuses": [
-        {
-          "id": "camp_nust_isb",
-          "universityId": "uni_nust",
-          "name": "Islamabad (H-12 Main)",
-          "city": "Islamabad",
-          "slug": "nust-islamabad",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_nust_rwp",
-          "universityId": "uni_nust",
-          "name": "Rawalpindi (EME)",
-          "city": "Rawalpindi",
-          "slug": "nust-rawalpindi",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_nust_khi",
-          "universityId": "uni_nust",
-          "name": "Karachi (PNEC)",
-          "city": "Karachi",
-          "slug": "nust-karachi",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_nust_rsp",
-          "universityId": "uni_nust",
-          "name": "Risalpur (CAE)",
-          "city": "Risalpur",
-          "slug": "nust-risalpur",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "id": "uni_lums",
-      "name": "Lahore University of Management Sciences (LUMS)",
-      "shortName": "LUMS",
-      "slug": "lums",
-      "city": "Lahore",
-      "province": "Punjab",
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "campuses": [
-        {
-          "id": "camp_lums_main",
-          "universityId": "uni_lums",
-          "name": "Main Campus (DHA)",
-          "city": "Lahore",
-          "slug": "lums-main",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "id": "uni_comsats",
-      "name": "COMSATS University Islamabad (CUI)",
-      "shortName": "COMSATS",
-      "slug": "comsats",
-      "city": "Islamabad",
-      "province": "Islamabad Capital Territory",
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "campuses": [
-        {
-          "id": "camp_comsats_isb",
-          "universityId": "uni_comsats",
-          "name": "Islamabad Campus",
-          "city": "Islamabad",
-          "slug": "comsats-isb",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_comsats_lhr",
-          "universityId": "uni_comsats",
-          "name": "Lahore Campus",
-          "city": "Lahore",
-          "slug": "comsats-lhr",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_comsats_atd",
-          "universityId": "uni_comsats",
-          "name": "Abbottabad Campus",
-          "city": "Abbottabad",
-          "slug": "comsats-abbottabad",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "id": "uni_pu",
-      "name": "University of the Punjab (PU)",
-      "shortName": "Punjab University",
-      "slug": "pu",
-      "city": "Lahore",
-      "province": "Punjab",
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "campuses": [
-        {
-          "id": "camp_pu_new",
-          "universityId": "uni_pu",
-          "name": "Quaid-e-Azam (New) Campus",
-          "city": "Lahore",
-          "slug": "pu-new",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_pu_old",
-          "universityId": "uni_pu",
-          "name": "Allama Iqbal (Old) Campus",
-          "city": "Lahore",
-          "slug": "pu-old",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_pu_gwa",
-          "universityId": "uni_pu",
-          "name": "Gujranwala Campus",
-          "city": "Gujranwala",
-          "slug": "pu-gujranwala",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "id": "uni_gcu",
-      "name": "Government College University (GCU) Lahore",
-      "shortName": "GCU Lahore",
-      "slug": "gcu",
-      "city": "Lahore",
-      "province": "Punjab",
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "campuses": [
-        {
-          "id": "camp_gcu_main",
-          "universityId": "uni_gcu",
-          "name": "Main Campus (Katchery Road)",
-          "city": "Lahore",
-          "slug": "gcu-main",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
-        },
-        {
-          "id": "camp_gcu_ksk",
-          "universityId": "uni_gcu",
-          "name": "Kala Shah Kaku (KSK) Campus",
-          "city": "Kala Shah Kaku",
-          "slug": "gcu-ksk",
-          "isActive": true,
-          "createdAt": "2026-01-01T00:00:00.000Z"
         }
       ]
     }
   ],
-  "campusAdmins": []
+  "campusAdmins": [
+    {
+      "id": "ca_d6e57892",
+      "userId": "u_itsfor017_gmail_com",
+      "userEmail": "itsfor017@gmail.com",
+      "userName": "Muhammad Hammad Ismail",
+      "campusId": "camp_uet_fsd",
+      "campusName": "Faisalabad Campus",
+      "universityId": "uni_uet_lahore",
+      "universityName": "UET Lahore",
+      "assignedBy": "ranahammad@gmail.com",
+      "assignedAt": "2026-10-25T14:52:30.516Z"
+    }
+  ]
 }

@@ -90,10 +90,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const resolvedCampusId = campusId || session?.campusId || "camp_uet_main";
-    const resolvedCampusName = campusName || session?.campusName || city || "Main Campus (Lahore)";
-    const resolvedUniversityId = universityId || session?.universityId || "uni_uet_lahore";
-    const resolvedUniversityName = university || session?.universityName || "UET Lahore";
+    let resolvedCampusId = campusId || session?.campusId || "camp_uet_main";
+    let resolvedCampusName = campusName || session?.campusName || city || "Main Campus (Lahore)";
+    let resolvedUniversityId = universityId || session?.universityId || "uni_uet_lahore";
+    let resolvedUniversityName = university || session?.universityName || "UET Lahore";
+
+    const campLookup = campusId || campusName || city;
+    if (campLookup) {
+      const campDetails = TenantsStore.getCampus(campLookup);
+      if (campDetails) {
+        resolvedCampusId = campDetails.campus.id;
+        resolvedCampusName = campDetails.campus.name;
+        resolvedUniversityId = campDetails.university.id;
+        resolvedUniversityName = campDetails.university.shortName;
+      }
+    }
 
     // Insert verification request
     const verificationRecord = {

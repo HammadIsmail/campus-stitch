@@ -32,10 +32,12 @@ export default function VerifyKycPage() {
   // Dynamic user fields (pre-filled from authenticated user)
   const [name, setName] = React.useState(authUser?.name || "");
   const [studentId, setStudentId] = React.useState(authUser?.studentId || "");
-  const [university, setUniversity] = React.useState("UET Lahore");
-  const [city, setCity] = React.useState("Lahore");
+  const [university, setUniversity] = React.useState(authUser?.universityName || "UET Lahore");
+  const [campusId, setCampusId] = React.useState(authUser?.campusId || "camp_uet_fsd");
+  const [campusName, setCampusName] = React.useState(authUser?.campusName || "Faisalabad Campus");
+  const [city, setCity] = React.useState(authUser?.city || authUser?.campusName || "Faisalabad");
   const [program, setProgram] = React.useState(authUser?.program || "BS Computer Science");
-  const [department, setDepartment] = React.useState("Computer Science");
+  const [department, setDepartment] = React.useState(authUser?.department || "Computer Science");
 
   // Step 1: Live Selfie Verification | Step 2: Student Card Upload | Step 3: Confirmation
   const [step, setStep] = React.useState<1 | 2>(1);
@@ -69,31 +71,67 @@ export default function VerifyKycPage() {
       if (authUser.name && !name) setName(authUser.name);
       if (authUser.studentId && !studentId) setStudentId(authUser.studentId);
       if (authUser.program && !program) setProgram(authUser.program);
+      if (authUser.department && !department) setDepartment(authUser.department);
+      if (authUser.universityName) setUniversity(authUser.universityName);
+      if (authUser.campusName) {
+        setCampusName(authUser.campusName);
+        setCity(authUser.city || authUser.campusName);
+      } else if (authUser.city) {
+        setCampusName(authUser.city);
+        setCity(authUser.city);
+      }
+      if (authUser.campusId) setCampusId(authUser.campusId);
     }
-  }, [authUser, name, studentId, program]);
+  }, [authUser]);
 
   // Start Webcam stream for identity verification
   const startCamera = async () => {
     setCameraError(null);
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 640 } },
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError("Camera access is not supported by your browser. Please upload a clear selfie photo instead.");
+        return;
+      }
+
+      // Stop any existing stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
           audio: false,
         });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+      } catch {
+        // Fallback constraint
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+      }
+
+      streamRef.current = stream;
+      setIsCameraActive(true);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        try {
           await videoRef.current.play();
+        } catch (e) {
+          console.warn("Video play error:", e);
         }
-        setIsCameraActive(true);
-      } else {
-        setCameraError("Camera access is not supported by your browser. Please upload a clear selfie instead.");
       }
     } catch (err: any) {
       console.warn("Camera start error:", err);
       setCameraError(
-        "Camera permission was denied or not available. You can upload a clear photo of your face below."
+        "Camera permission was denied or camera is in use by another app. You can upload a clear photo of your face below."
       );
       setIsCameraActive(false);
     }
@@ -105,6 +143,9 @@ export default function VerifyKycPage() {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setIsCameraActive(false);
   };
 
@@ -114,14 +155,28 @@ export default function VerifyKycPage() {
     };
   }, []);
 
+  // Keep video stream bound whenever camera is active
+  React.useEffect(() => {
+    if (isCameraActive && videoRef.current && streamRef.current) {
+      const video = videoRef.current;
+      if (video.srcObject !== streamRef.current) {
+        video.srcObject = streamRef.current;
+      }
+      video.play().catch((err) => console.warn("Video play error:", err));
+    }
+  }, [isCameraActive]);
+
   // Capture Live Selfie from Video Stream
   const captureSelfie = () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 640;
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 480;
+
+    canvas.width = width;
+    canvas.height = height;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -136,6 +191,14 @@ export default function VerifyKycPage() {
         if (blob) {
           setLiveSelfieBlob(blob);
           setLiveSelfiePreview(URL.createObjectURL(blob));
+          stopCamera();
+        } else {
+          // Fallback to dataURL if toBlob WebP fails
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+          setLiveSelfiePreview(dataUrl);
+          const res = await fetch(dataUrl);
+          const b = await res.blob();
+          setLiveSelfieBlob(b);
           stopCamera();
         }
       },
@@ -232,9 +295,9 @@ export default function VerifyKycPage() {
           email: authUser?.email,
           university: university || authUser?.universityName,
           universityId: authUser?.universityId,
-          campusId: authUser?.campusId,
-          campusName: authUser?.campusName || city,
-          city: city || authUser?.campusName,
+          campusId: campusId || authUser?.campusId,
+          campusName: campusName || authUser?.campusName || city,
+          city: city || campusName || authUser?.campusName,
           program,
           department,
           livePhotoUrl: selfieResult.url,
@@ -353,10 +416,19 @@ export default function VerifyKycPage() {
                   )}
                 </div>
 
+                {/* Camera Error Alert if permissions blocked */}
+                {cameraError && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 flex items-start gap-2 text-xs">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div className="flex-1 font-medium">{cameraError}</div>
+                  </div>
+                )}
+
                 {/* Webcam or Captured Selfie Preview */}
                 <div className="relative w-full aspect-square max-w-[280px] mx-auto rounded-2xl overflow-hidden bg-black flex items-center justify-center border-2 border-dashed border-border">
-                  {liveSelfiePreview ? (
-                    <div className="relative w-full h-full">
+                  {/* Captured Photo Preview */}
+                  {liveSelfiePreview && (
+                    <div className="relative w-full h-full z-10 bg-black">
                       <img
                         src={liveSelfiePreview}
                         alt="Live Face Selfie"
@@ -369,28 +441,39 @@ export default function VerifyKycPage() {
                           setLiveSelfieBlob(null);
                           startCamera();
                         }}
-                        className="absolute bottom-3 right-3 bg-black/70 hover:bg-black text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 backdrop-blur-sm transition-all"
+                        className="absolute bottom-3 right-3 bg-black/70 hover:bg-black text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 backdrop-blur-sm transition-all cursor-pointer"
                       >
                         <RefreshCw className="w-3.5 h-3.5" /> Retake
                       </button>
                     </div>
-                  ) : isCameraActive ? (
-                    <div className="relative w-full h-full">
-                      <video
-                        ref={videoRef}
-                        playsInline
-                        muted
-                        className="w-full h-full object-cover scale-x-[-1]"
-                      />
-                      {/* Oval Guide Frame Overlay (B&W) */}
-                      <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
-                        <div className="w-44 h-56 rounded-[50%] border-2 border-dashed border-white/80 shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-pulse" />
-                        <span className="mt-2 text-[10px] text-white/90 bg-black/60 px-2 py-0.5 rounded-full font-medium backdrop-blur-sm">
-                          Align face inside oval
-                        </span>
-                      </div>
+                  )}
+
+                  {/* Always render video element so videoRef is never null on startCamera */}
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedMetadata={() => {
+                      videoRef.current?.play().catch((e) => console.warn("Video play error:", e));
+                    }}
+                    className={`w-full h-full object-cover scale-x-[-1] ${
+                      isCameraActive && !liveSelfiePreview ? "block" : "hidden"
+                    }`}
+                  />
+
+                  {/* Oval Guide Frame Overlay during active camera */}
+                  {isCameraActive && !liveSelfiePreview && (
+                    <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4 z-20">
+                      <div className="w-44 h-56 rounded-[50%] border-2 border-dashed border-white/80 shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-pulse" />
+                      <span className="mt-2 text-[10px] text-white/90 bg-black/60 px-2 py-0.5 rounded-full font-medium backdrop-blur-sm">
+                        Align face inside oval
+                      </span>
                     </div>
-                  ) : (
+                  )}
+
+                  {/* Standby Placeholder when camera is inactive and no preview */}
+                  {!isCameraActive && !liveSelfiePreview && (
                     <div className="p-6 text-center text-muted-foreground flex flex-col items-center justify-center space-y-2">
                       <div className="w-12 h-12 rounded-full bg-muted/60 flex items-center justify-center">
                         <Camera className="w-6 h-6 text-foreground" />
@@ -399,7 +482,7 @@ export default function VerifyKycPage() {
                         Live Facial Verification
                       </div>
                       <p className="text-[11px] text-muted-foreground max-w-[200px]">
-                        Look directly into your front camera to confirm live liveness
+                        Look directly into your front camera to confirm identity
                       </p>
                     </div>
                   )}
@@ -530,8 +613,10 @@ export default function VerifyKycPage() {
                     <div className="font-bold text-foreground truncate">{university}</div>
                   </div>
                   <div className="p-2 rounded-lg bg-background border border-border">
-                    <div className="text-muted-foreground">Campus City</div>
-                    <div className="font-bold text-foreground truncate">{city}</div>
+                    <div className="text-muted-foreground">Campus</div>
+                    <div className="font-bold text-foreground truncate">
+                      {campusName || city || "Faisalabad Campus"}
+                    </div>
                   </div>
                 </div>
               </div>

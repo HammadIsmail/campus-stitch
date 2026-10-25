@@ -17,6 +17,8 @@ import {
   Trash2,
   Play,
   Pause,
+  Wrench,
+  Users,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { cn } from "@/lib/utils";
@@ -35,7 +37,7 @@ interface Conversation {
   id: string;
   contactName: string;
   contactVerified: boolean;
-  contextType: "ride" | "listing" | "bike";
+  contextType: "ride" | "listing" | "bike" | "service" | "roommate";
   contextTitle: string;
   contextSubtitle: string;
   contextLink: string;
@@ -204,8 +206,16 @@ function VoiceMessageBubble({ message, isMe }: { message: Message; isMe: boolean
 
 function MessagesContent() {
   const searchParams = useSearchParams();
-  const contextParam = searchParams.get("context") as "ride" | "listing" | "bike" | null;
+  const contextParam = searchParams.get("context") as
+    | "ride"
+    | "listing"
+    | "bike"
+    | "service"
+    | "roommate"
+    | null;
   const idParam = searchParams.get("id");
+  const nameParam = searchParams.get("name");
+  const titleParam = searchParams.get("title");
 
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -257,29 +267,56 @@ function MessagesContent() {
     if (contextParam && idParam) {
       const existing = currentConvs.find((c) => c.contextLink.includes(idParam));
       if (!existing) {
+        const contactName =
+          nameParam ||
+          (contextParam === "ride"
+            ? "Ride Organizer"
+            : contextParam === "bike"
+              ? "Bike Owner"
+              : contextParam === "service"
+                ? "Service Provider"
+                : contextParam === "roommate"
+                  ? "Roommate Lister"
+                  : "Seller");
+
+        const contextTitle =
+          titleParam ||
+          (contextParam === "ride"
+            ? "Commute Ride Inquiry"
+            : contextParam === "bike"
+              ? "Bike Rental Inquiry"
+              : contextParam === "service"
+                ? "Campus Service Inquiry"
+                : contextParam === "roommate"
+                  ? "Hostel Roommate Inquiry"
+                  : "Marketplace Listing Inquiry");
+
+        const contextSubtitle =
+          contextParam === "service"
+            ? `Regarding student service: ${titleParam || idParam}`
+            : contextParam === "roommate"
+              ? `Regarding hostel vacancy: ${titleParam || idParam}`
+              : `Regarding reference ID: ${idParam}`;
+
+        const contextLink =
+          contextParam === "ride"
+            ? `/commute?id=${idParam}`
+            : contextParam === "bike"
+              ? `/bike-rentals?id=${idParam}`
+              : contextParam === "service"
+                ? `/hostel?serviceId=${idParam}`
+                : contextParam === "roommate"
+                  ? `/hostel?id=${idParam}`
+                  : `/market?id=${idParam}`;
+
         const newChat: Conversation = {
           id: "c_" + Date.now(),
-          contactName:
-            contextParam === "ride"
-              ? "Ride Organizer"
-              : contextParam === "bike"
-                ? "Bike Owner"
-                : "Seller",
+          contactName,
           contactVerified: true,
           contextType: contextParam,
-          contextTitle:
-            contextParam === "ride"
-              ? "Commute Ride Inquiry"
-              : contextParam === "bike"
-                ? "Bike Rental Inquiry"
-                : "Marketplace Listing Inquiry",
-          contextSubtitle: `Regarding reference ID: ${idParam}`,
-          contextLink:
-            contextParam === "ride"
-              ? `/commute?id=${idParam}`
-              : contextParam === "bike"
-                ? `/bike-rentals?id=${idParam}`
-                : `/market?id=${idParam}`,
+          contextTitle,
+          contextSubtitle,
+          contextLink,
           lastMessage: "Conversation initiated",
           lastTime: "Just now",
           unreadCount: 0,
@@ -287,13 +324,9 @@ function MessagesContent() {
             {
               id: "m_init",
               sender: "other",
-              text: `Hello! Thanks for reaching out regarding the ${
-                contextParam === "ride"
-                  ? "ride"
-                  : contextParam === "bike"
-                    ? "bike rental"
-                    : "item listing"
-              }. Feel free to ask questions or send a voice message.`,
+              text: `Hello! Thanks for reaching out regarding ${
+                titleParam ? `"${titleParam}"` : `the ${contextParam}`
+              }. Feel free to ask questions about availability, pricing, or details.`,
               time: "Just now",
             },
           ],
@@ -635,6 +668,8 @@ function MessagesContent() {
                     {activeConv.contextType === "ride" && <Compass size={16} />}
                     {activeConv.contextType === "listing" && <Tag size={16} />}
                     {activeConv.contextType === "bike" && <Bike size={16} />}
+                    {activeConv.contextType === "service" && <Wrench size={16} />}
+                    {activeConv.contextType === "roommate" && <Users size={16} />}
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5 truncate">

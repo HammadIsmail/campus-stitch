@@ -3,11 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Camera, Check, Loader2, X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { ArrowLeft, Camera, Loader2, X } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DataService } from "@/lib/data-service";
+import { useCreateListingMutation, useUploadImageMutation } from "@/hooks/use-market-queries";
+import { useAuth } from "@/lib/auth-context";
 
 const CATEGORIES = [
   "Electronics",
@@ -16,79 +20,91 @@ const CATEGORIES = [
   "Furniture",
   "Other",
 ] as const;
+
 const CONDITIONS = ["New", "Like new", "Good", "Fair"] as const;
+
+const sellItemSchema = z.object({
+  title: z.string().min(2, "Item title must be at least 2 characters."),
+  category: z.enum(CATEGORIES),
+  price: z.string().min(1, "Price is required.").refine((val) => Number(val) > 0, "Price must be greater than 0."),
+  condition: z.enum(CONDITIONS),
+  location: z.string().optional(),
+  description: z.string().optional(),
+});
+
+type SellItemFormData = z.infer<typeof sellItemSchema>;
 
 export default function SellSomethingPage() {
   const router = useRouter();
-  const [title, setTitle] = React.useState("");
-  const [category, setCategory] =
-    React.useState<(typeof CATEGORIES)[number]>("Electronics");
-  const [price, setPrice] = React.useState("");
-  const [condition, setCondition] =
-    React.useState<(typeof CONDITIONS)[number]>("Good");
-  const [location, setLocation] = React.useState("");
+  const { user } = useAuth();
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const createListingMutation = useCreateListingMutation();
+  const uploadImageMutation = useUploadImageMutation();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<SellItemFormData>({
+    resolver: zodResolver(sellItemSchema),
+    defaultValues: {
+      title: "",
+      category: "Electronics",
+      price: "",
+      condition: "Good",
+      location: "",
+      description: "",
+    },
+  });
+
+  const selectedCategory = watch("category");
+  const selectedCondition = watch("condition");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsUploadingImage(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "campus_stitch/marketplace");
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to upload image");
-      }
-
-      const data = await res.json();
-      if (data.url) {
-        setImageUrl(data.url);
-      }
-    } catch (err) {
-      console.error("Cloudinary upload failed:", err);
-      alert("Failed to upload image. Please try again.");
-    } finally {
-      setIsUploadingImage(false);
-    }
+    uploadImageMutation.mutate(file, {
+      onSuccess: (uploadedUrl) => {
+        setImageUrl(uploadedUrl);
+      },
+      onError: () => {
+        alert("Failed to upload image. Please try again.");
+      },
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !price || isSubmitting) return;
-    setIsSubmitting(true);
-
-    try {
-      await DataService.createListing({
-        seller_name: "Muhammad Hammad",
-        seller_verified: true,
-        title: title.trim(),
-        category: category,
-        price: Number(price) || 1000,
-        condition: condition,
-        location: location.trim() || "Hostel Block B",
+  const onSubmit = async (data: SellItemFormData) => {
+    createListingMutation.mutate(
+      {
+        university_id: user?.universityId || "uni_uet_lahore",
+        campus_id: user?.campusId || "camp_uet_main",
+        seller_name: user?.name || "Student",
+        seller_verified: user?.isVerified ?? true,
+        title: data.title.trim(),
+        description: data.description?.trim(),
+        category: data.category,
+        price: Number(data.price) || 1000,
+        condition: data.condition,
+        location: data.location?.trim() || "Campus Hostel Block",
         is_graduation_sale: false,
         status: "available",
         image_url: imageUrl || undefined,
-      });
-
-      router.push("/market");
-    } catch (err) {
-      console.error("Failed to save listing:", err);
-    } finally {
-      setIsSubmitting(false);
-    }
+      },
+      {
+        onSuccess: () => {
+          router.push("/market");
+        },
+      }
+    );
   };
+
+  const isUploadingImage = uploadImageMutation.isPending;
+  const isSubmitting = createListingMutation.isPending;
 
   return (
     <MobileShell>
@@ -110,10 +126,11 @@ export default function SellSomethingPage() {
           </span>
         </header>
 
-        {/* Scrollable Form */}
+        {/* Scrollable Form with react-hook-form */}
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           className="flex-1 min-h-0 flex flex-col justify-between"
+          noValidate
         >
           <main className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
             {/* Photos Upload with Cloudinary WebP */}
@@ -150,7 +167,7 @@ export default function SellSomethingPage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingImage}
+                    disabled={isUploadingImage || isSubmitting}
                     className="w-24 h-24 shrink-0 rounded-xl border border-dashed border-zinc-400 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 flex flex-col items-center justify-center gap-1 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {isUploadingImage ? (
@@ -163,143 +180,153 @@ export default function SellSomethingPage() {
                       </>
                     ) : (
                       <>
-                        <Plus size={18} className="text-black dark:text-white" />
-                        <span>Add photo</span>
+                        <Camera size={20} className="text-zinc-500" />
+                        <span>Add Photo</span>
                       </>
                     )}
                   </button>
                 )}
+              </div>
+            </div>
 
-                <div className="w-24 h-24 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 flex flex-col items-center justify-center text-xs text-zinc-400 dark:text-zinc-500">
-                  <Camera size={18} />
-                  <span className="text-[10px] mt-1">Photo 2</span>
+            {/* Inputs */}
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label
+                  htmlFor="title-input"
+                  className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
+                >
+                  Item Title
+                </label>
+                <Input
+                  id="title-input"
+                  placeholder="e.g. TI-84 Plus Graphing Calculator"
+                  disabled={isSubmitting}
+                  {...register("title")}
+                />
+                {errors.title && (
+                  <p className="text-[11px] text-red-500 font-medium">{errors.title.message}</p>
+                )}
+              </div>
+
+              {/* Category Pill Selectors */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide">
+                  Category
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => setValue("category", cat)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        selectedCategory === cat
+                          ? "bg-black dark:bg-white text-white dark:text-black shadow-xs"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
 
-            {/* Title */}
-            <div className="space-y-1">
-              <label
-                htmlFor="sell-title"
-                className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
-              >
-                Title
-              </label>
-              <Input
-                id="sell-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Phone cooler, Study table, Books"
-                className="h-10 text-xs rounded-lg border-zinc-300 dark:border-zinc-700 focus:border-black dark:focus:border-white"
-                required
-              />
-            </div>
-
-            {/* Category */}
-            <div className="space-y-1.5">
-              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide">
-                Category
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    type="button"
-                    key={cat}
-                    onClick={() => setCategory(cat)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                      category === cat
-                        ? "bg-black dark:bg-white text-white dark:text-black font-bold"
-                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                    }`}
+              {/* Price & Condition */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label
+                    htmlFor="price-input"
+                    className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
                   >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
+                    Price (Rs.)
+                  </label>
+                  <Input
+                    id="price-input"
+                    type="number"
+                    placeholder="e.g. 1500"
+                    disabled={isSubmitting}
+                    {...register("price")}
+                  />
+                  {errors.price && (
+                    <p className="text-[11px] text-red-500 font-medium">{errors.price.message}</p>
+                  )}
+                </div>
 
-            {/* Price */}
-            <div className="space-y-1">
-              <label
-                htmlFor="sell-price"
-                className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
-              >
-                Price (PKR)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 z-10">
-                  Rs.
-                </span>
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide">
+                    Condition
+                  </span>
+                  <select
+                    value={selectedCondition}
+                    disabled={isSubmitting}
+                    onChange={(e) =>
+                      setValue("condition", e.target.value as (typeof CONDITIONS)[number])
+                    }
+                    className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-semibold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-black dark:focus:border-white transition-colors cursor-pointer"
+                  >
+                    {CONDITIONS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="space-y-1">
+                <label
+                  htmlFor="location-input"
+                  className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
+                >
+                  Pickup Location{" "}
+                  <span className="font-normal text-zinc-500">(optional)</span>
+                </label>
                 <Input
-                  id="sell-price"
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="1500"
-                  className="pl-9 h-10 text-xs rounded-lg border-zinc-300 dark:border-zinc-700 focus:border-black dark:focus:border-white"
-                  required
+                  id="location-input"
+                  placeholder="e.g. Hostel Block B or CS Department"
+                  disabled={isSubmitting}
+                  {...register("location")}
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1">
+                <label
+                  htmlFor="desc-input"
+                  className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
+                >
+                  Description{" "}
+                  <span className="font-normal text-zinc-500">(optional)</span>
+                </label>
+                <textarea
+                  id="desc-input"
+                  rows={3}
+                  placeholder="Describe your item, accessories included, and condition..."
+                  disabled={isSubmitting}
+                  {...register("description")}
+                  className="w-full p-3 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-black dark:focus:border-white transition-colors resize-none"
                 />
               </div>
             </div>
-
-            {/* Condition */}
-            <div className="space-y-1.5">
-              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide">
-                Condition
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                {CONDITIONS.map((cond) => (
-                  <button
-                    type="button"
-                    key={cond}
-                    onClick={() => setCondition(cond)}
-                    className={`h-9 px-3 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors cursor-pointer ${
-                      condition === cond
-                        ? "border-black dark:border-white bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white font-bold"
-                        : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600"
-                    }`}
-                  >
-                    <span>{cond}</span>
-                    {condition === cond && (
-                      <Check size={14} className="text-black dark:text-white" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="space-y-1">
-              <label
-                htmlFor="sell-location"
-                className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide"
-              >
-                Pickup Location
-              </label>
-              <Input
-                id="sell-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Hostel Block B, Main Gate"
-                className="h-10 text-xs rounded-lg border-zinc-300 dark:border-zinc-700 focus:border-black dark:focus:border-white"
-              />
-            </div>
           </main>
 
-          {/* Fixed Bottom Action */}
+          {/* Submit Action */}
           <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] flex-none">
             <Button
               type="submit"
-              disabled={isSubmitting || isUploadingImage || !title || !price}
-              className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-lg text-xs font-bold"
+              disabled={isSubmitting || isUploadingImage}
+              className="w-full h-12 rounded-xl text-base font-bold bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-xs"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 size={14} className="animate-spin mr-1.5" />
-                  Publishing listing...
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Publishing listing...</span>
                 </>
               ) : (
-                "Publish Listing"
+                <span>Post Item for Sale</span>
               )}
             </Button>
           </div>

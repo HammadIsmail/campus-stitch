@@ -1,8 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { useActionState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Mail,
   Lock,
@@ -10,61 +13,88 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Loader2,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
-import { SubmitButton } from "@/components/ui/submit-button";
+import { useSignInMutation } from "@/hooks/use-auth-queries";
 import { useAuth } from "@/lib/auth-context";
 
-interface SignInState {
-  error: string | null;
-}
+const signInSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .email("Please enter a valid email address.")
+    .transform((val) => val.trim().toLowerCase()),
+  password: z.string().min(1, "Password is required."),
+});
+
+type SignInFormData = z.infer<typeof signInSchema>;
 
 export default function SignInPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = React.useState(false);
-  const { login } = useAuth();
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const { refreshAuth } = useAuth();
 
-  // Modern React 19 Form Action State hook
-  // Official doc: https://react.dev/reference/react/useActionState
-  const [state, formAction] = useActionState<SignInState, FormData>(
-    async (_prevState, formData) => {
-      const email = formData.get("email")?.toString().trim().toLowerCase() || "";
-      const password = formData.get("password")?.toString().trim() || "";
+  const signInMutation = useSignInMutation();
 
-      if (!email || !password) {
-        return { error: "Please enter both email and password." };
-      }
-
-      try {
-        await login({
-          email,
-          password,
-        });
-
-        const params = new URLSearchParams(window.location.search);
-        let redirectTarget = params.get("redirect");
-
-        if (!redirectTarget || redirectTarget === "/") {
-          try {
-            const userStr = localStorage.getItem("campus_stitch_current_user");
-            if (userStr) {
-              const u = JSON.parse(userStr);
-              if (u.role === "super_admin") redirectTarget = "/admin/super";
-              else if (u.role === "campus_admin") redirectTarget = "/admin";
-              else redirectTarget = "/commute";
-            }
-          } catch {}
-        }
-
-        window.location.href = redirectTarget || "/commute";
-        return { error: null };
-      } catch (err: any) {
-        return {
-          error: err.message || "Failed to sign in. Please check your credentials.",
-        };
-      }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: "",
+      password: "",
     },
-    { error: null }
-  );
+  });
+
+  const onSubmit = async (data: SignInFormData) => {
+    setFormError(null);
+
+    signInMutation.mutate(
+      {
+        email: data.email,
+        password: data.password,
+      },
+      {
+        onSuccess: async (result) => {
+          if (result.success && result.user) {
+            if (typeof window !== "undefined") {
+              localStorage.setItem(
+                "campus_stitch_current_user",
+                JSON.stringify(result.user)
+              );
+            }
+            await refreshAuth();
+
+            const params = new URLSearchParams(window.location.search);
+            let redirectTarget = params.get("redirect");
+
+            if (!redirectTarget || redirectTarget === "/") {
+              if (result.user.role === "super_admin") {
+                redirectTarget = "/admin/super";
+              } else if (result.user.role === "campus_admin") {
+                redirectTarget = "/admin";
+              } else {
+                redirectTarget = "/commute";
+              }
+            }
+
+            router.push(redirectTarget || "/commute");
+          } else {
+            setFormError(result.message || "Failed to sign in. Please verify your credentials.");
+          }
+        },
+        onError: (err: any) => {
+          setFormError(err.message || "Failed to sign in. Please check your credentials.");
+        },
+      }
+    );
+  };
+
+  const isPending = signInMutation.isPending;
 
   return (
     <MobileShell hideNav={true}>
@@ -85,15 +115,18 @@ export default function SignInPage() {
             </p>
           </div>
 
-          {/* Error Message */}
-          {state.error && (
+          {/* Form / API Error Message */}
+          {formError && (
             <div className="w-full mb-4 p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-xl text-xs text-red-900 dark:text-red-300 font-medium flex items-start gap-2.5 animate-in fade-in">
               <AlertCircle size={16} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
               <div className="flex-1 space-y-1">
-                <div className="leading-relaxed font-semibold">{state.error}</div>
-                {state.error.toLowerCase().includes("invalid") && (
+                <div className="leading-relaxed font-semibold">{formError}</div>
+                {formError.toLowerCase().includes("invalid") && (
                   <div className="text-[11px] pt-0.5">
-                    <Link href="/sign-up" className="underline font-bold hover:text-black dark:hover:text-white">
+                    <Link
+                      href="/sign-up"
+                      className="underline font-bold hover:text-black dark:hover:text-white"
+                    >
                       Don&apos;t have an account yet? Create one here &rarr;
                     </Link>
                   </div>
@@ -102,9 +135,9 @@ export default function SignInPage() {
             </div>
           )}
 
-          {/* Sign In Form */}
+          {/* Sign In Form with react-hook-form */}
           <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-xs space-y-4 transition-colors">
-            <form action={formAction} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
               <div>
                 <label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 mb-1.5">
                   <Mail size={13} className="text-zinc-500 dark:text-zinc-400" />
@@ -112,12 +145,20 @@ export default function SignInPage() {
                 </label>
                 <input
                   type="email"
-                  name="email"
-                  required
                   placeholder="e.g. yourname@gmail.com or @uet.edu.pk"
-                  defaultValue=""
-                  className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors"
+                  disabled={isPending}
+                  {...register("email")}
+                  className={`w-full h-11 px-3.5 border ${
+                    errors.email
+                      ? "border-red-500 focus:border-red-500"
+                      : "border-zinc-300 dark:border-zinc-700 focus:border-zinc-950 dark:focus:border-zinc-400"
+                  } bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-colors`}
                 />
+                {errors.email && (
+                  <p className="mt-1 text-[11px] text-red-500 font-medium">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -136,11 +177,14 @@ export default function SignInPage() {
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    name="password"
-                    required
                     placeholder="Enter your password"
-                    defaultValue=""
-                    className="w-full h-11 px-3.5 pr-10 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors"
+                    disabled={isPending}
+                    {...register("password")}
+                    className={`w-full h-11 px-3.5 pr-10 border ${
+                      errors.password
+                        ? "border-red-500 focus:border-red-500"
+                        : "border-zinc-300 dark:border-zinc-700 focus:border-zinc-950 dark:focus:border-zinc-400"
+                    } bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-colors`}
                   />
                   <button
                     type="button"
@@ -150,15 +194,30 @@ export default function SignInPage() {
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="mt-1 text-[11px] text-red-500 font-medium">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
 
-              <SubmitButton
-                pendingText="Signing in..."
-                icon={<ArrowRight size={14} />}
-                className="w-full h-11 bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 shadow-xs"
+              <button
+                type="submit"
+                disabled={isPending}
+                className="w-full h-11 bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
               >
-                Sign In
-              </SubmitButton>
+                {isPending ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight size={14} />
+                  </>
+                )}
+              </button>
             </form>
 
             <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 text-center">

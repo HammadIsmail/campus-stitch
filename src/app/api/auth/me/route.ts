@@ -44,21 +44,13 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // If campus details missing, provide sensible defaults
-      if (!payload.campusId) {
-        payload.campusId = "camp_uet_main";
-        payload.campusName = "Main Campus (Lahore)";
-        payload.universityId = "uni_uet_lahore";
-        payload.universityName = "UET Lahore";
-      }
-
       try {
         const { createClient } = await import("@/lib/supabase/server");
         const supabase = await createClient();
         
         const profilePromise = supabase
           .from("profiles")
-          .select("avatar_url, bio, full_name, is_verified, verification_status, campus_id, campus_name, university_id, university, role")
+          .select("avatar_url, bio, full_name, is_verified, verification_status, campus_id, campus_name, university_id, university, role, city")
           .eq("email", cleanEmail)
           .maybeSingle();
 
@@ -77,11 +69,33 @@ export async function GET(request: NextRequest) {
           if (profile.campus_name) payload.campusName = profile.campus_name;
           if (profile.university_id) payload.universityId = profile.university_id;
           if (profile.university) payload.universityName = profile.university;
+          if (profile.city) (payload as any).city = profile.city;
           if (profile.role && payload.role !== "super_admin") {
             payload.role = profile.role as any;
           }
         }
+
+        // Truthful resolution: resolve campus & university from TenantsStore
+        const campLookup = payload.campusId || payload.campusName || (profile as any)?.city;
+        if (campLookup) {
+          const campDetails = TenantsStore.getCampus(campLookup);
+          if (campDetails) {
+            payload.campusId = campDetails.campus.id;
+            payload.campusName = campDetails.campus.name;
+            payload.universityId = campDetails.university.id;
+            payload.universityName = campDetails.university.shortName;
+            (payload as any).city = campDetails.campus.city;
+          }
+        }
       } catch {}
+
+      // If campus details still missing after checking profile, provide sensible defaults
+      if (!payload.campusId) {
+        payload.campusId = "camp_uet_main";
+        payload.campusName = "Main Campus (Lahore)";
+        payload.universityId = "uni_uet_lahore";
+        payload.universityName = "UET Lahore";
+      }
     } catch {}
 
     return NextResponse.json({

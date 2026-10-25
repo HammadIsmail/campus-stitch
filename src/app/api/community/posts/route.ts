@@ -156,6 +156,46 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, title, content, flair } = body;
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Post ID is required" },
+        { status: 400 }
+      );
+    }
+    const updates: Record<string, any> = {};
+    if (title !== undefined) updates.title = String(title).trim();
+    if (content !== undefined) updates.content = String(content).trim();
+    if (flair !== undefined) updates.flair = flair;
+
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("community_posts")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (!error && data) {
+        return NextResponse.json({ success: true, post: data });
+      }
+    } catch (err) {
+      console.warn("DB update post notice:", err);
+    }
+
+    return NextResponse.json({ success: true, message: "Post updated successfully" });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

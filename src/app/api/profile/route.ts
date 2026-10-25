@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, bio, avatarUrl, fullName, phone, hostelBlock } = body;
+    const { userId, bio, avatarUrl, fullName, phone, hostelBlock, campusId, campusName, city, university, universityId, program, department } = body;
 
     const supabase = await createClient();
 
@@ -93,6 +93,14 @@ export async function PATCH(req: NextRequest) {
     if (avatarUrl !== undefined) updates.avatar_url = avatarUrl;
     if (fullName !== undefined) updates.full_name = fullName;
     if (phone !== undefined) updates.phone = phone;
+    if (hostelBlock !== undefined) updates.hostel_block = hostelBlock;
+    if (campusId !== undefined) updates.campus_id = campusId;
+    if (campusName !== undefined) updates.campus_name = campusName;
+    if (city !== undefined) updates.city = city;
+    if (university !== undefined) updates.university = university;
+    if (universityId !== undefined) updates.university_id = universityId;
+    if (program !== undefined) updates.program = program;
+    if (department !== undefined) updates.department = department;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(

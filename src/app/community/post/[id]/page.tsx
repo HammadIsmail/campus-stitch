@@ -26,6 +26,8 @@ import {
   X,
   MoreHorizontal,
   Repeat,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { BottomNav } from "@/components/bottom-nav";
@@ -122,14 +124,64 @@ export default function DynamicPostPage({
   const [post, setPost] = React.useState<Post | null>(null);
   const [comments, setComments] = React.useState<Comment[]>([]);
   const [communities, setCommunities] = React.useState<Community[]>([]);
-  const [joinedCommunities, setJoinedCommunities] = React.useState<Record<string, boolean>>({
-    "r/cs-uet": true,
-    "r/commute-splits": true,
-    "r/exam-pastpapers": true,
-  });
+  const [joinedCommunities, setJoinedCommunities] = React.useState<Record<string, boolean>>({});
   const [isSaved, setIsSaved] = React.useState(false);
   const [copyFeedback, setCopyFeedback] = React.useState<string | null>(null);
   const [activeMenuOpen, setActiveMenuOpen] = React.useState(false);
+
+  // Edit & Delete Post state and handlers
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editTitle, setEditTitle] = React.useState("");
+  const [editContent, setEditContent] = React.useState("");
+  const [editFlair, setEditFlair] = React.useState("Discussion");
+  const [isUpdating, setIsUpdating] = React.useState(false);
+
+  const handleDeletePost = async () => {
+    if (!post || !window.confirm("Are you sure you want to delete this post?")) return;
+    try {
+      await fetch(`/api/community/posts?id=${post.id}`, { method: "DELETE" });
+    } catch (err) {
+      console.warn("Delete post error:", err);
+    }
+    router.push("/community");
+  };
+
+  const handleOpenEdit = () => {
+    if (!post) return;
+    setEditTitle(post.title);
+    setEditContent(post.content);
+    setEditFlair(post.flair || "Discussion");
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!post || !editTitle.trim()) return;
+    setIsUpdating(true);
+    try {
+      await fetch("/api/community/posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: post.id,
+          title: editTitle.trim(),
+          content: editContent.trim(),
+          flair: editFlair,
+        }),
+      });
+      setPost({
+        ...post,
+        title: editTitle.trim(),
+        content: editContent.trim(),
+        flair: editFlair,
+      });
+    } catch (err) {
+      console.warn("Update post error:", err);
+    } finally {
+      setIsUpdating(false);
+      setIsEditing(false);
+    }
+  };
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [newCommentText, setNewCommentText] = React.useState("");
@@ -595,6 +647,36 @@ export default function DynamicPostPage({
 
                       {activeMenuOpen && (
                         <div className="absolute right-0 top-8 z-30 w-44 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl py-1 text-xs text-zinc-700 dark:text-zinc-200 animate-in fade-in zoom-in-95">
+                          {Boolean(
+                            (user?.userId && post.author_id === user.userId) ||
+                            (user?.name && post.author_name?.toLowerCase().trim() === user.name.toLowerCase().trim())
+                          ) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleOpenEdit();
+                                  setActiveMenuOpen(false);
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 text-black dark:text-white font-medium cursor-pointer"
+                              >
+                                <Pencil size={13} />
+                                <span>Edit Post</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleDeletePost();
+                                  setActiveMenuOpen(false);
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center gap-2 font-medium cursor-pointer"
+                              >
+                                <Trash2 size={13} />
+                                <span>Delete Post</span>
+                              </button>
+                              <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+                            </>
+                          )}
                           <button
                             type="button"
                             onClick={() => {
@@ -711,7 +793,7 @@ export default function DynamicPostPage({
                       <Repeat size={14} className="stroke-[2.2px]" />
                     </button>
 
-                    {/* 4. Share Pill: [ ↗️ {count} ] */}
+                    {/* 4. Share Pill */}
                     <button
                       type="button"
                       onClick={handleShare}
@@ -719,7 +801,7 @@ export default function DynamicPostPage({
                       className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
                     >
                       <Share2 size={13} className="stroke-[2.2px]" />
-                      <span>{((post.upvotes || 7) % 35) + 14}</span>
+                      <span>Share</span>
                     </button>
                   </div>
                 </article>
@@ -974,6 +1056,92 @@ export default function DynamicPostPage({
             )}
           </aside>
         </div>
+
+        {/* ======================================================== */}
+        {/* MODAL: EDIT POST MODAL                                   */}
+        {/* ======================================================== */}
+        {isEditing && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <div className="bg-white dark:bg-[#121215] rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="font-extrabold text-base text-black dark:text-white flex items-center gap-2">
+                  <Pencil size={18} />
+                  <span>Edit Post</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-black dark:hover:text-white cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEdit} className="space-y-3.5">
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Flair / Category
+                  </label>
+                  <select
+                    value={editFlair}
+                    onChange={(e) => setEditFlair(e.target.value)}
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-semibold text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  >
+                    {["Resource", "Question", "Discussion", "Notice", "Carpool", "Meme", "Event"].map((f) => (
+                      <option key={f} value={f} className="dark:bg-[#121215]">
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Title"
+                    required
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Content
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    placeholder="Text (optional)"
+                    className="w-full p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 h-10 rounded-xl border border-zinc-300 dark:border-zinc-700 font-bold text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <Button
+                    type="submit"
+                    disabled={isUpdating || !editTitle.trim()}
+                    className="flex-1 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 cursor-pointer"
+                  >
+                    {isUpdating ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Navigation for Mobile Devices */}
         <BottomNav />

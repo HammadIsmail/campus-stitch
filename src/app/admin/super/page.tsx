@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
   MapPin,
@@ -30,55 +32,67 @@ import {
   Bell,
   Sparkles,
   Radio,
+  Pencil,
+  X,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
+import {
+  UniversityItem,
+  CampusItem,
+  CampusAdminItem,
+  CandidateUser,
+  AppVersionData,
+  useSuperAdminUniversitiesQuery,
+  useSuperAdminAdminsQuery,
+  useSuperAdminVersionQuery,
+  useCreateUniversityMutation,
+  useUpdateUniversityMutation,
+  useDeleteUniversityMutation,
+  useCreateCampusMutation,
+  useUpdateCampusMutation,
+  useDeleteCampusMutation,
+  useAssignCampusAdminMutation,
+  useRevokeCampusAdminMutation,
+  usePublishVersionMutation,
+} from "@/hooks/use-super-admin-queries";
 
-interface CampusItem {
-  id: string;
-  universityId: string;
+// Form value interfaces for react-hook-form
+interface AddUniFormValues {
   name: string;
+  shortName: string;
   city: string;
-  slug: string;
-  isActive: boolean;
-  createdAt?: string;
+  province: string;
+  initialCampus: string;
 }
 
-interface UniversityItem {
+interface EditUniFormValues {
   id: string;
   name: string;
   shortName: string;
-  slug: string;
   city: string;
   province: string;
-  logoUrl?: string;
-  campuses: CampusItem[];
 }
 
-interface CampusAdminItem {
-  id: string;
-  userId: string;
+interface AddCampusFormValues {
+  name: string;
+  city: string;
+}
+
+interface EditCampusFormValues {
+  campusId: string;
+  name: string;
+  city: string;
+}
+
+interface AssignAdminFormValues {
+  campusId: string;
   userEmail: string;
   userName: string;
-  campusId: string;
-  campusName: string;
-  universityId: string;
-  universityName: string;
-  assignedBy: string;
-  assignedAt: string;
 }
 
-interface CandidateUser {
-  id: string;
-  full_name: string;
-  email: string;
-  university?: string;
-  campus_name?: string;
-  role?: string;
-}
-
-interface AppVersionData {
+interface VersionFormValues {
   latestVersion: string;
   buildNumber: number;
   minSupportedVersion: string;
@@ -88,231 +102,322 @@ interface AppVersionData {
   releaseNotes: string;
   apkDownloadUrl: string;
   fileSize: string;
-  releasedAt: string;
-  updatedBy: string;
+  broadcastPush: boolean;
 }
 
 export default function SuperAdminPage() {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = React.useState<"universities" | "admins" | "releases">("universities");
-  const [loading, setLoading] = React.useState(true);
-  const [feedback, setFeedback] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
+  const queryClient = useQueryClient();
 
-  // Universities & Campuses Data
-  const [universities, setUniversities] = React.useState<UniversityItem[]>([]);
+  const [activeTab, setActiveTab] = React.useState<"universities" | "admins" | "releases">("universities");
+  const [feedback, setFeedback] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
   const [searchUni, setSearchUni] = React.useState("");
 
-  // Campus Admins Data
-  const [campusAdmins, setCampusAdmins] = React.useState<CampusAdminItem[]>([]);
-  const [candidates, setCandidates] = React.useState<CandidateUser[]>([]);
+  // TanStack React Queries
+  const { data: universities = [], isLoading: loadingUnis, isFetching: fetchingUnis } = useSuperAdminUniversitiesQuery();
+  const { data: adminsData = { admins: [], candidates: [] }, isLoading: loadingAdmins, isFetching: fetchingAdmins } = useSuperAdminAdminsQuery();
+  const { data: appVersion = null, isLoading: loadingVersion, isFetching: fetchingVersion } = useSuperAdminVersionQuery();
 
-  // Mobile App Version & Release Data
-  const [appVersion, setAppVersion] = React.useState<AppVersionData | null>(null);
-  const [verLatest, setVerLatest] = React.useState("");
-  const [verBuild, setVerBuild] = React.useState("1");
-  const [verMin, setVerMin] = React.useState("");
-  const [verMinBuild, setVerMinBuild] = React.useState("1");
-  const [verForce, setVerForce] = React.useState(false);
-  const [verTitle, setVerTitle] = React.useState("");
-  const [verNotes, setVerNotes] = React.useState("");
-  const [verUrl, setVerUrl] = React.useState("");
-  const [verSize, setVerSize] = React.useState("50.2 MB");
-  const [verBroadcast, setVerBroadcast] = React.useState(true);
-  const [isPublishingVersion, setIsPublishingVersion] = React.useState(false);
+  const campusAdmins = adminsData.admins;
+  const candidates = adminsData.candidates;
+  const isSyncing = fetchingUnis || fetchingAdmins || fetchingVersion;
 
-  // Modals / Forms
+  // TanStack React Mutations
+  const createUniMutation = useCreateUniversityMutation();
+  const updateUniMutation = useUpdateUniversityMutation();
+  const deleteUniMutation = useDeleteUniversityMutation();
+
+  const createCampusMutation = useCreateCampusMutation();
+  const updateCampusMutation = useUpdateCampusMutation();
+  const deleteCampusMutation = useDeleteCampusMutation();
+
+  const assignAdminMutation = useAssignCampusAdminMutation();
+  const revokeAdminMutation = useRevokeCampusAdminMutation();
+  const publishVersionMutation = usePublishVersionMutation();
+
+  // Modal display states
   const [showAddUniModal, setShowAddUniModal] = React.useState(false);
+  const [showEditUniModal, setShowEditUniModal] = React.useState(false);
+  const [editingUni, setEditingUni] = React.useState<UniversityItem | null>(null);
+
   const [showAddCampusModal, setShowAddCampusModal] = React.useState(false);
   const [selectedUniForCampus, setSelectedUniForCampus] = React.useState<UniversityItem | null>(null);
+
+  const [showEditCampusModal, setShowEditCampusModal] = React.useState(false);
+  const [editingCampus, setEditingCampus] = React.useState<{ campus: CampusItem; uniShort: string } | null>(null);
+
   const [showAssignAdminModal, setShowAssignAdminModal] = React.useState(false);
 
-  // New University Form Fields
-  const [newUniName, setNewUniName] = React.useState("");
-  const [newUniShort, setNewUniShort] = React.useState("");
-  const [newUniCity, setNewUniCity] = React.useState("");
-  const [newUniProvince, setNewUniProvince] = React.useState("Punjab");
-  const [newUniMainCampus, setNewUniMainCampus] = React.useState("Main Campus");
-  const [isSubmittingUni, setIsSubmittingUni] = React.useState(false);
+  // -------------------------------------------------------------
+  // React Hook Forms Setup
+  // -------------------------------------------------------------
 
-  // New Campus Form Fields
-  const [newCampusName, setNewCampusName] = React.useState("");
-  const [newCampusCity, setNewCampusCity] = React.useState("");
-  const [isSubmittingCampus, setIsSubmittingCampus] = React.useState(false);
+  // 1. Add University Form
+  const addUniForm = useForm<AddUniFormValues>({
+    defaultValues: {
+      name: "",
+      shortName: "",
+      city: "",
+      province: "Punjab",
+      initialCampus: "Main Campus",
+    },
+  });
 
-  // Assign Admin Form Fields
-  const [targetCampusId, setTargetCampusId] = React.useState("");
-  const [targetUserEmail, setTargetUserEmail] = React.useState("");
-  const [targetUserName, setTargetUserName] = React.useState("");
-  const [isSubmittingAdmin, setIsSubmittingAdmin] = React.useState(false);
+  // 2. Edit University Form
+  const editUniForm = useForm<EditUniFormValues>({
+    defaultValues: {
+      id: "",
+      name: "",
+      shortName: "",
+      city: "",
+      province: "Punjab",
+    },
+  });
 
-  // Load Data
-  const loadData = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const [uniRes, adminRes, verRes] = await Promise.all([
-        fetch("/api/universities"),
-        fetch("/api/admin/campus-admins"),
-        fetch("/api/app/version"),
-      ]);
+  // 3. Add Campus Form
+  const addCampusForm = useForm<AddCampusFormValues>({
+    defaultValues: {
+      name: "",
+      city: "",
+    },
+  });
 
-      const uniData = await uniRes.json();
-      if (uniData.success && Array.isArray(uniData.universities)) {
-        setUniversities(uniData.universities);
-        if (uniData.universities[0]?.campuses?.[0]) {
-          setTargetCampusId(uniData.universities[0].campuses[0].id);
-        }
-      }
+  // 4. Edit Campus Form
+  const editCampusForm = useForm<EditCampusFormValues>({
+    defaultValues: {
+      campusId: "",
+      name: "",
+      city: "",
+    },
+  });
 
-      const adminData = await adminRes.json();
-      if (adminData.success) {
-        setCampusAdmins(adminData.admins || []);
-        setCandidates(adminData.candidates || []);
-      }
+  // 5. Assign Campus Admin Form
+  const assignAdminForm = useForm<AssignAdminFormValues>({
+    defaultValues: {
+      campusId: "",
+      userEmail: "",
+      userName: "",
+    },
+  });
 
-      const verData = await verRes.json();
-      if (verData.success && verData.version) {
-        const v = verData.version;
-        setAppVersion(v);
-        setVerLatest(v.latestVersion);
-        setVerBuild(String(v.buildNumber || 1));
-        setVerMin(v.minSupportedVersion || v.latestVersion);
-        setVerMinBuild(String(v.minSupportedBuild || v.buildNumber || 1));
-        setVerForce(Boolean(v.forceUpdate));
-        setVerTitle(v.title || `CampuStitch v${v.latestVersion} Update Available! 🚀`);
-        setVerNotes(v.releaseNotes || "");
-        setVerUrl(v.apkDownloadUrl || "");
-        setVerSize(v.fileSize || "50.2 MB");
-      }
-    } catch (err) {
-      console.error("Failed to load super admin data:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Sync default target campus when universities load
   React.useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (universities[0]?.campuses?.[0]?.id && !assignAdminForm.getValues("campusId")) {
+      assignAdminForm.setValue("campusId", universities[0].campuses[0].id);
+    }
+  }, [universities, assignAdminForm]);
+
+  // 6. Publish Version Form
+  const versionForm = useForm<VersionFormValues>({
+    defaultValues: {
+      latestVersion: "1.0.0",
+      buildNumber: 1,
+      minSupportedVersion: "1.0.0",
+      minSupportedBuild: 1,
+      forceUpdate: false,
+      title: "CampuStitch v1.0.0 Released! 🚀",
+      releaseNotes: "",
+      apkDownloadUrl: "",
+      fileSize: "50.2 MB",
+      broadcastPush: true,
+    },
+  });
+
+  // Keep version form synchronized when appVersion is fetched
+  React.useEffect(() => {
+    if (appVersion) {
+      versionForm.reset({
+        latestVersion: appVersion.latestVersion,
+        buildNumber: appVersion.buildNumber || 1,
+        minSupportedVersion: appVersion.minSupportedVersion || appVersion.latestVersion,
+        minSupportedBuild: appVersion.minSupportedBuild || appVersion.buildNumber || 1,
+        forceUpdate: Boolean(appVersion.forceUpdate),
+        title: appVersion.title || `CampuStitch v${appVersion.latestVersion} Update Available! 🚀`,
+        releaseNotes: appVersion.releaseNotes || "",
+        apkDownloadUrl: appVersion.apkDownloadUrl || "",
+        fileSize: appVersion.fileSize || "50.2 MB",
+        broadcastPush: true,
+      });
+    }
+  }, [appVersion, versionForm]);
+
+  // -------------------------------------------------------------
+  // Form Submission Handlers
+  // -------------------------------------------------------------
 
   // Handle Add University
-  const handleAddUniversity = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUniName.trim() || !newUniShort.trim() || !newUniCity.trim()) return;
-
-    setIsSubmittingUni(true);
+  const onAddUniversitySubmit = async (values: AddUniFormValues) => {
     setFeedback(null);
-
     try {
-      const res = await fetch("/api/universities", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newUniName.trim(),
-          shortName: newUniShort.trim(),
-          city: newUniCity.trim(),
-          province: newUniProvince,
-          initialCampuses: [
-            {
-              name: newUniMainCampus.trim() || "Main Campus",
-              city: newUniCity.trim(),
-            },
-          ],
-        }),
+      const data = await createUniMutation.mutateAsync({
+        name: values.name.trim(),
+        shortName: values.shortName.trim(),
+        city: values.city.trim(),
+        province: values.province,
+        initialCampuses: [
+          {
+            name: values.initialCampus.trim() || "Main Campus",
+            city: values.city.trim(),
+          },
+        ],
       });
-
-      const data = await res.json();
-      if (data.success) {
-        setFeedback({ type: "success", text: `University "${newUniShort}" and initial campus created!` });
-        setShowAddUniModal(false);
-        setNewUniName("");
-        setNewUniShort("");
-        setNewUniCity("");
-        loadData();
-      } else {
-        setFeedback({ type: "error", text: data.message || "Failed to create university" });
-      }
+      setFeedback({ type: "success", text: `University "${values.shortName}" created successfully!` });
+      setShowAddUniModal(false);
+      addUniForm.reset();
     } catch (err: any) {
-      setFeedback({ type: "error", text: err.message || "An unexpected error occurred" });
-    } finally {
-      setIsSubmittingUni(false);
+      setFeedback({ type: "error", text: err.message || "Failed to create university" });
     }
   };
 
-  // Handle Add Campus
-  const handleAddCampus = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUniForCampus || !newCampusName.trim() || !newCampusCity.trim()) return;
+  // Open Edit University Modal
+  const openEditUniModal = (uni: UniversityItem) => {
+    setEditingUni(uni);
+    editUniForm.reset({
+      id: uni.id,
+      name: uni.name,
+      shortName: uni.shortName,
+      city: uni.city,
+      province: uni.province || "Punjab",
+    });
+    setShowEditUniModal(true);
+  };
 
-    setIsSubmittingCampus(true);
+  // Handle Update University
+  const onEditUniversitySubmit = async (values: EditUniFormValues) => {
     setFeedback(null);
-
     try {
-      const res = await fetch("/api/campuses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          universityId: selectedUniForCampus.id,
-          name: newCampusName.trim(),
-          city: newCampusCity.trim(),
-        }),
+      const data = await updateUniMutation.mutateAsync({
+        id: values.id,
+        name: values.name.trim(),
+        shortName: values.shortName.trim(),
+        city: values.city.trim(),
+        province: values.province,
       });
-
-      const data = await res.json();
-      if (data.success) {
-        setFeedback({
-          type: "success",
-          text: `Campus "${newCampusName}" added to ${selectedUniForCampus.shortName}!`,
-        });
-        setShowAddCampusModal(false);
-        setNewCampusName("");
-        setNewCampusCity("");
-        loadData();
-      } else {
-        setFeedback({ type: "error", text: data.message || "Failed to add campus" });
-      }
+      setFeedback({ type: "success", text: `University "${values.shortName}" updated successfully!` });
+      setShowEditUniModal(false);
     } catch (err: any) {
-      setFeedback({ type: "error", text: err.message || "An unexpected error occurred" });
-    } finally {
-      setIsSubmittingCampus(false);
+      setFeedback({ type: "error", text: err.message || "Failed to update university" });
+    }
+  };
+
+  // Handle Delete University
+  const handleDeleteUniversity = async (uni: UniversityItem) => {
+    if (
+      !confirm(
+        `Are you sure you want to permanently remove "${uni.shortName}" and all of its campuses? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setFeedback(null);
+    try {
+      await deleteUniMutation.mutateAsync(uni.id);
+      setFeedback({
+        type: "success",
+        text: `University "${uni.shortName}" and all its campuses removed.`,
+      });
+    } catch (err: any) {
+      setFeedback({ type: "error", text: err.message || "Failed to delete university" });
+    }
+  };
+
+  // Open Add Campus Modal
+  const openAddCampusModal = (uni: UniversityItem) => {
+    setSelectedUniForCampus(uni);
+    addCampusForm.reset({
+      name: "",
+      city: uni.city,
+    });
+    setShowAddCampusModal(true);
+  };
+
+  // Handle Add Campus
+  const onAddCampusSubmit = async (values: AddCampusFormValues) => {
+    if (!selectedUniForCampus) return;
+    setFeedback(null);
+    try {
+      await createCampusMutation.mutateAsync({
+        universityId: selectedUniForCampus.id,
+        name: values.name.trim(),
+        city: values.city.trim(),
+      });
+      setFeedback({
+        type: "success",
+        text: `Campus "${values.name}" added to ${selectedUniForCampus.shortName}!`,
+      });
+      setShowAddCampusModal(false);
+      addCampusForm.reset();
+    } catch (err: any) {
+      setFeedback({ type: "error", text: err.message || "Failed to add campus" });
+    }
+  };
+
+  // Open Edit Campus Modal
+  const openEditCampusModal = (uni: UniversityItem, campus: CampusItem) => {
+    setEditingCampus({ campus, uniShort: uni.shortName });
+    editCampusForm.reset({
+      campusId: campus.id,
+      name: campus.name,
+      city: campus.city,
+    });
+    setShowEditCampusModal(true);
+  };
+
+  // Handle Update Campus
+  const onEditCampusSubmit = async (values: EditCampusFormValues) => {
+    setFeedback(null);
+    try {
+      await updateCampusMutation.mutateAsync({
+        campusId: values.campusId,
+        name: values.name.trim(),
+        city: values.city.trim(),
+      });
+      setFeedback({
+        type: "success",
+        text: `Campus "${values.name}" updated successfully!`,
+      });
+      setShowEditCampusModal(false);
+    } catch (err: any) {
+      setFeedback({ type: "error", text: err.message || "Failed to update campus" });
+    }
+  };
+
+  // Handle Delete Campus
+  const handleDeleteCampus = async (campus: CampusItem) => {
+    if (!confirm(`Are you sure you want to remove the campus "${campus.name}"?`)) {
+      return;
+    }
+
+    setFeedback(null);
+    try {
+      await deleteCampusMutation.mutateAsync(campus.id);
+      setFeedback({
+        type: "success",
+        text: `Campus "${campus.name}" removed successfully!`,
+      });
+    } catch (err: any) {
+      setFeedback({ type: "error", text: err.message || "Failed to delete campus" });
     }
   };
 
   // Handle Assign Campus Admin
-  const handleAssignAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!targetCampusId || !targetUserEmail.trim()) return;
-
-    setIsSubmittingAdmin(true);
+  const onAssignAdminSubmit = async (values: AssignAdminFormValues) => {
     setFeedback(null);
-
     try {
-      const res = await fetch("/api/admin/campus-admins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userEmail: targetUserEmail.trim(),
-          userName: targetUserName.trim() || targetUserEmail.split("@")[0],
-          campusId: targetCampusId,
-        }),
+      await assignAdminMutation.mutateAsync({
+        userEmail: values.userEmail.trim(),
+        userName: values.userName.trim() || values.userEmail.split("@")[0],
+        campusId: values.campusId,
       });
-
-      const data = await res.json();
-      if (data.success) {
-        setFeedback({
-          type: "success",
-          text: data.message || "Campus Admin assigned successfully!",
-        });
-        setShowAssignAdminModal(false);
-        setTargetUserEmail("");
-        setTargetUserName("");
-        loadData();
-      } else {
-        setFeedback({ type: "error", text: data.message || "Failed to assign campus admin" });
-      }
+      setFeedback({
+        type: "success",
+        text: "Campus Admin assigned successfully!",
+      });
+      setShowAssignAdminModal(false);
+      assignAdminForm.reset();
     } catch (err: any) {
-      setFeedback({ type: "error", text: err.message || "An unexpected error occurred" });
-    } finally {
-      setIsSubmittingAdmin(false);
+      setFeedback({ type: "error", text: err.message || "Failed to assign campus admin" });
     }
   };
 
@@ -322,72 +427,51 @@ export default function SuperAdminPage() {
       return;
     }
 
+    setFeedback(null);
     try {
-      const res = await fetch("/api/admin/campus-admins", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIdOrEmail: userEmail }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setFeedback({ type: "success", text: `Campus Admin revoked for ${userEmail}` });
-        loadData();
-      } else {
-        setFeedback({ type: "error", text: data.message || "Failed to revoke admin" });
-      }
+      await revokeAdminMutation.mutateAsync(userEmail);
+      setFeedback({ type: "success", text: `Campus Admin revoked for ${userEmail}` });
     } catch (err: any) {
       setFeedback({ type: "error", text: err.message || "Failed to revoke admin" });
     }
   };
 
-  // Handle Publish App Version / In-App Release
-  const handlePublishVersion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!verLatest.trim() || !verUrl.trim()) {
-      setFeedback({ type: "error", text: "Version number and APK download URL are required." });
-      return;
-    }
-
-    setIsPublishingVersion(true);
+  // Handle Publish App Version
+  const onPublishVersionSubmit = async (values: VersionFormValues) => {
     setFeedback(null);
-
     try {
-      const res = await fetch("/api/admin/super/app-version", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          latestVersion: verLatest.trim(),
-          buildNumber: parseInt(verBuild, 10) || 1,
-          minSupportedVersion: verMin.trim() || verLatest.trim(),
-          minSupportedBuild: parseInt(verMinBuild, 10) || parseInt(verBuild, 10) || 1,
-          forceUpdate: verForce,
-          title: verTitle.trim() || `CampuStitch v${verLatest} Released! 🚀`,
-          releaseNotes: verNotes.trim(),
-          apkDownloadUrl: verUrl.trim(),
-          fileSize: verSize.trim() || "50.2 MB",
-          broadcastPush: verBroadcast,
-        }),
+      const data = await publishVersionMutation.mutateAsync({
+        latestVersion: values.latestVersion.trim(),
+        buildNumber: Number(values.buildNumber) || 1,
+        minSupportedVersion: values.minSupportedVersion.trim() || values.latestVersion.trim(),
+        minSupportedBuild: Number(values.minSupportedBuild) || Number(values.buildNumber) || 1,
+        forceUpdate: Boolean(values.forceUpdate),
+        title: values.title.trim() || `CampuStitch v${values.latestVersion} Released! 🚀`,
+        releaseNotes: values.releaseNotes.trim(),
+        apkDownloadUrl: values.apkDownloadUrl.trim(),
+        fileSize: values.fileSize.trim() || "50.2 MB",
+        broadcastPush: Boolean(values.broadcastPush),
       });
 
-      const data = await res.json();
-      if (data.success) {
-        setAppVersion(data.version);
-        setFeedback({
-          type: "success",
-          text: `Mobile Release v${data.version.latestVersion} published! ${data.pushResult?.sentCount > 0 ? `Push broadcast sent to ${data.pushResult.sentCount} devices.` : "In-app updater is now live for all active mobile apps."}`,
-        });
-        loadData();
-      } else {
-        setFeedback({ type: "error", text: data.error || "Failed to publish release" });
-      }
+      setFeedback({
+        type: "success",
+        text: `Mobile Release v${data.version.latestVersion} published! ${
+          data.pushResult?.sentCount && data.pushResult.sentCount > 0
+            ? `Push broadcast sent to ${data.pushResult.sentCount} devices.`
+            : "In-app updater is now live for all active mobile apps."
+        }`,
+      });
     } catch (err: any) {
       setFeedback({ type: "error", text: err.message || "Failed to publish release" });
-    } finally {
-      setIsPublishingVersion(false);
     }
   };
 
+  // Manual Refresh
+  const handleManualSync = () => {
+    queryClient.invalidateQueries({ queryKey: ["super-admin"] });
+  };
+
+  // Filtered universities
   const filteredUnis = universities.filter((u) => {
     const q = searchUni.toLowerCase().trim();
     if (!q) return true;
@@ -395,7 +479,7 @@ export default function SuperAdminPage() {
       u.name.toLowerCase().includes(q) ||
       u.shortName.toLowerCase().includes(q) ||
       u.city.toLowerCase().includes(q) ||
-      u.campuses.some((c) => c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q))
+      u.campuses?.some((c) => c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q))
     );
   });
 
@@ -441,12 +525,12 @@ export default function SuperAdminPage() {
               <span>KYC Queue</span>
             </Link>
             <button
-              onClick={loadData}
-              disabled={loading}
+              onClick={handleManualSync}
+              disabled={isSyncing}
               className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-pointer"
               title="Refresh Data"
             >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
             </button>
             <Link
               href="/"
@@ -486,67 +570,63 @@ export default function SuperAdminPage() {
               </div>
               <button
                 onClick={() => setFeedback(null)}
-                className="text-[11px] font-bold underline opacity-80 hover:opacity-100"
+                className="opacity-70 hover:opacity-100 text-sm font-bold ml-2 cursor-pointer"
               >
-                Dismiss
+                ✕
               </button>
             </div>
           </div>
         )}
 
         <main className="max-w-6xl mx-auto px-4 sm:px-8 py-6 space-y-6">
-          {/* Key Metric Stats Banner */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] shadow-2xs">
-              <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400 mb-1">
+              <div className="flex items-center justify-between text-zinc-400">
                 <span className="text-[11px] font-bold uppercase tracking-wider">Universities</span>
                 <Building2 size={16} />
               </div>
-              <div className="text-2xl font-black text-black dark:text-white">
-                {universities.length}
+              <div className="text-2xl font-black mt-2 text-black dark:text-white">
+                {loadingUnis ? "..." : universities.length}
               </div>
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                Major Pakistani institutions
-              </div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Major Pakistani institutions</div>
             </div>
 
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] shadow-2xs">
-              <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400 mb-1">
+              <div className="flex items-center justify-between text-zinc-400">
                 <span className="text-[11px] font-bold uppercase tracking-wider">Active Campuses</span>
                 <MapPin size={16} />
               </div>
-              <div className="text-2xl font-black text-black dark:text-white">
-                {totalCampuses}
+              <div className="text-2xl font-black mt-2 text-black dark:text-white">
+                {loadingUnis ? "..." : totalCampuses}
               </div>
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                Isolated tenant databases
-              </div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Isolated tenant databases</div>
             </div>
 
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] shadow-2xs">
-              <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400 mb-1">
+              <div className="flex items-center justify-between text-zinc-400">
                 <span className="text-[11px] font-bold uppercase tracking-wider">Campus Admins</span>
                 <Shield size={16} />
               </div>
-              <div className="text-2xl font-black text-black dark:text-white">
-                {campusAdmins.length}
+              <div className="text-2xl font-black mt-2 text-black dark:text-white">
+                {loadingAdmins ? "..." : campusAdmins.length}
               </div>
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                Assigned campus moderators
-              </div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Assigned campus moderators</div>
             </div>
 
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] shadow-2xs">
-              <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400 mb-1">
+              <div className="flex items-center justify-between text-zinc-400">
                 <span className="text-[11px] font-bold uppercase tracking-wider">Live Mobile App</span>
                 <Smartphone size={16} />
               </div>
-              <div className="text-xl font-black text-black dark:text-white">
-                v{appVersion?.latestVersion || "1.0.0"}
-                <span className="text-xs font-normal text-zinc-500 ml-1.5">(b{appVersion?.buildNumber || 1})</span>
+              <div className="text-2xl font-black mt-2 text-black dark:text-white flex items-baseline gap-1.5">
+                <span>v{appVersion?.latestVersion || "1.0.0"}</span>
+                <span className="text-xs text-zinc-400 font-normal font-mono">
+                  (b{appVersion?.buildNumber || 1})
+                </span>
               </div>
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span>OTA Updater Active</span>
               </div>
             </div>
@@ -557,7 +637,7 @@ export default function SuperAdminPage() {
             <div className="flex items-center gap-2 overflow-x-auto">
               <button
                 onClick={() => setActiveTab("universities")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
                   activeTab === "universities"
                     ? "bg-black dark:bg-white text-white dark:text-black shadow-xs"
                     : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -569,7 +649,7 @@ export default function SuperAdminPage() {
 
               <button
                 onClick={() => setActiveTab("admins")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
                   activeTab === "admins"
                     ? "bg-black dark:bg-white text-white dark:text-black shadow-xs"
                     : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -581,7 +661,7 @@ export default function SuperAdminPage() {
 
               <button
                 onClick={() => setActiveTab("releases")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
                   activeTab === "releases"
                     ? "bg-black dark:bg-white text-white dark:text-black shadow-xs"
                     : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -599,7 +679,7 @@ export default function SuperAdminPage() {
               {activeTab === "universities" ? (
                 <Button
                   onClick={() => setShowAddUniModal(true)}
-                  className="h-9 px-3.5 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold rounded-xl flex items-center gap-1.5"
+                  className="h-9 px-3.5 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus size={14} />
                   <span>Add University</span>
@@ -607,7 +687,7 @@ export default function SuperAdminPage() {
               ) : activeTab === "admins" ? (
                 <Button
                   onClick={() => setShowAssignAdminModal(true)}
-                  className="h-9 px-3.5 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold rounded-xl flex items-center gap-1.5"
+                  className="h-9 px-3.5 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
                 >
                   <UserPlus size={14} />
                   <span>Assign Campus Admin</span>
@@ -615,10 +695,10 @@ export default function SuperAdminPage() {
               ) : (
                 <button
                   type="button"
-                  onClick={loadData}
-                  className="h-9 px-3.5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-bold rounded-xl flex items-center gap-1.5"
+                  onClick={handleManualSync}
+                  className="h-9 px-3.5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
                 >
-                  <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                  <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
                   <span>Sync Status</span>
                 </button>
               )}
@@ -657,9 +737,27 @@ export default function SuperAdminPage() {
                             {uni.name}
                           </div>
                         </div>
-                        <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
-                          {uni.province}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
+                            {uni.province}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openEditUniModal(uni)}
+                            title={`Edit ${uni.shortName}`}
+                            className="p-1 rounded-md text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUniversity(uni)}
+                            title={`Delete ${uni.shortName}`}
+                            className="p-1 rounded-md text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Campuses Pill List */}
@@ -667,11 +765,9 @@ export default function SuperAdminPage() {
                         <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center justify-between">
                           <span>Campuses ({uni.campuses?.length || 0})</span>
                           <button
-                            onClick={() => {
-                              setSelectedUniForCampus(uni);
-                              setShowAddCampusModal(true);
-                            }}
-                            className="text-[11px] font-bold text-black dark:text-white hover:underline flex items-center gap-1"
+                            type="button"
+                            onClick={() => openAddCampusModal(uni)}
+                            className="text-[11px] font-bold text-black dark:text-white hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <Plus size={11} />
                             <span>Add Campus</span>
@@ -683,10 +779,27 @@ export default function SuperAdminPage() {
                             uni.campuses.map((c) => (
                               <span
                                 key={c.id}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800/80 text-black dark:text-white border border-zinc-200 dark:border-zinc-700"
+                                className="group inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800/80 text-black dark:text-white border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
                               >
-                                <MapPin size={11} className="text-zinc-500" />
+                                <MapPin size={11} className="text-zinc-500 shrink-0" />
                                 <span>{c.name}</span>
+                                <span className="text-[10px] text-zinc-400 font-normal">({c.city})</span>
+                                <button
+                                  type="button"
+                                  onClick={() => openEditCampusModal(uni, c)}
+                                  title={`Edit ${c.name}`}
+                                  className="p-0.5 rounded text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                                >
+                                  <Pencil size={10} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteCampus(c)}
+                                  title={`Remove ${c.name}`}
+                                  className="p-0.5 rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                                >
+                                  <X size={11} />
+                                </button>
                               </span>
                             ))
                           ) : (
@@ -697,7 +810,9 @@ export default function SuperAdminPage() {
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-                      <span>Primary City: <strong className="text-black dark:text-white">{uni.city}</strong></span>
+                      <span>
+                        Primary City: <strong className="text-black dark:text-white">{uni.city}</strong>
+                      </span>
                       <span className="text-[11px] font-mono opacity-70">{uni.slug}</span>
                     </div>
                   </div>
@@ -721,7 +836,7 @@ export default function SuperAdminPage() {
                   </div>
                   <Button
                     onClick={() => setShowAssignAdminModal(true)}
-                    className="h-8 px-3 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold rounded-lg flex items-center gap-1.5"
+                    className="h-8 px-3 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-pointer"
                   >
                     <UserPlus size={13} />
                     <span>Assign Admin</span>
@@ -750,32 +865,32 @@ export default function SuperAdminPage() {
                           <th className="py-2.5 px-3 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
                         {campusAdmins.map((admin) => (
-                          <tr key={admin.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
+                          <tr key={admin.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/40 transition-colors">
                             <td className="py-3 px-3">
                               <div className="font-bold text-black dark:text-white">{admin.userName}</div>
-                              <div className="text-zinc-500 dark:text-zinc-400 text-[11px]">{admin.userEmail}</div>
+                              <div className="text-[11px] text-zinc-500 font-mono">{admin.userEmail}</div>
                             </td>
                             <td className="py-3 px-3">
-                              <span className="inline-flex items-center gap-1 font-semibold text-black dark:text-white">
-                                <MapPin size={12} className="text-zinc-400" />
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-medium">
+                                <MapPin size={11} className="text-zinc-500" />
                                 {admin.campusName}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-zinc-700 dark:text-zinc-300 font-medium">
+                            <td className="py-3 px-3 font-medium text-zinc-700 dark:text-zinc-300">
                               {admin.universityName}
                             </td>
-                            <td className="py-3 px-3 text-zinc-500 text-[11px]">
+                            <td className="py-3 px-3 text-zinc-400 text-[11px]">
                               {new Date(admin.assignedAt).toLocaleDateString()}
                             </td>
                             <td className="py-3 px-3 text-right">
                               <button
+                                type="button"
                                 onClick={() => handleRevokeAdmin(admin.userEmail)}
-                                className="px-2.5 py-1 text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded border border-red-200 dark:border-red-900/60 transition-colors inline-flex items-center gap-1"
+                                className="text-xs font-semibold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
                               >
-                                <Trash2 size={11} />
-                                <span>Revoke</span>
+                                Revoke
                               </button>
                             </td>
                           </tr>
@@ -788,11 +903,10 @@ export default function SuperAdminPage() {
             </div>
           )}
 
-          {/* TAB 3: APP RELEASES & IN-APP UPDATES (OTA) */}
+          {/* TAB 3: APP RELEASES & IN-APP UPDATES */}
           {activeTab === "releases" && (
             <div className="space-y-6">
-              {/* Top Banner */}
-              <div className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center justify-between p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] shadow-2xs">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="p-1 rounded bg-black dark:bg-white text-white dark:text-black">
@@ -825,7 +939,7 @@ export default function SuperAdminPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Left Column: Live Release Status & Mobile Screen Preview */}
+                {/* Left Column: Live Release Status */}
                 <div className="lg:col-span-5 space-y-4">
                   <div className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] shadow-xs space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
@@ -907,13 +1021,13 @@ export default function SuperAdminPage() {
                         <strong>Force Update:</strong> If current build &lt; minimum required, a blocking screen prevents app use until updated.
                       </li>
                       <li>
-                        <strong>Real-Time Broadcast:</strong> Checking &quot;Broadcast Push Notification&quot; sends an instant FCM data alert to all active mobile devices.
+                        <strong>Real-Time Broadcast:</strong> Checking &quot;Broadcast Push Notification&quot; sends an instant alert to all active mobile devices.
                       </li>
                     </ul>
                   </div>
                 </div>
 
-                {/* Right Column: Publish New Release Form */}
+                {/* Right Column: Publish New Release Form with react-hook-form */}
                 <div className="lg:col-span-7">
                   <div className="p-5 sm:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] shadow-xs space-y-5">
                     <div>
@@ -925,7 +1039,7 @@ export default function SuperAdminPage() {
                       </p>
                     </div>
 
-                    <form onSubmit={handlePublishVersion} className="space-y-4 text-xs">
+                    <form onSubmit={versionForm.handleSubmit(onPublishVersionSubmit)} className="space-y-4 text-xs">
                       {/* Version & Build Grid */}
                       <div className="grid grid-cols-2 gap-3 sm:gap-4">
                         <div>
@@ -936,8 +1050,7 @@ export default function SuperAdminPage() {
                             type="text"
                             required
                             placeholder="e.g. 1.1.0"
-                            value={verLatest}
-                            onChange={(e) => setVerLatest(e.target.value)}
+                            {...versionForm.register("latestVersion", { required: true })}
                             className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-mono"
                           />
                           <p className="text-[10px] text-zinc-400 mt-1">Increment Semantic Version (e.g. 1.0.1, 1.1.0)</p>
@@ -952,8 +1065,7 @@ export default function SuperAdminPage() {
                             required
                             min="1"
                             placeholder="e.g. 2"
-                            value={verBuild}
-                            onChange={(e) => setVerBuild(e.target.value)}
+                            {...versionForm.register("buildNumber", { required: true, valueAsNumber: true })}
                             className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-mono"
                           />
                           <p className="text-[10px] text-zinc-400 mt-1">Sequential build code (e.g. 2, 3, 4)</p>
@@ -969,8 +1081,7 @@ export default function SuperAdminPage() {
                           <input
                             type="text"
                             placeholder="e.g. 1.0.0"
-                            value={verMin}
-                            onChange={(e) => setVerMin(e.target.value)}
+                            {...versionForm.register("minSupportedVersion")}
                             className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-mono"
                           />
                           <p className="text-[10px] text-zinc-400 mt-1">Older versions below this will be forced</p>
@@ -984,8 +1095,7 @@ export default function SuperAdminPage() {
                             type="number"
                             min="1"
                             placeholder="e.g. 1"
-                            value={verMinBuild}
-                            onChange={(e) => setVerMinBuild(e.target.value)}
+                            {...versionForm.register("minSupportedBuild", { valueAsNumber: true })}
                             className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-mono"
                           />
                           <p className="text-[10px] text-zinc-400 mt-1">Build codes below this will be forced</p>
@@ -997,7 +1107,7 @@ export default function SuperAdminPage() {
                         <div>
                           <div className="font-bold text-black dark:text-white flex items-center gap-1.5">
                             <span>Enforce Mandatory Update</span>
-                            {verForce && (
+                            {versionForm.watch("forceUpdate") && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-bold uppercase">
                                 Mandatory
                               </span>
@@ -1010,8 +1120,7 @@ export default function SuperAdminPage() {
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={verForce}
-                            onChange={(e) => setVerForce(e.target.checked)}
+                            {...versionForm.register("forceUpdate")}
                             className="sr-only peer"
                           />
                           <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black dark:peer-checked:bg-white dark:peer-checked:after:bg-black" />
@@ -1027,8 +1136,7 @@ export default function SuperAdminPage() {
                           type="text"
                           required
                           placeholder="e.g. New Features & Fixes Available! 🚀"
-                          value={verTitle}
-                          onChange={(e) => setVerTitle(e.target.value)}
+                          {...versionForm.register("title", { required: true })}
                           className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
@@ -1041,8 +1149,7 @@ export default function SuperAdminPage() {
                           rows={4}
                           required
                           placeholder={"• Added live carpool GPS tracking\n• Fixed student card verification\n• Improved dark mode contrast"}
-                          value={verNotes}
-                          onChange={(e) => setVerNotes(e.target.value)}
+                          {...versionForm.register("releaseNotes", { required: true })}
                           className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-mono text-xs leading-relaxed"
                         />
                       </div>
@@ -1057,8 +1164,7 @@ export default function SuperAdminPage() {
                             type="url"
                             required
                             placeholder="https://drive.usercontent.google.com/download?id=..."
-                            value={verUrl}
-                            onChange={(e) => setVerUrl(e.target.value)}
+                            {...versionForm.register("apkDownloadUrl", { required: true })}
                             className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-mono text-xs"
                           />
                         </div>
@@ -1071,8 +1177,7 @@ export default function SuperAdminPage() {
                             type="text"
                             required
                             placeholder="50.2 MB"
-                            value={verSize}
-                            onChange={(e) => setVerSize(e.target.value)}
+                            {...versionForm.register("fileSize", { required: true })}
                             className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                           />
                         </div>
@@ -1083,34 +1188,32 @@ export default function SuperAdminPage() {
                         <input
                           id="broadcast-push"
                           type="checkbox"
-                          checked={verBroadcast}
-                          onChange={(e) => setVerBroadcast(e.target.checked)}
-                          className="w-4 h-4 rounded text-black dark:text-white focus:ring-0 cursor-pointer"
+                          {...versionForm.register("broadcastPush")}
+                          className="w-4 h-4 rounded border-zinc-300 text-black focus:ring-black dark:bg-zinc-800 dark:border-zinc-700"
                         />
-                        <label htmlFor="broadcast-push" className="font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer select-none flex items-center gap-1.5">
-                          <Bell size={13} className="text-zinc-400" />
-                          <span>Broadcast FCM Push Notification to all active mobile devices</span>
+                        <label htmlFor="broadcast-push" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5 cursor-pointer">
+                          <Bell size={13} className="text-zinc-500" />
+                          <span>Broadcast Push Notification alert to all active mobile devices immediately</span>
                         </label>
                       </div>
 
-                      {/* Submit CTA */}
-                      <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end">
+                      {/* Submit Button */}
+                      <div className="pt-2">
                         <Button
                           type="submit"
-                          disabled={isPublishingVersion}
-                          className="h-10 px-5 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-bold rounded-xl flex items-center gap-2"
+                          disabled={publishVersionMutation.isPending}
+                          className="w-full h-11 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                         >
-                          {isPublishingVersion ? (
-                            <>
-                              <Loader2 size={14} className="animate-spin" />
-                              <span>Publishing Release & Broadcasting...</span>
-                            </>
+                          {publishVersionMutation.isPending ? (
+                            <Loader2 size={15} className="animate-spin" />
                           ) : (
-                            <>
-                              <Smartphone size={14} />
-                              <span>Publish Release & Trigger In-App Updates</span>
-                            </>
+                            <Smartphone size={15} />
                           )}
+                          <span>
+                            {publishVersionMutation.isPending
+                              ? "Broadcasting In-App Update..."
+                              : "Publish Mobile Release & In-App Update"}
+                          </span>
                         </Button>
                       </div>
                     </form>
@@ -1121,7 +1224,9 @@ export default function SuperAdminPage() {
           )}
         </main>
 
-        {/* MODAL 1: ADD UNIVERSITY */}
+        {/* ========================================================= */}
+        {/* MODAL 1: ADD UNIVERSITY (REACT-HOOK-FORM)                 */}
+        {/* ========================================================= */}
         {showAddUniModal && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95">
@@ -1131,28 +1236,28 @@ export default function SuperAdminPage() {
                     <Building2 size={16} />
                   </span>
                   <h3 className="text-sm font-extrabold text-black dark:text-white">
-                    Add New University
+                    Add University Institution
                   </h3>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowAddUniModal(false)}
-                  className="text-xs font-bold text-zinc-400 hover:text-black dark:hover:text-white"
+                  className="text-xs font-bold text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleAddUniversity} className="space-y-3.5 text-xs">
+              <form onSubmit={addUniForm.handleSubmit(onAddUniversitySubmit)} className="space-y-3.5 text-xs">
                 <div>
                   <label className="block font-bold text-black dark:text-white mb-1">
-                    Full University Name *
+                    University Full Name *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Ghulam Ishaq Khan Institute (GIKI)"
-                    value={newUniName}
-                    onChange={(e) => setNewUniName(e.target.value)}
+                    placeholder="e.g. University of Engineering and Technology Lahore"
+                    {...addUniForm.register("name", { required: true })}
                     className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                   />
                 </div>
@@ -1165,23 +1270,21 @@ export default function SuperAdminPage() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. GIKI"
-                      value={newUniShort}
-                      onChange={(e) => setNewUniShort(e.target.value)}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                      placeholder="e.g. UET Lahore"
+                      {...addUniForm.register("shortName", { required: true })}
+                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-mono"
                     />
                   </div>
 
                   <div>
                     <label className="block font-bold text-black dark:text-white mb-1">
-                      City *
+                      Primary City *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Topi"
-                      value={newUniCity}
-                      onChange={(e) => setNewUniCity(e.target.value)}
+                      placeholder="e.g. Lahore"
+                      {...addUniForm.register("city", { required: true })}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                     />
                   </div>
@@ -1190,12 +1293,11 @@ export default function SuperAdminPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-black dark:text-white mb-1">
-                      Province *
+                      Province / Region *
                     </label>
                     <select
-                      value={newUniProvince}
-                      onChange={(e) => setNewUniProvince(e.target.value)}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                      {...addUniForm.register("province", { required: true })}
+                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-medium"
                     >
                       <option value="Punjab">Punjab</option>
                       <option value="Sindh">Sindh</option>
@@ -1215,8 +1317,7 @@ export default function SuperAdminPage() {
                       type="text"
                       required
                       placeholder="e.g. Main Campus"
-                      value={newUniMainCampus}
-                      onChange={(e) => setNewUniMainCampus(e.target.value)}
+                      {...addUniForm.register("initialCampus", { required: true })}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                     />
                   </div>
@@ -1226,16 +1327,16 @@ export default function SuperAdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowAddUniModal(false)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <Button
                     type="submit"
-                    disabled={isSubmittingUni}
-                    className="h-9 px-4 bg-black dark:bg-white text-white dark:text-black font-bold text-xs rounded-xl flex items-center gap-1.5"
+                    disabled={createUniMutation.isPending}
+                    className="h-9 px-4 bg-black dark:bg-white text-white dark:text-black font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
                   >
-                    {isSubmittingUni ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                    {createUniMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                     <span>Create University</span>
                   </Button>
                 </div>
@@ -1244,7 +1345,122 @@ export default function SuperAdminPage() {
           </div>
         )}
 
-        {/* MODAL 2: ADD CAMPUS TO UNIVERSITY */}
+        {/* ========================================================= */}
+        {/* MODAL 2: EDIT UNIVERSITY (REACT-HOOK-FORM)                */}
+        {/* ========================================================= */}
+        {showEditUniModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95">
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black">
+                    <Pencil size={16} />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-black dark:text-white">
+                      Edit University
+                    </h3>
+                    <p className="text-[11px] text-zinc-500">
+                      Update institutional details
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditUniModal(false)}
+                  className="text-xs font-bold text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={editUniForm.handleSubmit(onEditUniversitySubmit)} className="space-y-3.5 text-xs">
+                <input type="hidden" {...editUniForm.register("id")} />
+
+                <div>
+                  <label className="block font-bold text-black dark:text-white mb-1">
+                    University Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. University of Engineering and Technology Lahore"
+                    {...editUniForm.register("name", { required: true })}
+                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-black dark:text-white mb-1">
+                      Short Name / Code *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. UET Lahore"
+                      {...editUniForm.register("shortName", { required: true })}
+                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-black dark:text-white mb-1">
+                      Primary City *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Lahore"
+                      {...editUniForm.register("city", { required: true })}
+                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-black dark:text-white mb-1">
+                    Province / Region *
+                  </label>
+                  <select
+                    {...editUniForm.register("province", { required: true })}
+                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-medium"
+                  >
+                    <option value="Punjab">Punjab</option>
+                    <option value="Sindh">Sindh</option>
+                    <option value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa</option>
+                    <option value="Balochistan">Balochistan</option>
+                    <option value="Islamabad Capital Territory">Islamabad (ICT)</option>
+                    <option value="Azad Jammu & Kashmir">AJK</option>
+                    <option value="Gilgit-Baltistan">Gilgit-Baltistan</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditUniModal(false)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <Button
+                    type="submit"
+                    disabled={updateUniMutation.isPending}
+                    className="h-9 px-4 bg-black dark:bg-white text-white dark:text-black font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {updateUniMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                    <span>Save Changes</span>
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* MODAL 3: ADD CAMPUS (REACT-HOOK-FORM)                     */}
+        {/* ========================================================= */}
         {showAddCampusModal && selectedUniForCampus && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95">
@@ -1263,14 +1479,15 @@ export default function SuperAdminPage() {
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowAddCampusModal(false)}
-                  className="text-xs font-bold text-zinc-400 hover:text-black dark:hover:text-white"
+                  className="text-xs font-bold text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleAddCampus} className="space-y-3.5 text-xs">
+              <form onSubmit={addCampusForm.handleSubmit(onAddCampusSubmit)} className="space-y-3.5 text-xs">
                 <div>
                   <label className="block font-bold text-black dark:text-white mb-1">
                     Campus Name *
@@ -1279,8 +1496,7 @@ export default function SuperAdminPage() {
                     type="text"
                     required
                     placeholder="e.g. Kala Shah Kaku (KSK) Campus"
-                    value={newCampusName}
-                    onChange={(e) => setNewCampusName(e.target.value)}
+                    {...addCampusForm.register("name", { required: true })}
                     className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                   />
                 </div>
@@ -1293,8 +1509,7 @@ export default function SuperAdminPage() {
                     type="text"
                     required
                     placeholder="e.g. Kala Shah Kaku"
-                    value={newCampusCity}
-                    onChange={(e) => setNewCampusCity(e.target.value)}
+                    {...addCampusForm.register("city", { required: true })}
                     className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                   />
                 </div>
@@ -1303,16 +1518,16 @@ export default function SuperAdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowAddCampusModal(false)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <Button
                     type="submit"
-                    disabled={isSubmittingCampus}
-                    className="h-9 px-4 bg-black dark:bg-white text-white dark:text-black font-bold text-xs rounded-xl flex items-center gap-1.5"
+                    disabled={createCampusMutation.isPending}
+                    className="h-9 px-4 bg-black dark:bg-white text-white dark:text-black font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
                   >
-                    {isSubmittingCampus ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                    {createCampusMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                     <span>Add Campus</span>
                   </Button>
                 </div>
@@ -1321,7 +1536,89 @@ export default function SuperAdminPage() {
           </div>
         )}
 
-        {/* MODAL 3: ASSIGN CAMPUS ADMIN */}
+        {/* ========================================================= */}
+        {/* MODAL 4: EDIT CAMPUS (REACT-HOOK-FORM)                    */}
+        {/* ========================================================= */}
+        {showEditCampusModal && editingCampus && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95">
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black">
+                    <Pencil size={16} />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-black dark:text-white">
+                      Edit Campus
+                    </h3>
+                    <p className="text-[11px] text-zinc-500">
+                      Under {editingCampus.uniShort}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditCampusModal(false)}
+                  className="text-xs font-bold text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={editCampusForm.handleSubmit(onEditCampusSubmit)} className="space-y-3.5 text-xs">
+                <input type="hidden" {...editCampusForm.register("campusId")} />
+
+                <div>
+                  <label className="block font-bold text-black dark:text-white mb-1">
+                    Campus Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kala Shah Kaku (KSK) Campus"
+                    {...editCampusForm.register("name", { required: true })}
+                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-black dark:text-white mb-1">
+                    Campus City *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kala Shah Kaku"
+                    {...editCampusForm.register("city", { required: true })}
+                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditCampusModal(false)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <Button
+                    type="submit"
+                    disabled={updateCampusMutation.isPending}
+                    className="h-9 px-4 bg-black dark:bg-white text-white dark:text-black font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {updateCampusMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                    <span>Save Changes</span>
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* MODAL 5: ASSIGN CAMPUS ADMIN (REACT-HOOK-FORM)            */}
+        {/* ========================================================= */}
         {showAssignAdminModal && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in-50 zoom-in-95">
@@ -1335,21 +1632,21 @@ export default function SuperAdminPage() {
                   </h3>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowAssignAdminModal(false)}
-                  className="text-xs font-bold text-zinc-400 hover:text-black dark:hover:text-white"
+                  className="text-xs font-bold text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleAssignAdmin} className="space-y-3.5 text-xs">
+              <form onSubmit={assignAdminForm.handleSubmit(onAssignAdminSubmit)} className="space-y-3.5 text-xs">
                 <div>
                   <label className="block font-bold text-black dark:text-white mb-1">
                     Select Target Campus *
                   </label>
                   <select
-                    value={targetCampusId}
-                    onChange={(e) => setTargetCampusId(e.target.value)}
+                    {...assignAdminForm.register("campusId", { required: true })}
                     className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white font-medium"
                   >
                     {universities.map((u) => (
@@ -1372,8 +1669,7 @@ export default function SuperAdminPage() {
                     type="email"
                     required
                     placeholder="e.g. moderator@uet.edu.pk or student@gmail.com"
-                    value={targetUserEmail}
-                    onChange={(e) => setTargetUserEmail(e.target.value)}
+                    {...assignAdminForm.register("userEmail", { required: true })}
                     className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                   />
                   {candidates.length > 0 && (
@@ -1385,10 +1681,10 @@ export default function SuperAdminPage() {
                             key={cand.id}
                             type="button"
                             onClick={() => {
-                              setTargetUserEmail(cand.email);
-                              setTargetUserName(cand.full_name);
+                              assignAdminForm.setValue("userEmail", cand.email);
+                              assignAdminForm.setValue("userName", cand.full_name);
                             }}
-                            className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
+                            className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors cursor-pointer"
                           >
                             {cand.full_name || cand.email.split("@")[0]}
                           </button>
@@ -1405,8 +1701,7 @@ export default function SuperAdminPage() {
                   <input
                     type="text"
                     placeholder="e.g. Campus Moderator"
-                    value={targetUserName}
-                    onChange={(e) => setTargetUserName(e.target.value)}
+                    {...assignAdminForm.register("userName")}
                     className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                   />
                 </div>
@@ -1415,16 +1710,16 @@ export default function SuperAdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowAssignAdminModal(false)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <Button
                     type="submit"
-                    disabled={isSubmittingAdmin}
-                    className="h-9 px-4 bg-black dark:bg-white text-white dark:text-black font-bold text-xs rounded-xl flex items-center gap-1.5"
+                    disabled={assignAdminMutation.isPending}
+                    className="h-9 px-4 bg-black dark:bg-white text-white dark:text-black font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
                   >
-                    {isSubmittingAdmin ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />}
+                    {assignAdminMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />}
                     <span>Assign Admin Rights</span>
                   </Button>
                 </div>

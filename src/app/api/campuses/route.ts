@@ -78,24 +78,87 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { campusId, isActive } = body;
+    const { campusId, name, city, isActive } = body;
 
-    if (!campusId || typeof isActive !== "boolean") {
+    if (!campusId) {
       return NextResponse.json(
-        { success: false, message: "campusId and boolean isActive required" },
+        { success: false, message: "campusId is required" },
         { status: 400 }
       );
     }
 
-    const ok = TenantsStore.toggleCampusActive(campusId, isActive);
+    let updatedCampus = null;
+
+    if (typeof isActive === "boolean") {
+      TenantsStore.toggleCampusActive(campusId, isActive);
+    }
+
+    if (name || city) {
+      updatedCampus = TenantsStore.updateCampus(campusId, { name, city });
+      if (!updatedCampus) {
+        return NextResponse.json(
+          { success: false, message: "Campus not found" },
+          { status: 404 }
+        );
+      }
+    }
 
     return NextResponse.json({
-      success: ok,
-      message: ok ? `Campus status updated` : "Campus not found",
+      success: true,
+      message: updatedCampus ? `Campus ${updatedCampus.name} updated` : "Campus status updated",
+      campus: updatedCampus,
     });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message || "Failed to update campus" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const token = getJwtFromRequest(request);
+    const session = token ? await verifyJwtToken(token) : null;
+
+    if (!session || session.role !== "super_admin") {
+      return NextResponse.json(
+        { success: false, message: "Super Admin privileges required" },
+        { status: 403 }
+      );
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+    let campusId = searchParams.get("campusId") || searchParams.get("id");
+
+    if (!campusId) {
+      const body = await request.json().catch(() => ({}));
+      campusId = body.campusId || body.id;
+    }
+
+    if (!campusId) {
+      return NextResponse.json(
+        { success: false, message: "campusId is required" },
+        { status: 400 }
+      );
+    }
+
+    const ok = TenantsStore.deleteCampus(campusId);
+
+    if (!ok) {
+      return NextResponse.json(
+        { success: false, message: "Campus not found or could not be removed" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Campus removed successfully!",
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error.message || "Failed to delete campus" },
       { status: 500 }
     );
   }

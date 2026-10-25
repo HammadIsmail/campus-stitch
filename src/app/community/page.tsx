@@ -38,6 +38,8 @@ import {
   Menu,
   MoreHorizontal,
   Repeat,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { BottomNav } from "@/components/bottom-nav";
@@ -191,11 +193,7 @@ export default function RedditCommunitiesPage() {
 
   const [isPendingVote, startVoteTransition] = React.useTransition();
 
-  const [joinedCommunities, setJoinedCommunities] = React.useState<Record<string, boolean>>({
-    "r/cs-uet": true,
-    "r/commute-splits": true,
-    "r/exam-pastpapers": true,
-  });
+  const [joinedCommunities, setJoinedCommunities] = React.useState<Record<string, boolean>>({});
   const [savedPosts, setSavedPosts] = React.useState<Record<string, boolean>>({});
 
   const [isLoading, setIsLoading] = React.useState(true);
@@ -220,13 +218,22 @@ export default function RedditCommunitiesPage() {
 
   // Create Post Form State
   const [postTab, setPostTab] = React.useState<"text" | "image" | "link">("text");
-  const [postFormCommunity, setPostFormCommunity] = React.useState("r/cs-uet");
+  const [postFormCommunity, setPostFormCommunity] = React.useState("");
   const [postFormTitle, setPostFormTitle] = React.useState("");
   const [postFormContent, setPostFormContent] = React.useState("");
   const [postFormFlair, setPostFormFlair] = React.useState("Discussion");
   const [postFormImageUrl, setPostFormImageUrl] = React.useState("");
   const [postFormLinkUrl, setPostFormLinkUrl] = React.useState("");
   const [isSubmittingPost, setIsSubmittingPost] = React.useState(false);
+
+  // Truthful data: only count subscriptions for communities that actually exist in the database
+  const subscribedCount = React.useMemo(() => {
+    if (!communities || communities.length === 0) return 0;
+    const existingCommunityNames = new Set(communities.map((c) => c.name));
+    return Object.entries(joinedCommunities).filter(
+      ([name, isJoined]) => isJoined && existingCommunityNames.has(name)
+    ).length;
+  }, [joinedCommunities, communities]);
 
   // Create Community Form State
   const [commFormName, setCommFormName] = React.useState("");
@@ -533,6 +540,65 @@ export default function RedditCommunitiesPage() {
     }
   };
 
+  // Edit & Delete Post state and handlers
+  const [editingPost, setEditingPost] = React.useState<Post | null>(null);
+  const [editTitle, setEditTitle] = React.useState("");
+  const [editContent, setEditContent] = React.useState("");
+  const [editFlair, setEditFlair] = React.useState("Discussion");
+  const [isUpdatingPost, setIsUpdatingPost] = React.useState(false);
+
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    try {
+      await fetch(`/api/community/posts?id=${postId}`, { method: "DELETE" });
+    } catch (err) {
+      console.warn("Delete post error:", err);
+    }
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  };
+
+  const openEditPostModal = (post: Post) => {
+    setEditingPost(post);
+    setEditTitle(post.title);
+    setEditContent(post.content);
+    setEditFlair(post.flair || "Discussion");
+  };
+
+  const handleSaveEditPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPost || !editTitle.trim()) return;
+    setIsUpdatingPost(true);
+    try {
+      await fetch("/api/community/posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingPost.id,
+          title: editTitle.trim(),
+          content: editContent.trim(),
+          flair: editFlair,
+        }),
+      });
+    } catch (err) {
+      console.warn("Update post error:", err);
+    }
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === editingPost.id
+          ? {
+              ...p,
+              title: editTitle.trim(),
+              content: editContent.trim(),
+              flair: editFlair,
+            }
+          : p
+      )
+    );
+    setIsUpdatingPost(false);
+    setEditingPost(null);
+  };
+
   // Submit Create Post
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -734,7 +800,7 @@ export default function RedditCommunitiesPage() {
                       : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                   )}
                 >
-                  {Object.values(joinedCommunities).filter(Boolean).length}
+                  {subscribedCount}
                 </span>
               </button>
             </div>
@@ -1225,6 +1291,38 @@ export default function RedditCommunitiesPage() {
 
                           {activeMenuPostId === post.id && (
                             <div className="absolute right-0 top-8 z-30 w-44 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl py-1 text-xs text-zinc-700 dark:text-zinc-200 animate-in fade-in zoom-in-95">
+                              {Boolean(
+                                (user?.userId && post.author_id === user.userId) ||
+                                (user?.name && post.author_name?.toLowerCase().trim() === user.name.toLowerCase().trim())
+                              ) && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEditPostModal(post);
+                                      setActiveMenuPostId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 text-black dark:text-white font-medium cursor-pointer"
+                                  >
+                                    <Pencil size={13} />
+                                    <span>Edit Post</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeletePost(post.id);
+                                      setActiveMenuPostId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center gap-2 font-medium cursor-pointer"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Delete Post</span>
+                                  </button>
+                                  <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+                                </>
+                              )}
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -1349,7 +1447,7 @@ export default function RedditCommunitiesPage() {
                           <Repeat size={14} className="stroke-[2.2px]" />
                         </button>
 
-                        {/* 4. Share Pill: [ ↗️ 39 ] */}
+                        {/* 4. Share Pill */}
                         <button
                           type="button"
                           onClick={(e) => handleSharePost(post.id, e)}
@@ -1357,7 +1455,7 @@ export default function RedditCommunitiesPage() {
                           className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
                         >
                           <Share2 size={13} className="stroke-[2.2px]" />
-                          <span>{((post.upvotes || 7) % 35) + 14}</span>
+                          <span>Share</span>
                         </button>
                       </div>
                     </article>
@@ -1786,6 +1884,92 @@ export default function RedditCommunitiesPage() {
                     ) : (
                       "Post to Reddit"
                     )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* MODAL: EDIT POST MODAL                                   */}
+        {/* ======================================================== */}
+        {editingPost && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <div className="bg-white dark:bg-[#121215] rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="font-extrabold text-base text-black dark:text-white flex items-center gap-2">
+                  <Pencil size={18} />
+                  <span>Edit Post</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingPost(null)}
+                  className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-black dark:hover:text-white cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditPost} className="space-y-3.5">
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Flair / Category
+                  </label>
+                  <select
+                    value={editFlair}
+                    onChange={(e) => setEditFlair(e.target.value)}
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-semibold text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  >
+                    {Object.keys(FLAIR_COLORS).map((f) => (
+                      <option key={f} value={f} className="dark:bg-[#121215]">
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Title"
+                    required
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Content
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    placeholder="Text (optional)"
+                    className="w-full p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingPost(null)}
+                    className="flex-1 h-10 rounded-xl border border-zinc-300 dark:border-zinc-700 font-bold text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <Button
+                    type="submit"
+                    disabled={isUpdatingPost || !editTitle.trim()}
+                    className="flex-1 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 cursor-pointer"
+                  >
+                    {isUpdatingPost ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               </form>

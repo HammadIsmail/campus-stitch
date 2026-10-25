@@ -15,8 +15,10 @@
   "dependencies": {
     "@ai-sdk/google": "^4.0.87",
     "@google/genai": "^2.27.0",
+    "@hookform/resolvers": "^6.0.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "@tanstack/react-query": "^5.104.5",
     "ai": "^7.0.127",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.11.0",
@@ -24,13 +26,18 @@
     "firebase": "^13.1.0",
     "firebase-admin": "^14.5.0",
     "lucide-react": "^1.51.0",
-    "next": "16.3.8",
+    "next": "^16.4.3",
     "next-auth": "^5.0.0-beta.32",
-    "nodemailer": "^8.0.11",
+    "nodemailer": "^10.2.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-hook-form": "^7.91.0",
     "tailwind-merge": "^3.7.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6",
+    "nodemailer": "^10.2.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.2",
@@ -43,5 +50,10 @@
     "pg": "^8.23.1",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "@firebase/util@1.15.3": true,
+    "@google/genai@2.27.0": true,
+    "protobufjs@7.6.6": true
   }
 }

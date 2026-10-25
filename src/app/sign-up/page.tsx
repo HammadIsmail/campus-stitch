@@ -3,10 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Mail,
   User,
-  GraduationCap,
   Building2,
   MapPin,
   ArrowRight,
@@ -26,6 +28,13 @@ import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { SUPPORTED_UNIVERSITIES, UniversityItem } from "@/lib/universities";
+import {
+  useUniversitiesQuery,
+  useDepartmentsQuery,
+  useCheckEmailMutation,
+  useSendOtpMutation,
+  useSignUpMutation,
+} from "@/hooks/use-auth-queries";
 
 // Curated list of departments fed by the system
 export const DEPARTMENTS = [
@@ -49,71 +58,132 @@ export const DEPARTMENTS = [
   "Social Sciences & Humanities",
 ];
 
+const signUpSchema = z
+  .object({
+    fullName: z
+      .string()
+      .min(2, "Full name must be at least 2 characters.")
+      .transform((val) => val.trim()),
+    universityId: z.string().min(1, "Please select a university."),
+    universityName: z.string().min(1, "University name is required."),
+    campusId: z.string().min(1, "Please select a campus."),
+    campusName: z.string().min(1, "Campus name is required."),
+    department: z.string().min(1, "Please select your department."),
+    email: z
+      .string()
+      .min(1, "Email is required.")
+      .email("Please enter a valid email address.")
+      .transform((val) => val.trim().toLowerCase()),
+    password: z.string().min(6, "Password must be at least 6 characters long."),
+    confirmPassword: z.string().min(1, "Please confirm your password."),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
+
+type SignUpFormData = z.infer<typeof signUpSchema>;
+
+const otpSchema = z.object({
+  otpCode: z
+    .string()
+    .length(6, "Verification code must be exactly 6 digits.")
+    .regex(/^\d{6}$/, "Code must contain only digits."),
+});
+
+type OtpFormData = z.infer<typeof otpSchema>;
+
 export default function SignUpPage() {
   const router = useRouter();
-  const { signup } = useAuth();
+  const { refreshAuth } = useAuth();
 
   // Step 1: Student Information Form | Step 2: 6-Digit Email OTP Verification
   const [step, setStep] = React.useState<1 | 2>(1);
 
-  // Form Fields
-  const [fullName, setFullName] = React.useState("");
-  const [universitiesList, setUniversitiesList] = React.useState<any[]>(SUPPORTED_UNIVERSITIES);
-  const [selectedUni, setSelectedUni] = React.useState<any>(SUPPORTED_UNIVERSITIES[0]);
+  // TanStack Query Router Hooks (Replaces direct fetch)
+  const { data: universitiesList = SUPPORTED_UNIVERSITIES } = useUniversitiesQuery();
+  const { data: departmentsList = DEPARTMENTS } = useDepartmentsQuery();
+  const checkEmailMutation = useCheckEmailMutation();
+  const sendOtpMutation = useSendOtpMutation();
+  const signUpMutation = useSignUpMutation();
+
+  // React Hook Form for Step 1
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    control,
+    formState: { errors },
+  } = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      fullName: "",
+      universityId: SUPPORTED_UNIVERSITIES[0].id,
+      universityName: SUPPORTED_UNIVERSITIES[0].name,
+      campusId: "camp_uet_main",
+      campusName: SUPPORTED_UNIVERSITIES[0].campuses[0] || "Main Campus (Lahore)",
+      department: DEPARTMENTS[0],
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  // React Hook Form for Step 2 (OTP)
+  const {
+    register: registerOtp,
+    handleSubmit: handleSubmitOtp,
+    setValue: setOtpValue,
+    watch: watchOtp,
+    formState: { errors: otpErrors },
+  } = useForm<OtpFormData>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: {
+      otpCode: "",
+    },
+  });
+
+  const selectedUniId = watch("universityId");
+  const selectedCampusId = watch("campusId");
+  const currentEmail = watch("email");
+  const otpCode = watchOtp("otpCode");
+
+  // Local UI helpers
+  const [showPassword, setShowPassword] = React.useState(false);
   const [uniSearchQuery, setUniSearchQuery] = React.useState("");
   const [isUniDropdownOpen, setIsUniDropdownOpen] = React.useState(false);
-  const [selectedCampusId, setSelectedCampusId] = React.useState<string>("camp_uet_main");
-  const [selectedCampusCity, setSelectedCampusCity] = React.useState<string>(
-    SUPPORTED_UNIVERSITIES[0].campuses[0] || "Main Campus (Lahore)"
-  );
-  const [department, setDepartment] = React.useState<string>(DEPARTMENTS[0]);
-  const [departmentsList, setDepartmentsList] = React.useState<string[]>(DEPARTMENTS);
-  const [email, setEmail] = React.useState("");
-
-  React.useEffect(() => {
-    // Load dynamic universities from database / tenant store
-    fetch("/api/universities")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.universities) && data.universities.length > 0) {
-          setUniversitiesList(data.universities);
-          setSelectedUni(data.universities[0]);
-          const camps = data.universities[0].campuses || [];
-          if (camps.length > 0) {
-            const firstCamp = camps[0];
-            setSelectedCampusId(typeof firstCamp === "string" ? firstCamp : firstCamp.id);
-            setSelectedCampusCity(typeof firstCamp === "string" ? firstCamp : firstCamp.name);
-          }
-        }
-      })
-      .catch(() => {});
-
-    fetch("/api/departments")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.departments) && data.departments.length > 0) {
-          setDepartmentsList(data.departments);
-        }
-      })
-      .catch(() => {});
-  }, []);
-  const [password, setPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
-  const [showPassword, setShowPassword] = React.useState(false);
-
-  // OTP State
-  const [otpCode, setOtpCode] = React.useState("");
   const [resendCooldown, setResendCooldown] = React.useState(60);
-  const [isResending, setIsResending] = React.useState(false);
   const [resendFeedback, setResendFeedback] = React.useState<string | null>(null);
-
-  // Loading & Error States
-  const [isProcessing, setIsProcessing] = React.useState(false);
-  const [isFinalizing, setIsFinalizing] = React.useState(false);
-  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
-  const isEmailExisting = Boolean(errorMsg?.toLowerCase().includes("already exists"));
+  const [globalErrorMsg, setGlobalErrorMsg] = React.useState<string | null>(null);
 
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Current selected university object
+  const selectedUni = React.useMemo(() => {
+    return (
+      universitiesList.find((u: any) => u.id === selectedUniId) ||
+      universitiesList[0] ||
+      SUPPORTED_UNIVERSITIES[0]
+    );
+  }, [universitiesList, selectedUniId]);
+
+  // Sync initial campus if university changes
+  const handleSelectUniversity = (uni: any) => {
+    setValue("universityId", uni.id);
+    setValue("universityName", uni.name);
+    const camps = uni.campuses || [];
+    if (camps.length > 0) {
+      const first = camps[0];
+      setValue("campusId", typeof first === "string" ? first : first.id);
+      setValue("campusName", typeof first === "string" ? first : first.name);
+    } else {
+      setValue("campusId", `${uni.id}_main`);
+      setValue("campusName", uni.city || "Main Campus");
+    }
+    setIsUniDropdownOpen(false);
+    setUniSearchQuery("");
+  };
 
   // Close university dropdown on outside click
   React.useEffect(() => {
@@ -125,22 +195,6 @@ export default function SignUpPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  // Update selected city if university changes
-  const handleSelectUniversity = (uni: any) => {
-    setSelectedUni(uni);
-    const camps = uni.campuses || [];
-    if (camps.length > 0) {
-      const first = camps[0];
-      setSelectedCampusId(typeof first === "string" ? first : first.id);
-      setSelectedCampusCity(typeof first === "string" ? first : first.name);
-    } else {
-      setSelectedCampusId(uni.id + "_main");
-      setSelectedCampusCity(uni.city || "Main Campus");
-    }
-    setIsUniDropdownOpen(false);
-    setUniSearchQuery("");
-  };
 
   // Filtered universities
   const filteredUniversities = React.useMemo(() => {
@@ -168,149 +222,121 @@ export default function SignUpPage() {
     return () => clearTimeout(timer);
   }, [step, resendCooldown]);
 
-  // Step 1 Submit: Validate and send OTP to email
-  const handleProceedToOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
+  // Step 1: Submit with react-hook-form + TanStack Query Mutations
+  const onProceedToOtp = async (data: SignUpFormData) => {
+    setGlobalErrorMsg(null);
 
-    const cleanName = fullName.trim();
-    const cleanEmail = email.trim().toLowerCase();
+    // 1. Check if email already registered via query mutation
+    checkEmailMutation.mutate(
+      { email: data.email },
+      {
+        onSuccess: (checkData) => {
+          if (checkData.exists) {
+            setGlobalErrorMsg("An account with this email already exists. Please sign in.");
+            return;
+          }
 
-    if (!cleanName) {
-      setErrorMsg("Please enter your full name.");
-      return;
-    }
-
-    if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
-      setErrorMsg("Please enter a valid email address.");
-      return;
-    }
-
-    if (!password || password.length < 6) {
-      setErrorMsg("Password must be at least 6 characters long.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setErrorMsg("Passwords do not match.");
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      // 1. Check if email already registered
-      const checkRes = await fetch("/api/auth/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail }),
-      });
-      const checkData = await checkRes.json();
-      if (checkData.exists) {
-        setErrorMsg("An account with this email already exists. Please sign in.");
-        setIsProcessing(false);
-        return;
+          // 2. Send 6-digit OTP code to email via query mutation
+          sendOtpMutation.mutate(
+            { email: data.email },
+            {
+              onSuccess: (otpData) => {
+                if (otpData.success) {
+                  setStep(2);
+                  setResendCooldown(60);
+                  setResendFeedback("A 6-digit verification code was sent to your email.");
+                } else {
+                  setGlobalErrorMsg(otpData.message || "Failed to send verification code.");
+                }
+              },
+              onError: (err: any) => {
+                setGlobalErrorMsg(err.message || "Failed to send verification code.");
+              },
+            }
+          );
+        },
+        onError: (err: any) => {
+          setGlobalErrorMsg(err.message || "Failed to verify email address.");
+        },
       }
-
-      // 2. Send 6-digit OTP code to the email
-      const otpRes = await fetch("/api/auth/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail }),
-      });
-      const otpData = await otpRes.json();
-
-      if (!otpRes.ok || !otpData.success) {
-        setErrorMsg(otpData.message || "Failed to send verification code. Please check your email.");
-        setIsProcessing(false);
-        return;
-      }
-
-      // Proceed to Step 2
-      setStep(2);
-      setResendCooldown(60);
-      setResendFeedback("A 6-digit verification code was sent to your email.");
-    } catch (err: any) {
-      setErrorMsg(err.message || "An unexpected error occurred. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
+    );
   };
 
-  // Resend OTP
-  const handleResendOtp = async () => {
-    const cleanEmail = email.trim().toLowerCase();
-    if (resendCooldown > 0 || isResending || !cleanEmail) return;
+  // Resend OTP via TanStack Query Mutation
+  const handleResendOtp = () => {
+    const cleanEmail = currentEmail.trim().toLowerCase();
+    if (resendCooldown > 0 || sendOtpMutation.isPending || !cleanEmail) return;
 
-    setIsResending(true);
-    setErrorMsg(null);
+    setGlobalErrorMsg(null);
     setResendFeedback(null);
 
-    try {
-      const res = await fetch("/api/auth/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setErrorMsg(data.message || "Failed to resend code.");
-      } else {
-        setResendCooldown(60);
-        setResendFeedback("New 6-digit code sent to your email.");
+    sendOtpMutation.mutate(
+      { email: cleanEmail },
+      {
+        onSuccess: (data) => {
+          if (data.success) {
+            setResendCooldown(60);
+            setResendFeedback("New 6-digit code sent to your email.");
+          } else {
+            setGlobalErrorMsg(data.message || "Failed to resend code.");
+          }
+        },
+        onError: () => {
+          setGlobalErrorMsg("Failed to resend code. Please try again.");
+        },
       }
-    } catch {
-      setErrorMsg("Failed to resend code. Please try again.");
-    } finally {
-      setIsResending(false);
-    }
+    );
   };
 
-  // Step 2 Submit: Finalize registration with OTP
-  const handleCompleteSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otpCode || otpCode.trim().length !== 6) {
-      setErrorMsg("Please enter the 6-digit verification code.");
-      return;
-    }
+  // Step 2: Finalize signup with OTP code via SignUp Mutation
+  const onCompleteSignUp = (otpData: OtpFormData) => {
+    setGlobalErrorMsg(null);
 
-    setIsFinalizing(true);
-    setErrorMsg(null);
+    const formValues = watch();
 
-    try {
-      const success = await signup({
-        name: fullName.trim(),
-        studentId: "", // Roll no not required from user during signup
-        email: email.trim().toLowerCase(),
-        password,
-        code: otpCode.trim(),
+    signUpMutation.mutate(
+      {
+        name: formValues.fullName,
+        studentId: "",
+        email: formValues.email,
+        password: formValues.password,
+        code: otpData.otpCode,
         university: selectedUni.name || selectedUni.shortName,
         universityId: selectedUni.id,
-        campusId: selectedCampusId,
-        campusName: selectedCampusCity,
-        city: selectedCampusCity,
-        department: department.trim(),
-        program: `BS ${department.trim()}`,
-      });
-
-      if (success) {
-        // Set flag to prompt the one-time unverified dialog on home page
-        if (typeof window !== "undefined") {
-          localStorage.setItem("campus_stitch_show_verify_prompt", "true");
-        }
-        router.push("/");
+        campusId: formValues.campusId,
+        campusName: formValues.campusName,
+        city: formValues.campusName,
+        department: formValues.department,
+        program: `BS ${formValues.department}`,
+      },
+      {
+        onSuccess: async (res) => {
+          if (res.success && res.user) {
+            if (typeof window !== "undefined") {
+              localStorage.setItem("campus_stitch_current_user", JSON.stringify(res.user));
+              localStorage.setItem("campus_stitch_show_verify_prompt", "true");
+            }
+            await refreshAuth();
+            router.push("/");
+          } else {
+            setGlobalErrorMsg(res.message || "Failed to create account. Please check your verification code.");
+          }
+        },
+        onError: (err: any) => {
+          setGlobalErrorMsg(err.message || "Failed to create account. Please check your verification code.");
+        },
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to create account. Please check your verification code.");
-    } finally {
-      setIsFinalizing(false);
-    }
+    );
   };
+
+  const isStep1Pending = checkEmailMutation.isPending || sendOtpMutation.isPending;
+  const isFinalizing = signUpMutation.isPending;
+  const isEmailExisting = Boolean(globalErrorMsg?.toLowerCase().includes("already exists"));
 
   return (
     <MobileShell hideNav>
       <div className="min-h-screen px-4 py-8 max-w-md mx-auto flex flex-col justify-center">
-        {/* Header / Brand (Unified Black & White Theme) */}
+        {/* Header / Brand */}
         <div className="text-center mb-6">
           <img
             src="/logo.png"
@@ -323,11 +349,11 @@ export default function SignUpPage() {
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             {step === 1
               ? "Join Campus Stitch. Select your university & city to get started."
-              : `Enter the 6-digit code sent to ${email}`}
+              : `Enter the 6-digit code sent to ${currentEmail}`}
           </p>
         </div>
 
-        {/* Step Progress Bar (Monochrome) */}
+        {/* Step Progress Bar */}
         <div className="flex items-center gap-2 mb-6">
           <div
             className={`h-1.5 flex-1 rounded-full transition-all ${
@@ -341,8 +367,8 @@ export default function SignUpPage() {
           />
         </div>
 
-        {/* Error Alert */}
-        {errorMsg && (
+        {/* Global Error Alert */}
+        {globalErrorMsg && (
           <div
             className={`mb-5 p-3.5 rounded-xl border flex items-start gap-2.5 text-xs animate-in fade-in ${
               isEmailExisting
@@ -358,7 +384,7 @@ export default function SignUpPage() {
               }`}
             />
             <div className="flex-1 space-y-2">
-              <div className="font-semibold leading-relaxed">{errorMsg}</div>
+              <div className="font-semibold leading-relaxed">{globalErrorMsg}</div>
               {isEmailExisting && (
                 <div className="pt-0.5">
                   <Link
@@ -377,14 +403,14 @@ export default function SignUpPage() {
         {/* Resend Feedback */}
         {resendFeedback && (
           <div className="mb-5 p-3 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-black dark:text-white flex items-center gap-2 text-xs">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
             <span className="font-semibold">{resendFeedback}</span>
           </div>
         )}
 
-        {/* STEP 1: Registration Form */}
+        {/* STEP 1: Registration Form with react-hook-form */}
         {step === 1 && (
-          <form onSubmit={handleProceedToOtp} className="space-y-4">
+          <form onSubmit={handleSubmit(onProceedToOtp)} className="space-y-4" noValidate>
             {/* Full Name */}
             <div>
               <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
@@ -394,13 +420,17 @@ export default function SignUpPage() {
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   type="text"
-                  required
                   placeholder="e.g. Ali Ahmed"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                  disabled={isStep1Pending}
+                  {...register("fullName")}
+                  className={`w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border ${
+                    errors.fullName ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                  } rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500`}
                 />
               </div>
+              {errors.fullName && (
+                <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.fullName.message}</p>
+              )}
             </div>
 
             {/* University Searchable Dropdown */}
@@ -410,8 +440,9 @@ export default function SignUpPage() {
               </label>
               <button
                 type="button"
+                disabled={isStep1Pending}
                 onClick={() => setIsUniDropdownOpen((prev) => !prev)}
-                className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-left text-sm flex items-center justify-between focus:outline-none focus:border-black dark:focus:border-white transition-all"
+                className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-left text-sm flex items-center justify-between focus:outline-none focus:border-black dark:focus:border-white transition-all cursor-pointer"
               >
                 <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <span className="truncate font-semibold text-black dark:text-white">
@@ -445,14 +476,14 @@ export default function SignUpPage() {
                         No matching universities found
                       </div>
                     ) : (
-                      filteredUniversities.map((uni) => {
+                      filteredUniversities.map((uni: any) => {
                         const isSelected = selectedUni.id === uni.id;
                         return (
                           <button
                             key={uni.id}
                             type="button"
                             onClick={() => handleSelectUniversity(uni)}
-                            className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
+                            className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer ${
                               isSelected
                                 ? "bg-black dark:bg-white text-white dark:text-black font-bold"
                                 : "text-zinc-800 dark:text-zinc-200"
@@ -460,7 +491,11 @@ export default function SignUpPage() {
                           >
                             <div className="pr-2 truncate">
                               <div className="font-bold truncate">{uni.shortName}</div>
-                              <div className={`text-[11px] truncate ${isSelected ? "opacity-80" : "text-zinc-500 dark:text-zinc-400"}`}>
+                              <div
+                                className={`text-[11px] truncate ${
+                                  isSelected ? "opacity-80" : "text-zinc-500 dark:text-zinc-400"
+                                }`}
+                              >
                                 {uni.name}
                               </div>
                             </div>
@@ -483,14 +518,15 @@ export default function SignUpPage() {
                 <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <select
                   value={selectedCampusId}
+                  disabled={isStep1Pending}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setSelectedCampusId(val);
+                    setValue("campusId", val);
                     const campObj = (selectedUni.campuses || []).find((c: any) =>
                       typeof c === "string" ? c === val : c.id === val
                     );
                     if (campObj) {
-                      setSelectedCampusCity(typeof campObj === "string" ? campObj : campObj.name);
+                      setValue("campusName", typeof campObj === "string" ? campObj : campObj.name);
                     }
                   }}
                   className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white appearance-none transition-all cursor-pointer font-semibold"
@@ -509,7 +545,7 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            {/* Department / Program Dropdown (Fed by us) */}
+            {/* Department / Program Dropdown */}
             <div>
               <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
                 Department / Program <span className="text-zinc-400">*</span>
@@ -517,11 +553,11 @@ export default function SignUpPage() {
               <div className="relative">
                 <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <select
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
+                  disabled={isStep1Pending}
+                  {...register("department")}
                   className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white appearance-none transition-all cursor-pointer font-semibold"
                 >
-                  {departmentsList.map((dept) => (
+                  {departmentsList.map((dept: string) => (
                     <option key={dept} value={dept} className="bg-white dark:bg-zinc-900 text-black dark:text-white">
                       {dept}
                     </option>
@@ -531,7 +567,7 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            {/* Email Address (Any standard email: Gmail, Outlook, Yahoo, etc.) */}
+            {/* Email Address */}
             <div>
               <label className="block text-xs font-bold text-black dark:text-white mb-1.5">
                 Email Address <span className="text-zinc-400">*</span>
@@ -540,20 +576,19 @@ export default function SignUpPage() {
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   type="email"
-                  required
                   placeholder="e.g. yourname@gmail.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (errorMsg) setErrorMsg(null);
-                  }}
+                  disabled={isStep1Pending}
+                  {...register("email")}
                   className={`w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border rounded-xl text-sm text-black dark:text-white focus:outline-none transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500 ${
-                    isEmailExisting
-                      ? "border-amber-500 focus:border-amber-600 dark:border-amber-500 ring-2 ring-amber-500/20"
+                    errors.email || isEmailExisting
+                      ? "border-red-500 focus:border-red-500 ring-2 ring-red-500/20"
                       : "border-zinc-300 dark:border-zinc-700 focus:border-black dark:focus:border-white"
                   }`}
                 />
               </div>
+              {errors.email && (
+                <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.email.message}</p>
+              )}
               {isEmailExisting ? (
                 <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1.5">
                   <span>This email is already registered.</span>
@@ -563,7 +598,7 @@ export default function SignUpPage() {
                 </p>
               ) : (
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                  You can use any valid email (Gmail, Outlook, Yahoo, etc.). A 6-digit code will be sent to verify.
+                  You can use any valid email. A 6-digit code will be sent to verify.
                 </p>
               )}
             </div>
@@ -577,20 +612,24 @@ export default function SignUpPage() {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   type={showPassword ? "text" : "password"}
-                  required
                   placeholder="At least 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"
+                  disabled={isStep1Pending}
+                  {...register("password")}
+                  className={`w-full pl-10 pr-10 py-2.5 bg-white dark:bg-zinc-900 border ${
+                    errors.password ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                  } rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black dark:hover:text-white p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black dark:hover:text-white p-1 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.password.message}</p>
+              )}
             </div>
 
             {/* Confirm Password */}
@@ -602,22 +641,26 @@ export default function SignUpPage() {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   type={showPassword ? "text" : "password"}
-                  required
                   placeholder="Repeat your password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"
+                  disabled={isStep1Pending}
+                  {...register("confirmPassword")}
+                  className={`w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-zinc-900 border ${
+                    errors.confirmPassword ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                  } rounded-xl text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all`}
                 />
               </div>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.confirmPassword.message}</p>
+              )}
             </div>
 
-            {/* Submit Button (Unified Black & White theme) */}
+            {/* Submit Button */}
             <Button
               type="submit"
-              disabled={isProcessing}
+              disabled={isStep1Pending}
               className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold text-xs shadow-xs mt-2 flex items-center justify-center gap-2 cursor-pointer transition-colors"
             >
-              {isProcessing ? (
+              {isStep1Pending ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Sending Verification Code...
@@ -633,11 +676,11 @@ export default function SignUpPage() {
 
         {/* STEP 2: Email OTP Verification */}
         {step === 2 && (
-          <form onSubmit={handleCompleteSignUp} className="space-y-5 animate-in fade-in">
+          <form onSubmit={handleSubmitOtp(onCompleteSignUp)} className="space-y-5 animate-in fade-in" noValidate>
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-center">
               <Mail className="w-6 h-6 text-black dark:text-white mx-auto mb-2" />
               <div className="text-xs text-zinc-500 dark:text-zinc-400">We sent a verification code to:</div>
-              <div className="text-sm font-bold text-black dark:text-white mt-0.5 break-all">{email}</div>
+              <div className="text-sm font-bold text-black dark:text-white mt-0.5 break-all">{currentEmail}</div>
             </div>
 
             <div>
@@ -646,14 +689,24 @@ export default function SignUpPage() {
               </label>
               <input
                 type="text"
-                required
                 maxLength={6}
                 autoFocus
                 placeholder="123456"
+                disabled={isFinalizing}
                 value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                className="w-full text-center tracking-[0.5em] font-mono text-2xl font-bold py-3 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all"
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, "").slice(0, 6);
+                  setOtpValue("otpCode", cleaned, { shouldValidate: true });
+                }}
+                className={`w-full text-center tracking-[0.5em] font-mono text-2xl font-bold py-3 bg-white dark:bg-zinc-900 border ${
+                  otpErrors.otpCode ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                } rounded-xl text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-all`}
               />
+              {otpErrors.otpCode && (
+                <p className="mt-1.5 text-center text-[11px] text-red-500 font-medium">
+                  {otpErrors.otpCode.message}
+                </p>
+              )}
             </div>
 
             {/* Resend Code Button & Countdown */}
@@ -666,20 +719,20 @@ export default function SignUpPage() {
                 <button
                   type="button"
                   onClick={handleResendOtp}
-                  disabled={isResending}
+                  disabled={sendOtpMutation.isPending}
                   className="text-black dark:text-white font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
-                  {isResending && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {sendOtpMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
                   Resend Verification Code
                 </button>
               )}
             </div>
 
-            {/* Buttons (Monochrome Theme) */}
+            {/* Buttons */}
             <div className="space-y-2 pt-2">
               <Button
                 type="submit"
-                disabled={isFinalizing || otpCode.length !== 6}
+                disabled={isFinalizing || (otpCode || "").length !== 6}
                 className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold text-xs shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
                 {isFinalizing ? (
@@ -699,7 +752,7 @@ export default function SignUpPage() {
                 type="button"
                 onClick={() => {
                   setStep(1);
-                  setErrorMsg(null);
+                  setGlobalErrorMsg(null);
                   setResendFeedback(null);
                 }}
                 disabled={isFinalizing}
@@ -716,10 +769,7 @@ export default function SignUpPage() {
         <div className="mt-8 text-center text-xs text-zinc-500 dark:text-zinc-400 space-y-3">
           <div>
             Already have an account?{" "}
-            <Link
-              href="/sign-in"
-              className="text-black dark:text-white font-bold hover:underline"
-            >
+            <Link href="/sign-in" className="text-black dark:text-white font-bold hover:underline">
               Sign In
             </Link>
           </div>

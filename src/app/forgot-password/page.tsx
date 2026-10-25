@@ -3,6 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Mail,
   Lock,
@@ -18,27 +21,83 @@ import {
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
+import {
+  useRequestResetCodeMutation,
+  useConfirmResetPasswordMutation,
+} from "@/hooks/use-profile-queries";
+
+const requestEmailSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .email("Please enter a valid email address.")
+    .transform((val) => val.trim().toLowerCase()),
+});
+
+type RequestEmailFormData = z.infer<typeof requestEmailSchema>;
+
+const resetPasswordSchema = z
+  .object({
+    code: z
+      .string()
+      .length(6, "Code must be exactly 6 digits.")
+      .regex(/^\d{6}$/, "Code must contain only digits."),
+    newPassword: z.string().min(6, "Password must be at least 6 characters long."),
+    confirmPassword: z.string().min(1, "Please confirm your password."),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
+
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
 
   // Phase: 1 = Email Input, 2 = Code + New Password, 3 = Success
   const [phase, setPhase] = React.useState<1 | 2 | 3>(1);
-
-  // Form State
-  const [email, setEmail] = React.useState("");
-  const [code, setCode] = React.useState("");
-  const [newPassword, setNewPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [submittedEmail, setSubmittedEmail] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
 
   // Feedback State
-  const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
 
-  // Resend cooldown
+  // Cooldown
   const [cooldown, setCooldown] = React.useState(0);
+
+  // TanStack Query Mutations
+  const requestResetMutation = useRequestResetCodeMutation();
+  const confirmResetMutation = useConfirmResetPasswordMutation();
+
+  // Form 1: Request Code
+  const {
+    register: registerEmail,
+    handleSubmit: handleSubmitEmail,
+    formState: { errors: emailErrors },
+  } = useForm<RequestEmailFormData>({
+    resolver: zodResolver(requestEmailSchema),
+    defaultValues: { email: "" },
+  });
+
+  // Form 2: Reset Password
+  const {
+    register: registerReset,
+    handleSubmit: handleSubmitReset,
+    setValue: setResetValue,
+    watch: watchReset,
+    formState: { errors: resetErrors },
+  } = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      code: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  const resetCode = watchReset("code");
 
   React.useEffect(() => {
     if (cooldown <= 0) return;
@@ -48,106 +107,68 @@ export default function ForgotPasswordPage() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  // Phase 1: Request Reset Code
-  const handleRequestCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-
-    setLoading(true);
+  // Phase 1: Request Reset Code via Query Mutation
+  const onRequestCode = (data: RequestEmailFormData) => {
     setErrorMsg(null);
     setSuccessMsg(null);
+    setSubmittedEmail(data.email);
 
-    try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to send reset code. Please check your email.");
+    requestResetMutation.mutate(
+      { email: data.email },
+      {
+        onSuccess: (res) => {
+          setSuccessMsg(res.message || "A 6-digit code has been sent to your email.");
+          setCooldown(60);
+          setPhase(2);
+        },
+        onError: (err: any) => {
+          setErrorMsg(err.message || "Failed to send reset code. Please check your email.");
+        },
       }
-
-      setSuccessMsg(data.message || "A 6-digit code has been sent to your email.");
-      setCooldown(60);
-      setPhase(2);
-    } catch (err: any) {
-      setErrorMsg(err.message || "An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
-  // Phase 2: Verify Code and Reset Password
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Phase 2: Verify Code and Reset Password via Query Mutation
+  const onResetPassword = (data: ResetPasswordFormData) => {
     setErrorMsg(null);
 
-    if (!code.trim() || code.trim().length < 6) {
-      setErrorMsg("Please enter the complete 6-digit verification code.");
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setErrorMsg("New password must be at least 6 characters long.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setErrorMsg("Passwords do not match. Please re-enter.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          code: code.trim(),
-          newPassword: newPassword.trim(),
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to reset password. Please check your code.");
+    confirmResetMutation.mutate(
+      {
+        email: submittedEmail,
+        code: data.code,
+        newPassword: data.newPassword,
+      },
+      {
+        onSuccess: () => {
+          setPhase(3);
+        },
+        onError: (err: any) => {
+          setErrorMsg(err.message || "Failed to reset password. Please check your code.");
+        },
       }
-
-      setPhase(3);
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to reset password.");
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   // Resend code handler
-  const handleResendCode = async () => {
-    if (cooldown > 0 || !email.trim()) return;
-    setLoading(true);
+  const handleResendCode = () => {
+    if (cooldown > 0 || !submittedEmail || requestResetMutation.isPending) return;
     setErrorMsg(null);
-    try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to resend code.");
+
+    requestResetMutation.mutate(
+      { email: submittedEmail },
+      {
+        onSuccess: () => {
+          setSuccessMsg("A new 6-digit code has been sent to your email.");
+          setCooldown(60);
+        },
+        onError: (err: any) => {
+          setErrorMsg(err.message || "Could not resend code.");
+        },
       }
-      setSuccessMsg("A new 6-digit code has been sent to your email.");
-      setCooldown(60);
-    } catch (err: any) {
-      setErrorMsg(err.message || "Could not resend code.");
-    } finally {
-      setLoading(false);
-    }
+    );
   };
+
+  const isPending = requestResetMutation.isPending || confirmResetMutation.isPending;
 
   return (
     <MobileShell hideNav={true}>
@@ -163,7 +184,7 @@ export default function ForgotPasswordPage() {
             </h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs leading-relaxed mx-auto">
               {phase === 1 && "Enter the email associated with your student account to receive a 6-digit verification code."}
-              {phase === 2 && `Enter the 6-digit verification code sent to ${email} and choose a new password.`}
+              {phase === 2 && `Enter the 6-digit verification code sent to ${submittedEmail} and choose a new password.`}
               {phase === 3 && "Your password has been successfully updated. You can now log into your account."}
             </p>
           </div>
@@ -185,9 +206,9 @@ export default function ForgotPasswordPage() {
 
           {/* Card Container */}
           <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-xs space-y-4 transition-colors">
-            {/* Phase 1: Request Code Form */}
+            {/* Phase 1: Request Code Form with react-hook-form */}
             {phase === 1 && (
-              <form onSubmit={handleRequestCode} className="space-y-4">
+              <form onSubmit={handleSubmitEmail(onRequestCode)} className="space-y-4" noValidate>
                 <div>
                   <label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 mb-1.5">
                     <Mail size={13} className="text-zinc-500 dark:text-zinc-400" />
@@ -195,20 +216,24 @@ export default function ForgotPasswordPage() {
                   </label>
                   <input
                     type="email"
-                    required
                     placeholder="e.g. student@uet.edu.pk or yourname@gmail.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors"
+                    disabled={isPending}
+                    {...registerEmail("email")}
+                    className={`w-full h-11 px-3.5 border ${
+                      emailErrors.email ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                    } bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors`}
                   />
+                  {emailErrors.email && (
+                    <p className="mt-1 text-[11px] text-red-500 font-medium">{emailErrors.email.message}</p>
+                  )}
                 </div>
 
                 <Button
                   type="submit"
-                  disabled={loading || !email.trim()}
+                  disabled={isPending}
                   className="w-full h-11 bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 disabled:opacity-50 rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
-                  {loading ? (
+                  {requestResetMutation.isPending ? (
                     <>
                       <Loader2 size={15} className="animate-spin" />
                       <span>Sending Code...</span>
@@ -223,9 +248,9 @@ export default function ForgotPasswordPage() {
               </form>
             )}
 
-            {/* Phase 2: Enter Code & Set New Password */}
+            {/* Phase 2: Enter Code & Set New Password with react-hook-form */}
             {phase === 2 && (
-              <form onSubmit={handleResetPassword} className="space-y-4">
+              <form onSubmit={handleSubmitReset(onResetPassword)} className="space-y-4" noValidate>
                 {/* 6-Digit Code */}
                 <div>
                   <label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between mb-1.5">
@@ -235,7 +260,7 @@ export default function ForgotPasswordPage() {
                     </span>
                     <button
                       type="button"
-                      disabled={cooldown > 0 || loading}
+                      disabled={cooldown > 0 || isPending}
                       onClick={handleResendCode}
                       className="text-[11px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white disabled:opacity-50 cursor-pointer"
                     >
@@ -244,13 +269,21 @@ export default function ForgotPasswordPage() {
                   </label>
                   <input
                     type="text"
-                    required
                     maxLength={6}
                     placeholder="Enter 6-digit code"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ""))}
-                    className="w-full h-11 px-3.5 text-center font-mono tracking-[6px] text-base font-bold border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors"
+                    disabled={isPending}
+                    value={resetCode}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setResetValue("code", digits, { shouldValidate: true });
+                    }}
+                    className={`w-full h-11 px-3.5 text-center font-mono tracking-[6px] text-base font-bold border ${
+                      resetErrors.code ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                    } bg-white dark:bg-zinc-800 rounded-xl text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors`}
                   />
+                  {resetErrors.code && (
+                    <p className="mt-1 text-[11px] text-red-500 font-medium">{resetErrors.code.message}</p>
+                  )}
                 </div>
 
                 {/* New Password */}
@@ -262,11 +295,12 @@ export default function ForgotPasswordPage() {
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
-                      required
-                      placeholder="Enter new password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full h-11 px-3.5 pr-10 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors"
+                      placeholder="At least 6 characters"
+                      disabled={isPending}
+                      {...registerReset("newPassword")}
+                      className={`w-full h-11 px-3.5 pr-10 border ${
+                        resetErrors.newPassword ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                      } bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors`}
                     />
                     <button
                       type="button"
@@ -276,6 +310,9 @@ export default function ForgotPasswordPage() {
                       {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
+                  {resetErrors.newPassword && (
+                    <p className="mt-1 text-[11px] text-red-500 font-medium">{resetErrors.newPassword.message}</p>
+                  )}
                 </div>
 
                 {/* Confirm Password */}
@@ -286,20 +323,24 @@ export default function ForgotPasswordPage() {
                   </label>
                   <input
                     type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="Re-enter new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors"
+                    placeholder="Repeat new password"
+                    disabled={isPending}
+                    {...registerReset("confirmPassword")}
+                    className={`w-full h-11 px-3.5 border ${
+                      resetErrors.confirmPassword ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                    } bg-white dark:bg-zinc-800 rounded-xl text-xs text-zinc-950 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-950 dark:focus:border-zinc-400 transition-colors`}
                   />
+                  {resetErrors.confirmPassword && (
+                    <p className="mt-1 text-[11px] text-red-500 font-medium">{resetErrors.confirmPassword.message}</p>
+                  )}
                 </div>
 
                 <Button
                   type="submit"
-                  disabled={loading || !code || !newPassword || !confirmPassword}
+                  disabled={isPending}
                   className="w-full h-11 bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 disabled:opacity-50 rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
-                  {loading ? (
+                  {confirmResetMutation.isPending ? (
                     <>
                       <Loader2 size={15} className="animate-spin" />
                       <span>Updating Password...</span>
@@ -311,61 +352,42 @@ export default function ForgotPasswordPage() {
                     </>
                   )}
                 </Button>
-
-                <button
-                  type="button"
-                  onClick={() => setPhase(1)}
-                  className="w-full text-center text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white cursor-pointer flex items-center justify-center gap-1.5 pt-1"
-                >
-                  <ArrowLeft size={13} />
-                  <span>Change email address</span>
-                </button>
               </form>
             )}
 
             {/* Phase 3: Success State */}
             {phase === 3 && (
-              <div className="text-center py-4 space-y-4">
-                <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                  <CheckCircle2 size={32} />
+              <div className="space-y-4 py-2 text-center animate-in fade-in zoom-in-95">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+                  <ShieldCheck size={28} />
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
                     Password Successfully Changed
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto">
-                    Your account password has been updated. You can now use your new password to sign in.
+                    Your account password has been updated. You can now use your new password to log in.
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  onClick={() => router.push("/sign-in")}
-                  className="w-full h-11 bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
-                >
-                  <span>Sign In Now</span>
-                  <ArrowRight size={14} />
-                </Button>
-              </div>
-            )}
-
-            {/* Link back to sign-in */}
-            {phase !== 3 && (
-              <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 text-center">
                 <Link
                   href="/sign-in"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-colors"
+                  className="w-full h-11 bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition-all"
                 >
-                  <ArrowLeft size={13} />
-                  <span>Back to Sign In</span>
+                  <span>Proceed to Sign In</span>
+                  <ArrowRight size={14} />
                 </Link>
               </div>
             )}
-          </div>
 
-          {/* Trust footnote */}
-          <div className="mt-5 text-center text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center justify-center gap-1.5">
-            <ShieldCheck size={14} className="text-zinc-950 dark:text-zinc-300" />
-            <span>Campus card verification required for all students.</span>
+            <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 text-center">
+              <Link
+                href="/sign-in"
+                className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white inline-flex items-center gap-1.5 transition-colors"
+              >
+                <ArrowLeft size={13} />
+                <span>Back to Sign In</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

@@ -3,6 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   ArrowLeft,
   Wrench,
@@ -17,7 +20,8 @@ import {
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { useCreateHostelServiceMutation } from "@/hooks/use-hostel-queries";
+import { useAuth } from "@/lib/auth-context";
 
 const SERVICE_PRESETS = [
   { name: "Laundry Pickup & Wash", icon: Shirt, defaultRate: "Rs. 40 / pair" },
@@ -26,56 +30,71 @@ const SERVICE_PRESETS = [
   { name: "Laptop Setup & OS Formatting", icon: Wrench, defaultRate: "Rs. 500" },
 ];
 
+const offerServiceSchema = z.object({
+  serviceName: z.string().min(2, "Service title must be at least 2 characters."),
+  location: z.string().min(2, "Service location is required."),
+  schedule: z.string().min(2, "Service schedule is required."),
+  rate: z.string().min(1, "Service charge / rate is required."),
+  phone: z.string().min(10, "Valid phone number is required."),
+  notes: z.string().optional(),
+});
+
+type OfferServiceFormData = z.infer<typeof offerServiceSchema>;
+
 export default function OfferServicePage() {
   const router = useRouter();
-  const [serviceName, setServiceName] = React.useState("");
-  const [providerName, setProviderName] = React.useState("Muhammad Hammad");
-  const [location, setLocation] = React.useState("Hostel Block A");
-  const [schedule, setSchedule] = React.useState("Daily 5 PM – 10 PM");
-  const [rate, setRate] = React.useState("");
-  const [phone, setPhone] = React.useState("");
-  const [notes, setNotes] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
+  const { user } = useAuth();
+  const createServiceMutation = useCreateHostelServiceMutation();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<OfferServiceFormData>({
+    resolver: zodResolver(offerServiceSchema),
+    defaultValues: {
+      serviceName: "",
+      location: "Hostel Block A",
+      schedule: "Daily 5 PM – 10 PM",
+      rate: "",
+      phone: "+923001234567",
+      notes: "",
+    },
+  });
+
+  const currentServiceName = watch("serviceName");
+  const currentRate = watch("rate");
 
   const handleSelectPreset = (preset: typeof SERVICE_PRESETS[0]) => {
-    setServiceName(preset.name);
-    if (!rate) setRate(preset.defaultRate);
+    setValue("serviceName", preset.name);
+    if (!currentRate) setValue("rate", preset.defaultRate);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!serviceName.trim() || !rate.trim()) return;
-
-    setLoading(true);
-    const newService = {
-      id: "srv_" + Date.now(),
-      name: serviceName.trim(),
-      provider: providerName.trim(),
-      location: location.trim(),
-      schedule: schedule.trim(),
-      rate: rate.trim(),
-      phone: phone.trim() || "0300-1234567",
-      notes: notes.trim(),
-      verified: true,
-      created_at: new Date().toISOString(),
-    };
-
-    try {
-      const stored = JSON.parse(
-        localStorage.getItem("campus_stitch_hostel_services") || "[]"
-      );
-      stored.unshift(newService);
-      localStorage.setItem("campus_stitch_hostel_services", JSON.stringify(stored));
-
-      const supabase = createClient();
-      await supabase.from("hostel_services").insert([newService]);
-    } catch (err) {
-      console.warn("Service save warning:", err);
-    } finally {
-      setLoading(false);
-      router.push("/hostel");
-    }
+  const onSubmit = (data: OfferServiceFormData) => {
+    createServiceMutation.mutate(
+      {
+        name: data.serviceName.trim(),
+        provider: user?.name || "Student",
+        location: data.location.trim(),
+        schedule: data.schedule.trim(),
+        rate: data.rate.trim(),
+        phone: data.phone.trim(),
+        notes: data.notes?.trim(),
+        verified: user?.isVerified ?? true,
+        campusId: user?.campusId,
+        userId: user?.userId,
+      },
+      {
+        onSuccess: () => {
+          router.push("/hostel");
+        },
+      }
+    );
   };
+
+  const isSubmitting = createServiceMutation.isPending;
 
   return (
     <MobileShell>
@@ -95,7 +114,7 @@ export default function OfferServicePage() {
           <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Hostel Hub</span>
         </header>
 
-        {/* Scrollable Form */}
+        {/* Scrollable Form with react-hook-form */}
         <main className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 max-w-xl mx-auto w-full">
           {/* Quick Presets */}
           <div className="space-y-1.5">
@@ -105,7 +124,7 @@ export default function OfferServicePage() {
             <div className="grid grid-cols-2 gap-2">
               {SERVICE_PRESETS.map((p) => {
                 const Icon = p.icon;
-                const isSelected = serviceName === p.name;
+                const isSelected = currentServiceName === p.name;
                 return (
                   <button
                     key={p.name}
@@ -130,48 +149,57 @@ export default function OfferServicePage() {
             </div>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-2xs space-y-3.5 transition-colors">
+          {/* Form with react-hook-form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-2xs space-y-3.5 transition-colors" noValidate>
             <div>
               <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                Service Title
+                Service Title <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                required
-                value={serviceName}
-                onChange={(e) => setServiceName(e.target.value)}
                 placeholder="e.g. Desert Cooler Cleaning & Pump Setup"
-                className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
+                disabled={isSubmitting}
+                {...register("serviceName")}
+                className={`w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border ${
+                  errors.serviceName ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                } rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white transition-colors`}
               />
+              {errors.serviceName && (
+                <p className="mt-1 text-[11px] text-red-500 font-medium">{errors.serviceName.message}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                  Pricing / Rate
+                  Location / Hostel <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <MapPin size={13} className="absolute left-3 top-3 text-zinc-400" />
+                  <input
+                    type="text"
+                    disabled={isSubmitting}
+                    placeholder="Hostel Block"
+                    {...register("location")}
+                    className={`w-full h-10 pl-8 pr-2.5 bg-zinc-50 dark:bg-zinc-900 border ${
+                      errors.location ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                    } rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                  Rate / Charges <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  required
-                  value={rate}
-                  onChange={(e) => setRate(e.target.value)}
+                  disabled={isSubmitting}
                   placeholder="e.g. Rs. 200 visit"
-                  className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                  Provider Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={providerName}
-                  onChange={(e) => setProviderName(e.target.value)}
-                  placeholder="Your Name"
-                  className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
+                  {...register("rate")}
+                  className={`w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border ${
+                    errors.rate ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                  } rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white`}
                 />
               </div>
             </div>
@@ -179,81 +207,67 @@ export default function OfferServicePage() {
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                  Hostel / Area
+                  Available Hours
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Hostel Block A & B"
-                  className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
-                />
+                <div className="relative">
+                  <Clock size={13} className="absolute left-3 top-3 text-zinc-400" />
+                  <input
+                    type="text"
+                    disabled={isSubmitting}
+                    placeholder="e.g. 5 PM – 10 PM"
+                    {...register("schedule")}
+                    className="w-full h-10 pl-8 pr-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                  Availability Hours
+                  Contact Phone <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={schedule}
-                  onChange={(e) => setSchedule(e.target.value)}
-                  placeholder="Daily 6 PM – 10 PM"
-                  className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
-                />
+                <div className="relative">
+                  <Phone size={13} className="absolute left-3 top-3 text-zinc-400" />
+                  <input
+                    type="text"
+                    disabled={isSubmitting}
+                    placeholder="0300-1234567"
+                    {...register("phone")}
+                    className={`w-full h-10 pl-8 pr-2.5 bg-zinc-50 dark:bg-zinc-900 border ${
+                      errors.phone ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+                    } rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white`}
+                  />
+                </div>
               </div>
             </div>
 
             <div>
               <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                WhatsApp / Phone (for bookings)
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="0300-1234567"
-                className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-black dark:text-white block mb-1">
-                Service Details & Notes
+                Additional Notes
               </label>
               <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Turnaround time, what tools you bring, room delivery details..."
                 rows={2}
-                className="w-full p-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-colors"
+                disabled={isSubmitting}
+                placeholder="Bring own soap, urgent delivery available, warranty details..."
+                {...register("notes")}
+                className="w-full p-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-black dark:text-white outline-none focus:border-black dark:focus:border-white resize-none"
               />
             </div>
 
-            <div className="pt-2">
-              <Button
-                type="submit"
-                disabled={loading || !serviceName.trim() || !rate.trim()}
-                className="w-full h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-lg text-xs font-bold shadow-xs cursor-pointer"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin mr-1.5" />
-                    <span>Publishing Service...</span>
-                  </>
-                ) : (
-                  "Publish Student Service"
-                )}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-11 bg-black dark:bg-white text-white dark:text-black font-bold text-xs rounded-xl shadow-2xs hover:bg-zinc-800 dark:hover:bg-zinc-200 cursor-pointer flex items-center justify-center gap-2 transition-colors"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  <span>Publishing Service...</span>
+                </>
+              ) : (
+                <span>Publish Service Listing</span>
+              )}
+            </Button>
           </form>
-
-          <div className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl text-[11px] text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5 border border-zinc-200 dark:border-zinc-800 transition-colors">
-            <ShieldCheck size={14} className="text-black dark:text-white shrink-0" />
-            <span>All student services are linked to verified campus ID profiles.</span>
-          </div>
         </main>
       </div>
     </MobileShell>

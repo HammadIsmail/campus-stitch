@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   X,
   Compass,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
@@ -22,38 +24,91 @@ import { DataService, Ride, BikeItem } from "@/lib/data-service";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { useAuth } from "@/lib/auth-context";
 import { MapPin } from "lucide-react";
+import { useRidesQuery, useBikesQuery } from "@/hooks/use-commute-queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 
 export default function CommutePage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState("rides");
   const [fromFilter, setFromFilter] = React.useState("");
   const [toFilter, setToFilter] = React.useState("");
-  const [rides, setRides] = React.useState<Ride[]>([]);
-  const [bikes, setBikes] = React.useState<BikeItem[]>([]);
   const [myBookings, setMyBookings] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+
+  // Edit Ride Modal State
+  const [editingRide, setEditingRide] = React.useState<Ride | null>(null);
+  const [editTime, setEditTime] = React.useState("");
+  const [editPrice, setEditPrice] = React.useState("");
+  const [editFrom, setEditFrom] = React.useState("");
+  const [editTo, setEditTo] = React.useState("");
+  const [editVehicle, setEditVehicle] = React.useState("rickshaw");
+  const [editSeats, setEditSeats] = React.useState(3);
+  const [isUpdatingRide, setIsUpdatingRide] = React.useState(false);
+
+  const openEditRideModal = (ride: Ride, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingRide(ride);
+    setEditTime(ride.departure_time);
+    setEditPrice(String(ride.price_per_seat));
+    setEditFrom(ride.from_location);
+    setEditTo(ride.to_location);
+    setEditVehicle(ride.vehicle_type || "rickshaw");
+    setEditSeats(ride.available_seats || 3);
+  };
+
+  const handleDeleteRide = async (rideId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this ride offer?")) return;
+    try {
+      await fetch(`/api/commute/rides?id=${rideId}`, { method: "DELETE" });
+      queryClient.invalidateQueries({ queryKey: ["rides"] });
+    } catch (err) {
+      console.warn("Delete ride error:", err);
+    }
+  };
+
+  const handleSaveEditRide = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRide) return;
+    setIsUpdatingRide(true);
+    try {
+      await fetch("/api/commute/rides", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingRide.id,
+          departureTime: editTime.trim(),
+          pricePerSeat: Number(editPrice),
+          fromLocation: editFrom.trim(),
+          toLocation: editTo.trim(),
+          vehicleType: editVehicle,
+          availableSeats: Number(editSeats),
+        }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["rides"] });
+    } catch (err) {
+      console.warn("Update ride error:", err);
+    } finally {
+      setIsUpdatingRide(false);
+      setEditingRide(null);
+    }
+  };
+
+  const { data: rides = [], isLoading: ridesLoading } = useRidesQuery(user?.campusId);
+  const { data: bikes = [], isLoading: bikesLoading } = useBikesQuery(user?.campusId);
+  const loading = ridesLoading || bikesLoading;
 
   React.useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      const [ridesData, bikesData] = await Promise.all([
-        DataService.getRides(user?.campusId),
-        DataService.getBikes(user?.campusId),
-      ]);
-      setRides(ridesData);
-      setBikes(bikesData);
-
-      try {
-        const stored = JSON.parse(
-          localStorage.getItem("campus_stitch_my_bookings") || "[]"
-        );
-        setMyBookings(stored);
-      } catch {}
-
-      setLoading(false);
-    }
-    loadData();
-  }, [user?.campusId]);
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("campus_stitch_my_bookings") || "[]"
+      );
+      setMyBookings(stored);
+    } catch {}
+  }, []);
 
   const filteredRides = rides.filter((r) => {
     const matchFrom =
@@ -156,53 +211,88 @@ export default function CommutePage() {
                     </Link>
                   </div>
                 ) : (
-                  filteredRides.map((ride) => (
-                    <Link
-                      key={ride.id}
-                      href={`/commute/ride?id=${ride.id}`}
-                      className="flex flex-col gap-2.5 p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-2xs block"
-                    >
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-base font-extrabold text-black dark:text-white">
-                          {ride.departure_time}
-                        </span>
-                        <div className="text-right">
-                          <span className="text-base font-extrabold text-black dark:text-white">
-                            Rs. {ride.price_per_seat}
+                  filteredRides.map((ride) => {
+                    const isMine = Boolean(
+                      (user?.userId && (ride as any).user_id === user.userId) ||
+                      (user?.name && ride.organizer_name?.toLowerCase().trim() === user.name.toLowerCase().trim())
+                    );
+
+                    return (
+                      <div
+                        key={ride.id}
+                        className="flex flex-col gap-2.5 p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-2xs relative"
+                      >
+                        <div className="flex justify-between items-baseline">
+                          <Link href={`/commute/ride?id=${ride.id}`} className="hover:underline">
+                            <span className="text-base font-extrabold text-black dark:text-white">
+                              {ride.departure_time}
+                            </span>
+                          </Link>
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <span className="text-base font-extrabold text-black dark:text-white">
+                                Rs. {ride.price_per_seat}
+                              </span>
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                                {" "}
+                                / seat
+                              </span>
+                            </div>
+
+                            {isMine && (
+                              <div className="flex items-center gap-1 ml-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => openEditRideModal(ride, e)}
+                                  title="Edit ride"
+                                  className="w-7 h-7 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center cursor-pointer transition-colors"
+                                >
+                                  <Pencil size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteRide(ride.id, e)}
+                                  title="Delete ride"
+                                  className="w-7 h-7 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center cursor-pointer transition-colors"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <Link href={`/commute/ride?id=${ride.id}`} className="block">
+                          <div className="text-xs text-zinc-600 dark:text-zinc-300">
+                            {ride.from_location} → {ride.to_location} ·{" "}
+                            <span className="capitalize font-semibold text-zinc-800 dark:text-zinc-200">
+                              {ride.vehicle_type}
+                            </span>
+                          </div>
+                        </Link>
+
+                        <div className="flex justify-between items-center pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                          <span className="inline-flex items-center gap-2 text-xs font-semibold text-black dark:text-white">
+                            <span className="w-6 h-6 rounded-full bg-black dark:bg-white text-white dark:text-black text-[11px] font-bold flex items-center justify-center">
+                              {ride.organizer_name.charAt(0)}
+                            </span>
+                            <span>{ride.organizer_name}</span>
+                            <VerificationBadge isVerified={ride.organizer_verified} size="xs" />
                           </span>
-                          <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                            {" "}
-                            / seat
+                          <span
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                              ride.available_seats === 1
+                                ? "text-black dark:text-white bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700"
+                                : "text-white dark:text-black bg-black dark:bg-white"
+                            }`}
+                          >
+                            {ride.available_seats} seat
+                            {ride.available_seats === 1 ? "" : "s"} left
                           </span>
                         </div>
                       </div>
-                      <div className="text-xs text-zinc-600 dark:text-zinc-300">
-                        {ride.from_location} → {ride.to_location} ·{" "}
-                        <span className="capitalize font-semibold text-zinc-800 dark:text-zinc-200">
-                          {ride.vehicle_type}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                        <span className="inline-flex items-center gap-2 text-xs font-semibold text-black dark:text-white">
-                          <span className="w-6 h-6 rounded-full bg-black dark:bg-white text-white dark:text-black text-[11px] font-bold flex items-center justify-center">
-                            {ride.organizer_name.charAt(0)}
-                          </span>
-                          <span>{ride.organizer_name}</span>
-                          <VerificationBadge isVerified={ride.organizer_verified} size="xs" />
-                        </span>
-                        <span
-                          className={`text-[11px] font-bold px-2 py-0.5 rounded ${
-                            ride.available_seats === 1
-                              ? "text-black dark:text-white bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700"
-                              : "text-white dark:text-black bg-black dark:bg-white"
-                          }`}
-                        >
-                          {ride.available_seats} seat
-                          {ride.available_seats === 1 ? "" : "s"} left
-                        </span>
-                      </div>
-                    </Link>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
@@ -316,6 +406,136 @@ export default function CommutePage() {
             </TabsContent>
           </Tabs>
         </main>
+
+        {/* ======================================================== */}
+        {/* MODAL: EDIT RIDE MODAL                                   */}
+        {/* ======================================================== */}
+        {editingRide && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <div className="bg-white dark:bg-[#121215] rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="font-extrabold text-base text-black dark:text-white flex items-center gap-2">
+                  <Pencil size={18} />
+                  <span>Edit Ride Offer</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingRide(null)}
+                  className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-black dark:hover:text-white cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditRide} className="space-y-3.5">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                      Departure Time
+                    </label>
+                    <input
+                      type="text"
+                      value={editTime}
+                      onChange={(e) => setEditTime(e.target.value)}
+                      placeholder="e.g. 08:00 AM"
+                      required
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                      Price per Seat (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value)}
+                      placeholder="50"
+                      required
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                      From Location
+                    </label>
+                    <input
+                      type="text"
+                      value={editFrom}
+                      onChange={(e) => setEditFrom(e.target.value)}
+                      placeholder="Pickup"
+                      required
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                      To Location
+                    </label>
+                    <input
+                      type="text"
+                      value={editTo}
+                      onChange={(e) => setEditTo(e.target.value)}
+                      placeholder="Dropoff"
+                      required
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                      Vehicle Type
+                    </label>
+                    <select
+                      value={editVehicle}
+                      onChange={(e) => setEditVehicle(e.target.value)}
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs font-semibold text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                    >
+                      <option value="rickshaw">Rickshaw</option>
+                      <option value="car">Car / Carpool</option>
+                      <option value="bike">Bike (Pillion)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                      Available Seats
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={6}
+                      value={editSeats}
+                      onChange={(e) => setEditSeats(Number(e.target.value))}
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingRide(null)}
+                    className="flex-1 h-10 rounded-xl border border-zinc-300 dark:border-zinc-700 font-bold text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <Button
+                    type="submit"
+                    disabled={isUpdatingRide || !editTime.trim() || !editPrice.trim()}
+                    className="flex-1 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 cursor-pointer"
+                  >
+                    {isUpdatingRide ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Navigation */}
         <BottomNav />

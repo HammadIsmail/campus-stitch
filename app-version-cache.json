@@ -1,0 +1,13 @@
+{
+  "latestVersion": "1.0.0",
+  "buildNumber": 1,
+  "minSupportedVersion": "1.0.0",
+  "minSupportedBuild": 1,
+  "forceUpdate": false,
+  "title": "Welcome to CampuStitch v1.0.0",
+  "releaseNotes": "• Initial production release\n• Multi-campus carpool, market, and hostel finder\n• Verified student identity badge & peer chats",
+  "apkDownloadUrl": "https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0",
+  "fileSize": "50.2 MB",
+  "releasedAt": "2026-10-24T00:00:00.000Z",
+  "updatedBy": "system"
+}
