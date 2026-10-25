@@ -111,14 +111,20 @@ export default function ContactPage() {
 
             <div className="space-y-1">
               <span className="font-semibold text-zinc-500 block">General Support</span>
-              <a href="mailto:support@campus-stitch.com" className="font-bold text-zinc-950 dark:text-white hover:underline">
+              <a href="mailto:hammadismail807@gmail.com" className="font-bold text-zinc-950 dark:text-white hover:underline block">
+                hammadismail807@gmail.com
+              </a>
+              <a href="mailto:support@campus-stitch.com" className="text-zinc-500 hover:underline block text-[11px]">
                 support@campus-stitch.com
               </a>
             </div>
 
             <div className="space-y-1">
               <span className="font-semibold text-zinc-500 block">Security & Verification</span>
-              <a href="mailto:verify@campus-stitch.com" className="font-bold text-zinc-950 dark:text-white hover:underline">
+              <a href="mailto:hammadismail807@gmail.com" className="font-bold text-zinc-950 dark:text-white hover:underline block">
+                hammadismail807@gmail.com
+              </a>
+              <a href="mailto:verify@campus-stitch.com" className="text-zinc-500 hover:underline block text-[11px]">
                 verify@campus-stitch.com
               </a>
             </div>

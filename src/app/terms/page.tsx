@@ -253,7 +253,7 @@ export default function TermsPage() {
             </p>
             <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs space-y-1">
               <div><strong>Platform Administration:</strong> CampuStitch Legal & Compliance Team</div>
-              <div><strong>Email:</strong> legal@campus-stitch.com / ranahammadismail@gmail.com</div>
+              <div><strong>Email:</strong> hammadismail807@gmail.com </div>
               <div><strong>Support Desk:</strong> <Link href="/contact" className="underline font-bold">campus-stitch.com/contact</Link></div>
               <div><strong>Registered Operations:</strong> Lahore, Punjab, Pakistan</div>
             </div>

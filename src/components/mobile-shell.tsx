@@ -242,24 +242,7 @@ export function MobileShell({
         </div>
       </main>
 
-      {/* ======================================================== */}
-      {/* FLOATING URDU VOICE SEARCH (MOBILE ONLY, HIDDEN ON DESKTOP, AUTH, MESSAGES & COMMUNITY) */}
-      {/* ======================================================== */}
-      {!isAuthPage && !isAppLayoutPage && pathname !== "/voice" && (
-        <Link
-          href="/voice"
-          aria-label="Campus Voice Search Assistant"
-          title="Search by Voice or Text (Urdu / English)"
-          className="md:hidden fixed z-40 bottom-20 right-4 w-12 h-12 rounded-full bg-black text-white hover:bg-zinc-800 shadow-[0_6px_24px_rgba(0,0,0,0.3)] border border-zinc-700/50 flex items-center justify-center transition-all hover:scale-105 active:scale-95 group cursor-pointer"
-        >
-          <span className="absolute -inset-0.5 rounded-full bg-black/20 animate-ping pointer-events-none" />
-          <Mic
-            size={22}
-            className="stroke-[2.2px] group-hover:scale-110 transition-transform relative z-10"
-          />
-          <span className="sr-only">Voice Search Assistant</span>
-        </Link>
-      )}
+
 
       {/* Cart-style Notifications Slide-Over Drawer */}
       <NotificationsSlider
