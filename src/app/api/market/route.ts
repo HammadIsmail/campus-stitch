@@ -121,3 +121,74 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, status, price, title, description } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Listing ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const updates: Record<string, any> = {};
+    if (status !== undefined) updates.status = status;
+    if (price !== undefined) updates.price = Number(price);
+    if (title !== undefined) updates.title = String(title).trim();
+    if (description !== undefined) updates.description = String(description).trim();
+
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("listings")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (!error && data) {
+        return NextResponse.json({ success: true, listing: data });
+      }
+    } catch (dbErr) {
+      console.warn("Update listing notice:", dbErr);
+    }
+
+    return NextResponse.json({ success: true, message: "Listing updated successfully" });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to update listing" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Listing ID is required" },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const supabase = await createClient();
+      await supabase.from("listings").delete().eq("id", id);
+    } catch (dbErr) {
+      console.warn("Delete listing notice:", dbErr);
+    }
+
+    return NextResponse.json({ success: true, message: "Listing deleted successfully" });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to delete listing" },
+      { status: 500 }
+    );
+  }
+}

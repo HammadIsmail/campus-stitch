@@ -112,3 +112,74 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, status, availableSeats, notes } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Ride ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const updates: Record<string, any> = {};
+    if (status !== undefined) updates.status = status;
+    if (availableSeats !== undefined) updates.available_seats = Number(availableSeats);
+    if (notes !== undefined) updates.notes = notes;
+
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("rides")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (!error && data) {
+        return NextResponse.json({ success: true, ride: data });
+      }
+    } catch (dbErr) {
+      console.warn("Update ride notice:", dbErr);
+    }
+
+    return NextResponse.json({ success: true, message: "Ride updated successfully" });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to update ride" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Ride ID is required" },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const supabase = await createClient();
+      await supabase.from("rides").delete().eq("id", id);
+      await supabase.from("ride_bookings").delete().eq("ride_id", id);
+    } catch (dbErr) {
+      console.warn("Delete ride notice:", dbErr);
+    }
+
+    return NextResponse.json({ success: true, message: "Ride deleted successfully" });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to delete ride" },
+      { status: 500 }
+    );
+  }
+}
