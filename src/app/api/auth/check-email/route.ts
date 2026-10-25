@@ -13,19 +13,7 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = String(email).trim().toLowerCase();
 
-    // Check pre-registered/demo accounts
-    const knownEmails = [
-      "ranahammadismail@gmail.com",
-      "student@uet.edu.pk",
-      "admin@uet.edu.pk",
-    ];
-
-    if (knownEmails.includes(cleanEmail)) {
-      return NextResponse.json({
-        exists: true,
-        message: "An account with this email already exists. Please sign in instead.",
-      });
-    }
+    // Query actual profiles database for email existence
 
     try {
       const supabase = await createClient();

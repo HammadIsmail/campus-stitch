@@ -27,7 +27,7 @@ export default function PrivacyPolicyPage() {
     { id: "data-collected", title: "2. Information We Collect", icon: Eye },
     { id: "camera-permissions", title: "3. Device Permissions & Camera Use", icon: Camera },
     { id: "purpose-use", title: "4. How We Use Your Data", icon: UserCheck },
-    { id: "tenant-isolation", title: "5. Multi-Tenant Architecture & Security", icon: Lock },
+    { id: "tenant-isolation", title: "5. Campus Scoping & Security", icon: Lock },
     { id: "third-parties", title: "6. Third-Party Processors", icon: Server },
     { id: "data-retention", title: "7. Data Retention & Deletion Rights", icon: Trash2 },
     { id: "children", title: "8. Children's Privacy", icon: Shield },
@@ -94,7 +94,7 @@ export default function PrivacyPolicyPage() {
               CampuStitch (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is the data controller for the CampuStitch mobile application and web portal. Our platform provides verified student utilities (carpooling, marketplace, hostel listings, and community discussion) for universities in Pakistan.
             </p>
             <p>
-              We operate under a strict <strong>Privacy-by-Design</strong> ethos: student information is strictly scoped to your verified university campus tenant, protected with encryption, and never shared or sold to advertising brokerages.
+              We operate under a strict <strong>Privacy-by-Design</strong> ethos: student information is strictly scoped to your verified university campus, protected with encryption, and never shared or sold to advertising brokerages.
             </p>
           </section>
 
@@ -114,7 +114,7 @@ export default function PrivacyPolicyPage() {
                   A. Student Profile & Affiliation
                 </h3>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                  Full name, email address, password hash (bcrypt), degree program, student roll number, University ID, and Campus Tenant ID.
+                  Full name, email address, password hash (bcrypt), degree program, student roll number, University ID, and Campus ID.
                 </p>
               </div>
 
@@ -141,7 +141,7 @@ export default function PrivacyPolicyPage() {
                   D. Device & Security Telemetry
                 </h3>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                  Device model, operating system version, app version, IP address, and session tokens to secure accounts against credential stuffing and unauthorized tenant access.
+                  Device model, operating system version, app version, IP address, and session tokens to secure accounts against credential stuffing and unauthorized account access.
                 </p>
               </div>
             </div>
@@ -189,17 +189,17 @@ export default function PrivacyPolicyPage() {
           <section id="tenant-isolation" className="scroll-mt-24 space-y-3 bg-white dark:bg-[#121215] p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xs">
             <h2 className="text-lg font-bold text-zinc-950 dark:text-white flex items-center gap-2">
               <Lock size={18} className="text-emerald-600 dark:text-emerald-400" />
-              5. Multi-Tenant Architecture & Data Security
+              5. Campus Scoping & Data Security
             </h2>
             <p>
-              CampuStitch implements strict <strong>Multi-Tenant Data Isolation</strong>. Every record is indexed with a mandatory <code>campus_id</code> foreign key:
+              CampuStitch implements strict <strong>Campus Data Isolation</strong>. Every record is indexed with a mandatory campus scope:
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>
                 Students from UET Lahore cannot view, query, or interact with private student records, ride schedules, or KYC queues of NUST or FAST students.
               </li>
               <li>
-                Campus Administrators are legally restricted to moderating solely their designated campus tenant.
+                Campus Administrators are legally restricted to moderating solely their designated university campus.
               </li>
               <li>
                 All network transmissions utilize TLS 1.3 encryption. Passwords are salted and hashed using bcrypt.
@@ -220,9 +220,9 @@ export default function PrivacyPolicyPage() {
               We utilize select, industry-standard infrastructure sub-processors strictly to deliver app functionality:
             </p>
             <ul className="list-disc pl-5 space-y-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-              <li><strong>Supabase (AWS):</strong> Secure PostgreSQL hosting and relational data storage.</li>
+              <li><strong>Cloud Database Infrastructure:</strong> Secure encrypted relational data storage with role-based access control.</li>
               <li><strong>Cloudinary:</strong> Secure CDN for student ID cards and listing photo uploads.</li>
-              <li><strong>Resend / Nodemailer:</strong> One-Time Password (OTP) verification email dispatch.</li>
+              <li><strong>Nodemailer:</strong> One-Time Password (OTP) verification email dispatch.</li>
             </ul>
           </section>
 

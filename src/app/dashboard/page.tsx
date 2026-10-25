@@ -228,21 +228,26 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {hasBooking ? (
+              {hasBooking && latestBooking ? (
                 <Link
-                  href="/commute/ride"
+                  href="/commute"
                   className="p-5 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-2xs block space-y-3"
                 >
                   <div className="flex justify-between items-baseline">
                     <span className="text-lg font-extrabold text-black dark:text-white">
-                      Khurrialwala → University
+                      {latestBooking.route || `${latestBooking.from_location || "Campus"} → ${latestBooking.to_location || "Destination"}`}
                     </span>
-                    <span className="text-lg font-extrabold text-black dark:text-white">
-                      Rs. 50
-                    </span>
+                    {latestBooking.pricePerSeat ? (
+                      <span className="text-lg font-extrabold text-black dark:text-white">
+                        Rs. {latestBooking.pricePerSeat}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
-                    <span>Tomorrow, 8:00 AM · Pickup Gate 3</span>
+                    <span>
+                      {latestBooking.departureTime ? `${latestBooking.departureTime}` : "Active Booking"}
+                      {latestBooking.pickupPoint ? ` · Pickup: ${latestBooking.pickupPoint}` : ""}
+                    </span>
                     <span className="font-semibold text-black dark:text-white bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
                       Seat confirmed
                     </span>
@@ -331,7 +336,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
               <div className="text-[11px] text-zinc-400">
-                &copy; {new Date().getFullYear()} CampuStitch &bull; Multi-Tenant University Network
+                &copy; {new Date().getFullYear()} CampuStitch &bull; Campus University Network
               </div>
             </div>
           </div>

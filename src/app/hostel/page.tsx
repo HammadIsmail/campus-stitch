@@ -91,7 +91,7 @@ export default function HostelPage() {
 
         const [roomsRes, servicesRes] = await Promise.all([roomQuery, serviceQuery]);
 
-        if (roomsRes.data && roomsRes.data.length > 0) {
+        if (!roomsRes.error && roomsRes.data !== null) {
           const mappedRooms: RoommateListing[] = roomsRes.data.map((r: any) => ({
             id: r.id,
             title: r.title,
@@ -109,7 +109,7 @@ export default function HostelPage() {
           } catch {}
         }
 
-        if (servicesRes.data && servicesRes.data.length > 0) {
+        if (!servicesRes.error && servicesRes.data !== null) {
           const mappedServices: HostelService[] = servicesRes.data.map((s: any) => ({
             id: s.id,
             name: s.service_name,

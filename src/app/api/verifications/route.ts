@@ -36,49 +36,7 @@ export async function GET(request: NextRequest) {
       console.warn("DB query verifications notice:", err.message);
     }
 
-    // If records are empty, provide structured sample queue matching tenant for UI demo
-    if (records.length === 0) {
-      const camp = targetCampusId ? TenantsStore.getCampus(targetCampusId) : null;
-      const campName = camp?.campus.name || session?.campusName || "Main Campus (Lahore)";
-      const uniName = camp?.university.shortName || session?.universityName || "UET Lahore";
-
-      records = [
-        {
-          id: "v_demo_1",
-          name: "Hamza Tariq",
-          email: "hamza.tariq@gmail.com",
-          student_id: "CS-2024-81",
-          program: "BS Computer Science",
-          department: "Computer Science",
-          university: uniName,
-          campus_id: targetCampusId || "camp_uet_main",
-          campus_name: campName,
-          city: campName,
-          confidence_status: "matches",
-          status: "pending",
-          card_photo_url: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80",
-          live_photo_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80",
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: "v_demo_2",
-          name: "Ayesha Malik",
-          email: "ayesha.malik@gmail.com",
-          student_id: "SE-2024-19",
-          program: "Software Engineering",
-          department: "Software Engineering",
-          university: uniName,
-          campus_id: targetCampusId || "camp_uet_main",
-          campus_name: campName,
-          city: campName,
-          confidence_status: "matches",
-          status: "pending",
-          card_photo_url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80",
-          live_photo_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&auto=format&fit=crop&q=80",
-          created_at: new Date(Date.now() - 7200000).toISOString(),
-        },
-      ];
-    }
+    // Zero fabricated data rule: Return honest empty queue when database has no records
 
     return NextResponse.json({
       success: true,

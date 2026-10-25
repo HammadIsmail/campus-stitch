@@ -9,12 +9,12 @@ export const metadata: Metadata = {
     template: "%s | CampuStitch",
   },
   description:
-    "Student-verified commute sharing, peer marketplace, hostel finder, and multi-tenant student community for Pakistani universities.",
+    "Student-verified commute sharing, peer marketplace, hostel finder, and student community for Pakistani universities.",
   alternates: {
     canonical: "./",
   },
   openGraph: {
-    title: "CampuStitch - Multi-Tenant University Student SuperApp",
+    title: "CampuStitch - University Student SuperApp",
     description:
       "Verified student commute sharing, marketplace, hostel finder, and campus community across Pakistan.",
     url: "https://campus-stitch.vercel.app",

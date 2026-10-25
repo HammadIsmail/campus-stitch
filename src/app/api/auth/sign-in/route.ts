@@ -70,28 +70,30 @@ export async function POST(request: NextRequest) {
       console.warn("Supabase profile lookup fallback in sign-in:", e);
     }
 
-    // 2. OWASP A07: Verify Password Integrity
-    if (userProfile?.password_hash) {
+    // 2. OWASP A07: Verify Account Existence & Password Integrity
+    if (!userProfile) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "No account found with this email. Please create an account first.",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (userProfile.password_hash) {
       const isValid = verifyPassword(cleanPassword, userProfile.password_hash);
       if (!isValid) {
         return NextResponse.json(
-          { success: false, message: "Invalid email or password" },
+          { success: false, message: "Incorrect password. Please try again." },
           { status: 401 }
         );
       }
-    } else if (!userProfile) {
-      // Demo accounts fallback (e.g. UET Lahore demo or Super Admin)
-      const isKnownDemo =
-        cleanEmail === "ranahammadismail@gmail.com" ||
-        cleanEmail === "student@uet.edu.pk" ||
-        cleanEmail === "admin@uet.edu.pk";
-
-      if (!isKnownDemo && cleanPassword.length < 6) {
-        return NextResponse.json(
-          { success: false, message: "Invalid email or password" },
-          { status: 401 }
-        );
-      }
+    } else if (cleanPassword.length < 6) {
+      return NextResponse.json(
+        { success: false, message: "Incorrect password. Please try again." },
+        { status: 401 }
+      );
     }
 
     const { TenantsStore } = await import("@/lib/tenants-store");

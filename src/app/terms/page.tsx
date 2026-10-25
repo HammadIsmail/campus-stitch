@@ -57,7 +57,7 @@ export default function TermsPage() {
           <div className="flex items-center gap-4 text-xs text-zinc-500 pt-2">
             <span>Last Updated: October 2026</span>
             <span>&bull;</span>
-            <span>Applicable to all Pakistani Campus Tenants</span>
+            <span>Applicable to all Pakistani University Campuses</span>
           </div>
         </div>
       </section>
@@ -124,7 +124,7 @@ export default function TermsPage() {
                 <strong>Zero Impersonation Tolerance:</strong> Falsifying identity documents, using borrowed or altered student cards, or creating fraudulent accounts will result in immediate permanent banning and formal referral to your university disciplinary committee.
               </li>
               <li>
-                <strong>Campus Scoping:</strong> Your account is mapped directly to your specific university campus tenant. You may only interact with feeds, rides, and marketplace items authorized for your campus.
+                <strong>Campus Scoping:</strong> Your account is mapped directly to your specific university campus. You may only interact with feeds, rides, and marketplace items authorized for your campus.
               </li>
             </ul>
           </section>

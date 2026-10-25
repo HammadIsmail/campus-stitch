@@ -39,13 +39,7 @@ export async function POST(request: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const supabase = await createClient();
 
-    // 1. Verify that user exists in profiles or is demo
-    const isKnownDemo = [
-      "ranahammadismail@gmail.com",
-      "student@uet.edu.pk",
-      "admin@uet.edu.pk",
-    ].includes(cleanEmail);
-
+    // 1. Verify that user exists in profiles database
     let userProfile: any = null;
     try {
       const { data } = await supabase
@@ -58,11 +52,11 @@ export async function POST(request: NextRequest) {
       console.warn("DB forgot-password lookup fallback:", e);
     }
 
-    if (!userProfile && !isKnownDemo) {
+    if (!userProfile) {
       return NextResponse.json(
         {
           success: false,
-          message: "No registered account found with this email address.",
+          message: "No account found with this email. Please create an account first.",
         },
         { status: 404 }
       );

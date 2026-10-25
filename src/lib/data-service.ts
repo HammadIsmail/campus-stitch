@@ -140,16 +140,24 @@ export const DataService = {
 
       const { data, error } = await query;
 
-      if (data && data.length > 0 && !error) {
+      if (!error && data !== null) {
         setStored("rides", data);
         return data as Ride[];
       }
     } catch {
-      // Fallback
+      // Supabase direct failed or unavailable, try API endpoint
+      try {
+        const res = await fetch(`/api/commute/rides${campusId ? `?campusId=${encodeURIComponent(campusId)}` : ""}`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.rides)) {
+          setStored("rides", json.rides);
+          return json.rides as Ride[];
+        }
+      } catch {}
     }
-    const all = getStored<Ride[]>("rides", SEED_RIDES);
+    const all = getStored<Ride[]>("rides", []);
     if (!campusId) return all;
-    return all.filter((r) => r.campus_id === campusId || (!r.campus_id && campusId === "camp_uet_main"));
+    return all.filter((r) => r.campus_id === campusId);
   },
 
   async createRide(ride: Omit<Ride, "id">): Promise<Ride> {
@@ -170,10 +178,21 @@ export const DataService = {
         newRide.id = data.id;
       }
     } catch {
-      // Offline fallback
+      // Try API route
+      try {
+        const res = await fetch("/api/commute/rides", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newRide),
+        });
+        const json = await res.json();
+        if (json.success && json.ride?.id) {
+          newRide.id = json.ride.id;
+        }
+      } catch {}
     }
 
-    const current = getStored<Ride[]>("rides", SEED_RIDES);
+    const current = getStored<Ride[]>("rides", []);
     const updated = [newRide, ...current];
     setStored("rides", updated);
     return newRide;
@@ -183,7 +202,7 @@ export const DataService = {
     rideId: string,
     riderName: string,
   ): Promise<{ success: boolean; available_seats: number }> {
-    const current = getStored<Ride[]>("rides", SEED_RIDES);
+    const current = getStored<Ride[]>("rides", []);
     const ride = current.find((r) => r.id === rideId);
     if (!ride || ride.available_seats <= 0) {
       return { success: false, available_seats: 0 };
@@ -218,7 +237,15 @@ export const DataService = {
           status: "confirmed",
         },
       ]);
-    } catch {}
+    } catch {
+      try {
+        await fetch("/api/commute/book", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rideId, riderName, seats: 1 }),
+        });
+      } catch {}
+    }
 
     return { success: true, available_seats: ride.available_seats };
   },
@@ -238,14 +265,14 @@ export const DataService = {
 
       const { data, error } = await query;
 
-      if (data && data.length > 0 && !error) {
+      if (!error && data !== null) {
         setStored("listings", data);
         return data as Listing[];
       }
     } catch {}
-    const all = getStored<Listing[]>("listings", SEED_LISTINGS);
+    const all = getStored<Listing[]>("listings", []);
     if (!campusId) return all;
-    return all.filter((l) => l.campus_id === campusId || (!l.campus_id && campusId === "camp_uet_main"));
+    return all.filter((l) => l.campus_id === campusId);
   },
 
   async createListing(listing: Omit<Listing, "id">): Promise<Listing> {
@@ -267,7 +294,7 @@ export const DataService = {
       }
     } catch {}
 
-    const current = getStored<Listing[]>("listings", SEED_LISTINGS);
+    const current = getStored<Listing[]>("listings", []);
     const updated = [newListing, ...current];
     setStored("listings", updated);
     return newListing;
@@ -277,7 +304,7 @@ export const DataService = {
     listingId: string,
     status: "available" | "reserved" | "sold",
   ): Promise<void> {
-    const current = getStored<Listing[]>("listings", SEED_LISTINGS);
+    const current = getStored<Listing[]>("listings", []);
     const item = current.find((l) => l.id === listingId);
     if (item) {
       item.status = status;
@@ -299,14 +326,14 @@ export const DataService = {
         query = query.eq("campus_id", campusId);
       }
       const { data, error } = await query;
-      if (data && data.length > 0 && !error) {
+      if (!error && data !== null) {
         setStored("bikes", data);
         return data as BikeItem[];
       }
     } catch {}
-    const all = getStored<BikeItem[]>("bikes", SEED_BIKES);
+    const all = getStored<BikeItem[]>("bikes", []);
     if (!campusId) return all;
-    return all.filter((b) => b.campus_id === campusId || (!b.campus_id && campusId === "camp_uet_main"));
+    return all.filter((b) => b.campus_id === campusId);
   },
 
   async rentBike(bikeId: string, renterName: string): Promise<boolean> {
@@ -345,7 +372,7 @@ export const DataService = {
         .from("shared_item_owners")
         .select("*");
 
-      if (items && items.length > 0 && !itemsError) {
+      if (!itemsError && items !== null) {
         const mapped: SharedItem[] = items.map((it) => {
           const itemOwners = (owners || [])
             .filter((o) => o.item_id === it.id)
@@ -371,7 +398,7 @@ export const DataService = {
         return mapped;
       }
     } catch {}
-    const all = getStored<SharedItem[]>("shared_items", SEED_SHARED_ITEMS);
+    const all = getStored<SharedItem[]>("shared_items", []);
     if (!campusId) return all;
     return all.filter((s) => s.campus_id === campusId || (!s.campus_id && campusId === "camp_uet_main"));
   },
@@ -429,14 +456,14 @@ export const DataService = {
     try {
       const supabase = createClient();
       const { data, error } = await supabase.from("verifications").select("*");
-      if (data && data.length > 0 && !error) {
+      if (!error && data !== null) {
         setStored("verifications", data);
         return data as VerificationRequest[];
       }
     } catch {}
     return getStored<VerificationRequest[]>(
       "verifications",
-      SEED_VERIFICATIONS,
+      [],
     );
   },
 
@@ -446,7 +473,7 @@ export const DataService = {
   ): Promise<void> {
     const queue = getStored<VerificationRequest[]>(
       "verifications",
-      SEED_VERIFICATIONS,
+      [],
     );
     const item = queue.find((v) => v.id === id);
     if (item) {
