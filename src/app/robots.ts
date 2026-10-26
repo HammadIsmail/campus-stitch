@@ -13,7 +13,7 @@ export default function robots(): MetadataRoute.Robots {
           "/download",
           "/commute",
           "/market",
-          "/hostel",
+          "/services",
           "/community",
           "/safety",
           "/contact",

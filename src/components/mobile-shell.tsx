@@ -8,8 +8,7 @@ import {
   Mic,
   Compass,
   Tag,
-  Building2,
-  Users,
+  Wrench,
   Plus,
   MessageSquare,
   Bell,
@@ -24,11 +23,10 @@ import { NotificationsSlider } from "@/components/notifications-slider";
 import { UnverifiedDialog } from "@/components/unverified-dialog";
 
 const NAV_LINKS = [
-  { name: "Home", href: "/", icon: null },
+  { name: "Services", href: "/services", icon: Wrench },
   { name: "Commute", href: "/commute", icon: Compass },
-  { name: "Marketplace", href: "/market", icon: Tag },
-  { name: "Hostel", href: "/hostel", icon: Building2 },
-  { name: "Community", href: "/community", icon: Users },
+  { name: "Market", href: "/market", icon: Tag },
+  { name: "Profile", href: "/profile", icon: User },
 ];
 
 export function MobileShell({
@@ -66,9 +64,7 @@ export function MobileShell({
 
   const isMessagesPage =
     pathname === "/messages" || Boolean(pathname?.startsWith("/messages"));
-  const isCommunityPage =
-    pathname === "/community" || Boolean(pathname?.startsWith("/community"));
-  const isAppLayoutPage = isMessagesPage || isCommunityPage;
+  const isAppLayoutPage = isMessagesPage;
 
   return (
     <div
@@ -225,7 +221,6 @@ export function MobileShell({
           className={cn(
             "w-full max-w-6xl xl:max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-6 flex-1 flex flex-col",
             isMessagesPage && "h-full py-0 sm:py-4 min-h-0 overflow-hidden",
-            isCommunityPage && "h-full py-0 sm:py-2 min-h-0 overflow-hidden max-w-7xl xl:max-w-[1536px]",
             isAuthPage && "max-w-full px-0 sm:px-0 py-0 sm:py-0 justify-center items-center"
           )}
         >

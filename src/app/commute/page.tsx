@@ -16,6 +16,8 @@ import {
   Compass,
   Pencil,
   Trash2,
+  Star,
+  Loader2,
 } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
@@ -27,6 +29,8 @@ import { MapPin } from "lucide-react";
 import { useRidesQuery, useBikesQuery } from "@/hooks/use-commute-queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { StudentProfileModal } from "@/components/student-profile-modal";
+import { ReviewModal } from "@/components/review-modal";
 
 export default function CommutePage() {
   const { user } = useAuth();
@@ -35,6 +39,30 @@ export default function CommutePage() {
   const [fromFilter, setFromFilter] = React.useState("");
   const [toFilter, setToFilter] = React.useState("");
   const [myBookings, setMyBookings] = React.useState<any[]>([]);
+
+  // Modals state
+  const [profileModalTarget, setProfileModalTarget] = React.useState<{
+    userId?: string;
+    name: string;
+    isVerified?: boolean;
+  } | null>(null);
+
+  const [reviewModalTarget, setReviewModalTarget] = React.useState<{
+    userId: string;
+    name: string;
+    category?: "commute" | "marketplace" | "service" | "rental";
+  } | null>(null);
+
+  // List Bike Modal State
+  const [showListBikeModal, setShowListBikeModal] = React.useState(false);
+  const [bikeModel, setBikeModel] = React.useState("");
+  const [bikeDailyRate, setBikeDailyRate] = React.useState("150");
+  const [bikeDeposit, setBikeDeposit] = React.useState("500");
+  const [bikeLocation, setBikeLocation] = React.useState("");
+  const [bikeCondition, setBikeCondition] = React.useState("Good condition");
+  const [bikeRules, setBikeRules] = React.useState("");
+  const [isListingBike, setIsListingBike] = React.useState(false);
+  const [bikeListError, setBikeListError] = React.useState<string | null>(null);
 
   // Edit Ride Modal State
   const [editingRide, setEditingRide] = React.useState<Ride | null>(null);
@@ -94,6 +122,57 @@ export default function CommutePage() {
     } finally {
       setIsUpdatingRide(false);
       setEditingRide(null);
+    }
+  };
+
+  const handleListBike = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bikeModel.trim()) {
+      setBikeListError("Please enter the bicycle or motorbike model.");
+      return;
+    }
+    setBikeListError(null);
+    setIsListingBike(true);
+
+    try {
+      const res = await DataService.listBike({
+        model: bikeModel.trim(),
+        condition: bikeCondition,
+        location: bikeLocation.trim() || "Hostel Bike Stand",
+        dailyRate: Number(bikeDailyRate) || 150,
+        depositAmount: Number(bikeDeposit) || 500,
+        rules: bikeRules.trim() || "Return by 9 PM in clean condition",
+        ownerName: user?.name || "Student Peer",
+        campusId: user?.campusId || "camp_uet_main",
+        universityId: user?.universityId || "uni_uet_lahore",
+      });
+
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ["bikes"] });
+        setShowListBikeModal(false);
+        setBikeModel("");
+        setBikeRules("");
+        setBikeLocation("");
+      } else {
+        setBikeListError(res.error || "Failed to list bike. Please try again.");
+      }
+    } catch (err: any) {
+      setBikeListError(err.message || "Failed to list bike.");
+    } finally {
+      setIsListingBike(false);
+    }
+  };
+
+  const handleDeleteBike = async (bikeId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to remove this bike listing?")) return;
+
+    try {
+      await DataService.deleteBike(bikeId);
+      queryClient.invalidateQueries({ queryKey: ["bikes"] });
+    } catch (err) {
+      console.warn("Delete bike error:", err);
     }
   };
 
@@ -272,13 +351,25 @@ export default function CommutePage() {
                         </Link>
 
                         <div className="flex justify-between items-center pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                          <span className="inline-flex items-center gap-2 text-xs font-semibold text-black dark:text-white">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setProfileModalTarget({
+                                userId: ride.organizer_name,
+                                name: ride.organizer_name,
+                                isVerified: ride.organizer_verified,
+                              });
+                            }}
+                            className="inline-flex items-center gap-2 text-xs font-semibold text-black dark:text-white hover:underline cursor-pointer"
+                          >
                             <span className="w-6 h-6 rounded-full bg-black dark:bg-white text-white dark:text-black text-[11px] font-bold flex items-center justify-center">
                               {ride.organizer_name.charAt(0)}
                             </span>
                             <span>{ride.organizer_name}</span>
                             <VerificationBadge isVerified={ride.organizer_verified} size="xs" />
-                          </span>
+                          </button>
                           <span
                             className={`text-[11px] font-bold px-2 py-0.5 rounded ${
                               ride.available_seats === 1
@@ -296,72 +387,148 @@ export default function CommutePage() {
                 )}
               </div>
 
-              {bikes.length > 0 && (
-                <Link
-                  href={`/commute/bike?id=${bikes[0].id}`}
-                  className="flex items-center justify-between min-h-[50px] px-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-2xs"
-                >
-                  <span className="text-xs text-black dark:text-white flex items-center gap-2">
-                    <Bike size={16} className="text-black dark:text-white" />
-                    <span>
-                      <b>{bikes[0].model}</b> · Rs. {bikes[0].daily_rate} · {bikes[0].available_date}
-                    </span>
-                  </span>
-                  <span className="text-xs font-bold text-black dark:text-white flex items-center gap-1">
-                    Bike Details
-                    <ChevronRight size={13} />
-                  </span>
-                </Link>
-              )}
+              {/* In-person payment notice */}
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Notice: All fuel splits, rickshaw fares, and ride shares are handled directly between students in cash. No in-app payment transactions occur on this platform.
+              </div>
             </TabsContent>
 
             {/* TAB: BIKES */}
             <TabsContent
               value="bikes"
-              className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4"
+              className="space-y-4 mt-4"
             >
+              <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 px-1">
+                <span>
+                  <b className="text-black dark:text-white font-bold">
+                    {bikes.length} bike{bikes.length === 1 ? "" : "s"}
+                  </b>{" "}
+                  available on campus
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowListBikeModal(true)}
+                  className="font-semibold text-black dark:text-white hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={13} />
+                  List your bike
+                </button>
+              </div>
+
               {bikes.length === 0 ? (
-                <div className="col-span-full p-8 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl text-center space-y-2.5 shadow-2xs">
+                <div className="p-8 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl text-center space-y-3 shadow-2xs">
                   <Bike size={32} className="mx-auto text-zinc-400 stroke-[1.5px]" />
                   <div className="text-sm font-bold text-black dark:text-white">No bikes available for rent</div>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
                     No rental bikes or motorbikes are listed on campus yet. Students can list their bikes when idle between classes.
                   </p>
+                  <Button
+                    type="button"
+                    onClick={() => setShowListBikeModal(true)}
+                    className="h-8.5 px-4 text-xs font-bold bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200"
+                  >
+                    <Plus size={13} className="mr-1" />
+                    List Your Bike
+                  </Button>
                 </div>
               ) : (
-                bikes.map((b) => (
-                  <Link
-                    key={b.id}
-                    href={`/commute/bike?id=${b.id}`}
-                    className="block p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-2xs"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-sm text-black dark:text-white">
-                          {b.model}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {bikes.map((b) => {
+                    const isBikeMine =
+                      (user?.name && b.owner_name?.toLowerCase().trim() === user.name.toLowerCase().trim());
+
+                    return (
+                      <div
+                        key={b.id}
+                        className="p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xs flex flex-col justify-between space-y-3"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-sm text-black dark:text-white">
+                              {b.model}
+                            </div>
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                              {b.location} · {b.condition}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-extrabold text-black dark:text-white text-sm">
+                              Rs. {b.daily_rate}
+                            </span>
+                            <span className="text-xs text-zinc-500 dark:text-zinc-400"> / day</span>
+                            {b.deposit_amount ? (
+                              <div className="text-[10px] text-zinc-400">
+                                Deposit: Rs. {b.deposit_amount}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                          {b.location} · {b.condition}
+
+                        {/* Owner & Safety Actions */}
+                        <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileModalTarget({
+                                userId: b.owner_name,
+                                name: b.owner_name || "Student Owner",
+                                isVerified: b.owner_verified,
+                              });
+                            }}
+                            className="flex items-center gap-1.5 font-semibold text-black dark:text-white hover:underline cursor-pointer"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold flex items-center justify-center">
+                              {(b.owner_name?.[0] || "S").toUpperCase()}
+                            </span>
+                            <span>{b.owner_name || "Student Owner"}</span>
+                            <VerificationBadge isVerified={b.owner_verified} size="xs" />
+                          </button>
+
+                          <div className="flex items-center gap-2">
+                            {isBikeMine ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteBike(b.id, e)}
+                                title="Remove Bike Listing"
+                                className="p-1 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReviewModalTarget({
+                                    userId: b.owner_name || "Owner",
+                                    name: b.owner_name || "Owner",
+                                    category: "rental",
+                                  });
+                                }}
+                                className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                              >
+                                <Star size={11} className="fill-amber-400 text-amber-400" />
+                                <span>Rate</span>
+                              </button>
+                            )}
+
+                            <Link
+                              href={`/commute/bike?id=${b.id}`}
+                              className="font-bold text-black dark:text-white hover:underline"
+                            >
+                              Details →
+                            </Link>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="font-extrabold text-black dark:text-white text-sm">
-                          Rs. {b.daily_rate}
-                        </span>
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400"> / day</span>
-                      </div>
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs">
-                      <span className="text-zinc-600 dark:text-zinc-300 font-medium">
-                        {b.available_date} ({b.available_time})
-                      </span>
-                      <span className="font-bold text-black dark:text-white hover:underline">
-                        Rent Bike →
-                      </span>
-                    </div>
-                  </Link>
-                ))
+                    );
+                  })}
+                </div>
               )}
+
+              {/* In-person rental notice */}
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Rental Policy: Security deposit and rental rate are collected directly in person between students upon key handover. No in-app payment transactions occur on this platform.
+              </div>
             </TabsContent>
 
             {/* TAB: MY RIDES */}
@@ -388,17 +555,39 @@ export default function CommutePage() {
                     <div className="text-sm font-bold text-black dark:text-white">
                       {booking.route || `${booking.from_location || "Campus"} → ${booking.to_location || "City"}`}
                     </div>
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Organizer: {booking.organizer_name || "Student"}
+                    <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                      <span>Organizer: {booking.organizer_name || "Student"}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReviewModalTarget({
+                            userId: booking.organizer_name || "Driver",
+                            name: booking.organizer_name || "Driver",
+                            category: "commute",
+                          });
+                        }}
+                        className="font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Star size={11} className="fill-amber-400 text-amber-400" />
+                        <span>Rate Driver</span>
+                      </button>
                     </div>
                     <div className="pt-2 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800">
                       <span className="text-sm font-bold text-black dark:text-white">Rs. {booking.price_per_seat || booking.cost || 50}</span>
-                      <Link
-                        href={`/commute/ride?id=${booking.ride_id || ""}`}
-                        className="text-xs font-bold text-black dark:text-white hover:underline cursor-pointer"
-                      >
-                        View Details
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/messages?context=commute&id=${booking.ride_id || ""}`}
+                          className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:underline cursor-pointer"
+                        >
+                          Chat
+                        </Link>
+                        <Link
+                          href={`/commute/ride?id=${booking.ride_id || ""}`}
+                          className="text-xs font-bold text-black dark:text-white hover:underline cursor-pointer"
+                        >
+                          View Details
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -535,6 +724,160 @@ export default function CommutePage() {
               </form>
             </div>
           </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* MODAL: LIST BIKE FOR RENT                                */}
+        {/* ======================================================== */}
+        {showListBikeModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <div className="bg-white dark:bg-[#121215] rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="font-extrabold text-base text-black dark:text-white flex items-center gap-2">
+                  <Bike size={18} />
+                  <span>List Your Bike for Rent</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowListBikeModal(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {bikeListError && (
+                <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl text-xs text-red-600 dark:text-red-400 font-medium">
+                  {bikeListError}
+                </div>
+              )}
+
+              <form onSubmit={handleListBike} className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Bicycle or Motorbike Model
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={bikeModel}
+                    onChange={(e) => setBikeModel(e.target.value)}
+                    placeholder="e.g. Sohrab 26-inch Commuter / Honda CD 70"
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                      Daily Rate (PKR)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={bikeDailyRate}
+                      onChange={(e) => setBikeDailyRate(e.target.value)}
+                      placeholder="150"
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                      Security Deposit (PKR)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={bikeDeposit}
+                      onChange={(e) => setBikeDeposit(e.target.value)}
+                      placeholder="500"
+                      className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Campus Pickup Location
+                  </label>
+                  <input
+                    type="text"
+                    value={bikeLocation}
+                    onChange={(e) => setBikeLocation(e.target.value)}
+                    placeholder="e.g. Hostel 4 Bicycle Stand, Library Gate"
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Condition
+                  </label>
+                  <select
+                    value={bikeCondition}
+                    onChange={(e) => setBikeCondition(e.target.value)}
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  >
+                    <option value="Like New">Like New</option>
+                    <option value="Good condition">Good condition</option>
+                    <option value="Fair / Usable">Fair / Usable</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-black dark:text-white block mb-1">
+                    Rental Terms / Rules
+                  </label>
+                  <input
+                    type="text"
+                    value={bikeRules}
+                    onChange={(e) => setBikeRules(e.target.value)}
+                    placeholder="e.g. Return with lock key by 9 PM"
+                    className="w-full h-10 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl text-xs text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowListBikeModal(false)}
+                    className="flex-1 h-10 rounded-xl border border-zinc-300 dark:border-zinc-700 font-bold text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <Button
+                    type="submit"
+                    disabled={isListingBike || !bikeModel.trim()}
+                    className="flex-1 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 cursor-pointer"
+                  >
+                    {isListingBike ? "Listing..." : "Publish Bike"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Student Profile Modal */}
+        {profileModalTarget && (
+          <StudentProfileModal
+            isOpen={!!profileModalTarget}
+            onClose={() => setProfileModalTarget(null)}
+            userId={profileModalTarget.userId}
+            fallbackName={profileModalTarget.name}
+            fallbackVerified={profileModalTarget.isVerified}
+          />
+        )}
+
+        {/* Review Modal */}
+        {reviewModalTarget && (
+          <ReviewModal
+            isOpen={!!reviewModalTarget}
+            onClose={() => setReviewModalTarget(null)}
+            targetUserId={reviewModalTarget.userId}
+            targetName={reviewModalTarget.name}
+            defaultCategory={reviewModalTarget.category || "commute"}
+          />
         )}
 
         {/* Bottom Navigation */}

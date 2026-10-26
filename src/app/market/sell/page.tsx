@@ -38,6 +38,7 @@ export default function SellSomethingPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
+  const [imageError, setImageError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const createListingMutation = useCreateListingMutation();
@@ -68,23 +69,30 @@ export default function SellSomethingPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setImageError(null);
     uploadImageMutation.mutate(file, {
       onSuccess: (uploadedUrl) => {
         setImageUrl(uploadedUrl);
       },
       onError: () => {
-        alert("Failed to upload image. Please try again.");
+        setImageError("Failed to upload image. Please try again.");
       },
     });
   };
 
   const onSubmit = async (data: SellItemFormData) => {
+    if (!imageUrl) {
+      setImageError("An item photo is compulsory. Please capture or upload a clear photo.");
+      return;
+    }
+    setImageError(null);
+
     createListingMutation.mutate(
       {
         university_id: user?.universityId || "uni_uet_lahore",
         campus_id: user?.campusId || "camp_uet_main",
         seller_name: user?.name || "Student",
-        seller_verified: user?.isVerified ?? true,
+        seller_verified: user?.isVerified ?? false,
         title: data.title.trim(),
         description: data.description?.trim(),
         category: data.category,
@@ -93,11 +101,14 @@ export default function SellSomethingPage() {
         location: data.location?.trim() || "Campus Hostel Block",
         is_graduation_sale: false,
         status: "available",
-        image_url: imageUrl || undefined,
+        image_url: imageUrl,
       },
       {
         onSuccess: () => {
           router.push("/market");
+        },
+        onError: (err: any) => {
+          setImageError(err.message || "Failed to create listing. Please try again.");
         },
       }
     );
@@ -135,9 +146,14 @@ export default function SellSomethingPage() {
           <main className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
             {/* Photos Upload with Cloudinary WebP */}
             <div className="space-y-1.5">
-              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide">
-                Item Photos
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-200 tracking-wide">
+                  Item Photo <span className="text-red-500">*</span>
+                </span>
+                <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
+                  Compulsory for buyer trust
+                </span>
+              </div>
 
               <input
                 ref={fileInputRef}
@@ -168,7 +184,9 @@ export default function SellSomethingPage() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploadingImage || isSubmitting}
-                    className="w-24 h-24 shrink-0 rounded-xl border border-dashed border-zinc-400 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 flex flex-col items-center justify-center gap-1 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
+                    className={`w-24 h-24 shrink-0 rounded-xl border border-dashed ${
+                      imageError ? "border-red-500 bg-red-50/20" : "border-zinc-400 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900"
+                    } text-zinc-800 dark:text-zinc-200 flex flex-col items-center justify-center gap-1 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50`}
                   >
                     {isUploadingImage ? (
                       <>
@@ -180,13 +198,17 @@ export default function SellSomethingPage() {
                       </>
                     ) : (
                       <>
-                        <Camera size={20} className="text-zinc-500" />
+                        <Camera size={20} className={imageError ? "text-red-500" : "text-zinc-500"} />
                         <span>Add Photo</span>
                       </>
                     )}
                   </button>
                 )}
               </div>
+
+              {imageError && (
+                <p className="text-[11px] font-medium text-red-500">{imageError}</p>
+              )}
             </div>
 
             {/* Inputs */}

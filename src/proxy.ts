@@ -47,14 +47,18 @@ export async function proxy(request: NextRequest) {
       });
     }
 
-    // Public API endpoints (auth, upload, departments, universities, contact, app version)
+    // Public API endpoints (auth, upload, departments, universities, campuses, contact, app version, and GET browsing)
     if (
       pathname.startsWith("/api/auth") ||
       pathname.startsWith("/api/upload") ||
       pathname.startsWith("/api/departments") ||
       pathname.startsWith("/api/universities") ||
+      pathname.startsWith("/api/campuses") ||
       pathname.startsWith("/api/contact") ||
-      pathname.startsWith("/api/app/version")
+      pathname.startsWith("/api/app/version") ||
+      (pathname.startsWith("/api/market") && request.method === "GET") ||
+      (pathname.startsWith("/api/commute") && request.method === "GET") ||
+      (pathname.startsWith("/api/services") && request.method === "GET")
     ) {
       return NextResponse.next();
     }

@@ -26,6 +26,7 @@ import {
   Trash2,
   AlertTriangle,
   ExternalLink,
+  Star,
 } from "lucide-react";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { MobileShell } from "@/components/mobile-shell";
@@ -37,6 +38,7 @@ import {
   useUpdateProfileMutation,
   useDeleteAccountMutation,
 } from "@/hooks/use-profile-queries";
+import { StudentProfileModal } from "@/components/student-profile-modal";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -88,6 +90,14 @@ export default function ProfilePage() {
   const [pushNotifs, setPushNotifs] = React.useState(true);
   const [publicProfile, setPublicProfile] = React.useState(true);
 
+  // Ratings & Public Preview State
+  const [ratingData, setRatingData] = React.useState<{
+    averageRating: number;
+    totalReviews: number;
+    reviews: any[];
+  }>({ averageRating: 0, totalReviews: 0, reviews: [] });
+  const [showPublicPreview, setShowPublicPreview] = React.useState(false);
+
   // Load Profile Data
   React.useEffect(() => {
     async function loadData() {
@@ -138,6 +148,26 @@ export default function ProfilePage() {
         }
       } catch (err) {
         console.warn("Failed to load user profile:", err);
+      }
+
+      // Fetch real ratings from /api/profile/ratings
+      try {
+        const queryUserId = user.userId || user.email || user.name;
+        if (queryUserId) {
+          const ratRes = await fetch(`/api/profile/ratings?userId=${encodeURIComponent(queryUserId)}`);
+          if (ratRes.ok) {
+            const ratJson = await ratRes.json();
+            if (ratJson.success) {
+              setRatingData({
+                averageRating: Number(ratJson.averageRating) || 0,
+                totalReviews: Number(ratJson.totalReviews) || 0,
+                reviews: Array.isArray(ratJson.reviews) ? ratJson.reviews : [],
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load ratings:", err);
       }
     }
     loadData();
@@ -274,24 +304,34 @@ export default function ProfilePage() {
               {user.university} &bull; {user.campus}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            disabled={isSigningOut}
-            className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {isSigningOut ? (
-              <>
-                <Loader2 size={14} className="animate-spin text-black dark:text-white" />
-                <span>Signing Out...</span>
-              </>
-            ) : (
-              <>
-                <LogOut size={14} />
-                <span>Sign Out</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPublicPreview(true)}
+              className="text-xs font-semibold text-black dark:text-white flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+            >
+              <Eye size={13} />
+              <span>Public Preview</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isSigningOut ? (
+                <>
+                  <Loader2 size={14} className="animate-spin text-black dark:text-white" />
+                  <span>Signing Out...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut size={14} />
+                  <span>Sign Out</span>
+                </>
+              )}
+            </button>
+          </div>
         </header>
 
         {/* Scrollable Content */}
@@ -436,6 +476,108 @@ export default function ProfilePage() {
                 )}
               </span>
             </div>
+          </div>
+
+          {/* ======================================================== */}
+          {/* PEER RATINGS & REPUTATION SUMMARY                        */}
+          {/* ======================================================== */}
+          <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs space-y-3.5 transition-colors">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-extrabold text-black dark:text-white flex items-center gap-1.5">
+                  <Star size={16} className="fill-amber-400 text-amber-400" />
+                  <span>Peer Reviews & Trust Score</span>
+                </h2>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Honest feedback from carpools, marketplace deals, and campus services
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPublicPreview(true)}
+                className="text-xs font-bold text-black dark:text-white hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>View Full Profile</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl font-black text-black dark:text-white">
+                  {ratingData.totalReviews > 0 ? ratingData.averageRating.toFixed(1) : "0.0"}
+                </span>
+                <div>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        size={12}
+                        className={
+                          s <= Math.round(ratingData.averageRating) && ratingData.totalReviews > 0
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-zinc-300 dark:text-zinc-700"
+                        }
+                      />
+                    ))}
+                  </div>
+                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">
+                    {ratingData.totalReviews > 0
+                      ? `${ratingData.totalReviews} peer ${ratingData.totalReviews === 1 ? "review" : "reviews"}`
+                      : "No peer reviews yet"}
+                  </div>
+                </div>
+              </div>
+
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                {user.verified || verificationStatus === "verified" ? "Verified Peer" : "Student Member"}
+              </span>
+            </div>
+
+            {/* Recent Peer Feedback List */}
+            {ratingData.reviews.length > 0 ? (
+              <div className="space-y-2 pt-1">
+                <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                  Recent Peer Comments
+                </div>
+                <div className="space-y-2">
+                  {ratingData.reviews.slice(0, 3).map((r: any) => (
+                    <div
+                      key={r.id}
+                      className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-100 dark:border-zinc-800 space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-black dark:text-white">
+                          {r.rater_name || "Student"}
+                        </span>
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              size={10}
+                              className={
+                                s <= Number(r.rating)
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "text-zinc-300 dark:text-zinc-700"
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {r.comment && (
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed italic">
+                          &ldquo;{r.comment}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 italic text-center py-2">
+                Honest state: You have not received any peer ratings yet. Complete rides or marketplace exchanges to earn your trust badges.
+              </p>
+            )}
           </div>
 
           {/* Verification CTA Banner (Unified Black & White Theme) */}
@@ -925,6 +1067,17 @@ export default function ProfilePage() {
               </form>
             </div>
           </div>
+        )}
+
+        {/* Public Profile Preview Modal */}
+        {showPublicPreview && (
+          <StudentProfileModal
+            isOpen={showPublicPreview}
+            onClose={() => setShowPublicPreview(false)}
+            userId={user.userId || user.email || user.name}
+            fallbackName={user.name}
+            fallbackVerified={user.verified || verificationStatus === "verified"}
+          />
         )}
       </div>
     </MobileShell>

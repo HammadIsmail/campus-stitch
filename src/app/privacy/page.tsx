@@ -91,7 +91,7 @@ export default function PrivacyPolicyPage() {
               1. Overview & Data Controller
             </h2>
             <p>
-              CampuStitch (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is the data controller for the CampuStitch mobile application and web portal. Our platform provides verified student utilities (carpooling, marketplace, hostel listings, and community discussion) for universities in Pakistan.
+              CampuStitch (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is the data controller for the CampuStitch mobile application and web portal. Our platform provides verified student utilities (carpooling, peer marketplace, campus student services, and student communities) for universities in Pakistan.
             </p>
             <p>
               We operate under a strict <strong>Privacy-by-Design</strong> ethos: student information is strictly scoped to your verified university campus, protected with encryption, and never shared or sold to advertising brokerages.
@@ -132,7 +132,7 @@ export default function PrivacyPolicyPage() {
                   C. User Content & Activity
                 </h3>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                  Marketplace listing photos and descriptions, carpool routes and pickup locations, hostel listings, community forum discussions, upvotes, and direct chat messages between students.
+                  Marketplace listing photos and descriptions, carpool routes and pickup locations, campus student service listings, community forum discussions, upvotes, and direct chat messages between students.
                 </p>
               </div>
 
@@ -179,7 +179,7 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc pl-5 space-y-1.5 text-xs text-zinc-600 dark:text-zinc-400">
               <li>Authenticating your student account and issuing cryptographic JWT session tokens.</li>
               <li>Verifying your campus enrollment status through our dual-factor ID card and facial verification check.</li>
-              <li>Displaying campus-isolated carpools, second-hand books, and hostel matches.</li>
+              <li>Displaying campus-isolated carpools, second-hand books, and campus services.</li>
               <li>Enabling student-to-student messaging for coordinating rides and book purchases.</li>
               <li>Moderating forum content to prevent harassment, fraud, and academic dishonesty.</li>
             </ul>

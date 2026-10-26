@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 
-export interface HostelService {
+export interface CampusService {
   id: string;
   name: string;
   provider: string;
@@ -18,9 +18,9 @@ export interface HostelService {
   created_at: string;
 }
 
-export function useHostelServicesQuery() {
+export function useServicesQuery() {
   return useQuery({
-    queryKey: ["hostel_services"],
+    queryKey: ["campus_services"],
     queryFn: async () => {
       try {
         const supabase = createClient();
@@ -33,7 +33,7 @@ export function useHostelServicesQuery() {
             id: s.id,
             name: s.service_name || s.name || "Student Service",
             provider: s.provider_name || s.provider || "Student",
-            location: s.location || "Hostel Block",
+            location: s.location || "Campus Service Point",
             schedule: s.turnaround_time || s.schedule || "Daily",
             rate: s.rate || "Standard rate",
             phone: s.phone || "",
@@ -42,36 +42,36 @@ export function useHostelServicesQuery() {
             campusId: s.campus_id,
             userId: s.user_id,
             created_at: s.created_at,
-          })) as HostelService[];
+          })) as CampusService[];
         }
       } catch {}
 
       try {
-        const local = localStorage.getItem("campus_stitch_hostel_services");
-        if (local) return JSON.parse(local) as HostelService[];
+        const local = localStorage.getItem("campus_stitch_services");
+        if (local) return JSON.parse(local) as CampusService[];
       } catch {}
 
-      return [] as HostelService[];
+      return [] as CampusService[];
     },
     staleTime: 60 * 1000,
   });
 }
 
-export function useCreateHostelServiceMutation() {
+export function useCreateServiceMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: Omit<HostelService, "id" | "created_at">) => {
-      const newService: HostelService = {
+    mutationFn: async (payload: Omit<CampusService, "id" | "created_at">) => {
+      const newService: CampusService = {
         ...payload,
         id: "srv_" + Date.now(),
         created_at: new Date().toISOString(),
       };
 
       try {
-        const local = JSON.parse(localStorage.getItem("campus_stitch_hostel_services") || "[]");
+        const local = JSON.parse(localStorage.getItem("campus_stitch_services") || "[]");
         local.unshift(newService);
-        localStorage.setItem("campus_stitch_hostel_services", JSON.stringify(local));
+        localStorage.setItem("campus_stitch_services", JSON.stringify(local));
 
         const supabase = createClient();
         await supabase.from("hostel_services").insert([
@@ -90,13 +90,19 @@ export function useCreateHostelServiceMutation() {
           },
         ]);
       } catch (err) {
-        console.warn("Supabase insert hostel service error:", err);
+        console.warn("Supabase insert service error:", err);
       }
 
       return newService;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["campus_services"] });
       queryClient.invalidateQueries({ queryKey: ["hostel_services"] });
     },
   });
 }
+
+// Backwards compatibility aliases
+export type HostelService = CampusService;
+export const useHostelServicesQuery = useServicesQuery;
+export const useCreateHostelServiceMutation = useCreateServiceMutation;

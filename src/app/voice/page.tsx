@@ -68,9 +68,9 @@ const QUICK_SUGGESTIONS = [
     query: "کیا کوئی کھڑیاںوالہ جا رہا ہے؟",
   },
   {
-    urdu: "r/cs-uet کمیونٹی اور ڈسکشن دکھائیں",
-    label: "Reddit Community: r/cs-uet",
-    query: "Show me r/cs-uet community discussions and lab tips",
+    urdu: "ہاسٹل لانڈری یا استری سروس چاہیے",
+    label: "Hostel Laundry & Student Services",
+    query: "Show hostel laundry and room services",
   },
   {
     urdu: "طالبعلم محمد حماد کی ریٹنگ اور پروفائل کیا ہے؟",
@@ -563,37 +563,6 @@ export default function VoiceAskPage() {
                 </div>
               )}
 
-              {/* Tool Results: Matching Reddit Communities */}
-              {!isLoading && matchedCommunities.length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 px-1">
-                    Matching Reddit Communities
-                  </div>
-                  {matchedCommunities.map((comm) => (
-                    <Link
-                      key={comm.id}
-                      href="/community"
-                      className="flex items-center gap-3 p-3.5 bg-white border border-zinc-200 hover:border-black rounded-xl shadow-2xs transition-all block"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center font-bold text-xs shrink-0">
-                        r/
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13.5px] font-bold text-black flex items-center gap-1.5">
-                          <span>{comm.name}</span>
-                          <ShieldCheck size={13} className="text-black" />
-                        </div>
-                        <div className="text-xs text-zinc-500 truncate">
-                          {comm.title || comm.description}
-                        </div>
-                      </div>
-                      <div className="text-xs font-bold text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-lg shrink-0">
-                        {comm.member_count} members
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
 
               {/* Tool Results: Matching Student Profiles & Ratings */}
               {!isLoading && matchedProfiles.length > 0 && (

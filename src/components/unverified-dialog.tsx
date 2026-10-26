@@ -96,7 +96,7 @@ export function UnverifiedDialog() {
             </li>
             <li className="flex items-start gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-black dark:text-white shrink-0 mt-0.5" />
-              <span>Unlock verified-only roommate listings and safe campus marketplace</span>
+              <span>Unlock verified-only student campus services and safe marketplace</span>
             </li>
           </ul>
         </div>

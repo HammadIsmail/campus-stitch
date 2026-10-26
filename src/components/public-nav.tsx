@@ -6,8 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Compass,
   Tag,
-  Building2,
-  Users,
+  Wrench,
   Shield,
   Menu,
   X,
@@ -34,10 +33,9 @@ export function PublicNav({ onDownloadClick }: PublicNavProps) {
 
   const links = [
     { name: "Overview", href: "/home" },
+    { name: "Services", href: "/services", icon: Wrench },
     { name: "Commute", href: "/commute", icon: Compass },
     { name: "Market", href: "/market", icon: Tag },
-    { name: "Hostels", href: "/hostel", icon: Building2 },
-    { name: "Community", href: "/community", icon: Users },
     { name: "Safety", href: "/safety", icon: Shield },
   ];
 

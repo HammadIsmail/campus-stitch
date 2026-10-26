@@ -23,9 +23,11 @@ import { Button } from "@/components/ui/button";
 import { DataService, Listing } from "@/lib/data-service";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { useAuth } from "@/lib/auth-context";
-import { MapPin } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import { useMarketListingsQuery } from "@/hooks/use-market-queries";
 import { useQueryClient } from "@tanstack/react-query";
+import { StudentProfileModal } from "@/components/student-profile-modal";
+import { ReviewModal } from "@/components/review-modal";
 
 const CATEGORIES = ["All", "Electronics", "Hostel", "Books", "Furniture"];
 
@@ -34,6 +36,18 @@ export default function MarketPage() {
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = React.useState("All");
   const [searchQuery, setSearchQuery] = React.useState("");
+
+  // Student Profile & Review Modals State
+  const [profileModalTarget, setProfileModalTarget] = React.useState<{
+    userId?: string;
+    name: string;
+    isVerified?: boolean;
+  } | null>(null);
+
+  const [reviewModalTarget, setReviewModalTarget] = React.useState<{
+    userId: string;
+    name: string;
+  } | null>(null);
 
   // Modern React 19 useDeferredValue for responsive keystroke handling
   // Official doc: https://react.dev/reference/react/useDeferredValue
@@ -70,6 +84,7 @@ export default function MarketPage() {
     if (!window.confirm("Are you sure you want to delete this listing?")) return;
     try {
       await fetch(`/api/market?id=${itemId}`, { method: "DELETE" });
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
       queryClient.invalidateQueries({ queryKey: ["market_listings"] });
       if (selectedItem?.id === itemId) setSelectedItem(null);
     } catch (err) {
@@ -95,6 +110,7 @@ export default function MarketPage() {
           description: editDescription.trim(),
         }),
       });
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
       queryClient.invalidateQueries({ queryKey: ["market_listings"] });
       if (selectedItem?.id === editingItem.id) {
         setSelectedItem({
@@ -329,9 +345,20 @@ export default function MarketPage() {
                         {item.location} · {item.condition}
                       </div>
                       <div className="mt-2 pt-1.5 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-[11px]">
-                        <span className="text-zinc-600 dark:text-zinc-300 font-semibold truncate max-w-[110px]">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProfileModalTarget({
+                              userId: item.seller_id,
+                              name: item.seller_name || "Student",
+                              isVerified: item.seller_verified,
+                            });
+                          }}
+                          className="text-zinc-600 dark:text-zinc-300 font-semibold truncate max-w-[110px] hover:text-black dark:hover:text-white hover:underline text-left cursor-pointer"
+                        >
                           {item.seller_name || "Student"}
-                        </span>
+                        </button>
                         <VerificationBadge isVerified={item.seller_verified} size="xs" />
                       </div>
                     </div>
@@ -390,22 +417,58 @@ export default function MarketPage() {
                     </span>
                   </div>
 
-                  <div className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed bg-zinc-50 dark:bg-zinc-900/60 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 space-y-1">
+                  <div className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed bg-zinc-50 dark:bg-zinc-900/60 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 space-y-2">
                     <div>
                       <b>Location:</b> {selectedItem.location}
                     </div>
                     <div>
                       <b>Category:</b> {selectedItem.category}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <b>Seller:</b> <span>{selectedItem.seller_name}</span>
-                      <VerificationBadge isVerified={selectedItem.seller_verified} size="xs" />
+                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-zinc-200/60 dark:border-zinc-800/80">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <b>Seller:</b>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileModalTarget({
+                              userId: selectedItem.seller_id,
+                              name: selectedItem.seller_name || "Student",
+                              isVerified: selectedItem.seller_verified,
+                            });
+                          }}
+                          className="hover:underline font-bold text-black dark:text-white cursor-pointer"
+                        >
+                          {selectedItem.seller_name}
+                        </button>
+                        <VerificationBadge isVerified={selectedItem.seller_verified} size="xs" />
+                      </div>
+
+                      {!isDrawerMine && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReviewModalTarget({
+                              userId: selectedItem.seller_id || selectedItem.seller_name,
+                              name: selectedItem.seller_name,
+                            });
+                          }}
+                          className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Star size={12} className="fill-amber-400 text-amber-400" />
+                          <span>Rate Seller</span>
+                        </button>
+                      )}
                     </div>
                     {selectedItem.description && (
                       <div className="pt-1 text-zinc-500 dark:text-zinc-400">
                         {selectedItem.description}
                       </div>
                     )}
+                  </div>
+
+                  {/* Policy Rule Notice */}
+                  <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Campus Rule: All payments and exchanges are conducted directly between students in cash. No in-app payment processing or online checkout exists on this platform.
                   </div>
 
                   {isDrawerMine ? (
@@ -466,6 +529,19 @@ export default function MarketPage() {
                           <MessageSquare size={14} />
                           <span>Chat with Seller</span>
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileModalTarget({
+                              userId: selectedItem.seller_id,
+                              name: selectedItem.seller_name || "Student",
+                              isVerified: selectedItem.seller_verified,
+                            });
+                          }}
+                          className="px-4 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-black dark:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <span>Profile</span>
+                        </button>
                       </div>
                     </>
                   )}
@@ -607,6 +683,28 @@ export default function MarketPage() {
               </form>
             </div>
           </div>
+        )}
+
+        {/* Student Profile Modal */}
+        {profileModalTarget && (
+          <StudentProfileModal
+            isOpen={!!profileModalTarget}
+            onClose={() => setProfileModalTarget(null)}
+            userId={profileModalTarget.userId}
+            fallbackName={profileModalTarget.name}
+            fallbackVerified={profileModalTarget.isVerified}
+          />
+        )}
+
+        {/* Review Modal */}
+        {reviewModalTarget && (
+          <ReviewModal
+            isOpen={!!reviewModalTarget}
+            onClose={() => setReviewModalTarget(null)}
+            targetUserId={reviewModalTarget.userId}
+            targetName={reviewModalTarget.name}
+            defaultCategory="marketplace"
+          />
         )}
 
         {/* Bottom Navigation */}

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
-import { useCreateHostelServiceMutation } from "@/hooks/use-hostel-queries";
+import { useCreateServiceMutation } from "@/hooks/use-services-queries";
 import { useAuth } from "@/lib/auth-context";
 
 const SERVICE_PRESETS = [
@@ -44,7 +44,7 @@ type OfferServiceFormData = z.infer<typeof offerServiceSchema>;
 export default function OfferServicePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const createServiceMutation = useCreateHostelServiceMutation();
+  const createServiceMutation = useCreateServiceMutation();
 
   const {
     register,
@@ -56,7 +56,7 @@ export default function OfferServicePage() {
     resolver: zodResolver(offerServiceSchema),
     defaultValues: {
       serviceName: "",
-      location: "Hostel Block A",
+      location: "Campus Service Point",
       schedule: "Daily 5 PM – 10 PM",
       rate: "",
       phone: "+923001234567",
@@ -88,7 +88,7 @@ export default function OfferServicePage() {
       },
       {
         onSuccess: () => {
-          router.push("/hostel");
+          router.push("/services");
         },
       }
     );
@@ -102,7 +102,7 @@ export default function OfferServicePage() {
         {/* Header */}
         <header className="flex items-center gap-2 px-4 py-3 flex-none bg-white dark:bg-[#121215] border-b border-zinc-200 dark:border-zinc-800 transition-colors">
           <Link
-            href="/hostel"
+            href="/services"
             aria-label="Back"
             className="w-9 h-9 -ml-1 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
           >
@@ -111,7 +111,7 @@ export default function OfferServicePage() {
           <div className="flex-1 font-bold text-base tracking-tight text-black dark:text-white">
             Offer Campus Service
           </div>
-          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Hostel Hub</span>
+          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Services Hub</span>
         </header>
 
         {/* Scrollable Form with react-hook-form */}
@@ -179,7 +179,7 @@ export default function OfferServicePage() {
                   <input
                     type="text"
                     disabled={isSubmitting}
-                    placeholder="Hostel Block"
+                    placeholder="Hostel Block A"
                     {...register("location")}
                     className={`w-full h-10 pl-8 pr-2.5 bg-zinc-50 dark:bg-zinc-900 border ${
                       errors.location ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"

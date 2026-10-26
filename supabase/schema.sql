@@ -328,6 +328,7 @@ create policy "Allow public update bookings" on public.ride_bookings for update 
 create policy "Allow public read listings" on public.listings for select using (true);
 create policy "Allow public insert listings" on public.listings for insert with check (true);
 create policy "Allow public update listings" on public.listings for update using (true);
+create policy "Allow public delete listings" on public.listings for delete using (true);
 
 create policy "Allow public read bikes" on public.bikes for select using (true);
 create policy "Allow public insert bikes" on public.bikes for insert with check (true);

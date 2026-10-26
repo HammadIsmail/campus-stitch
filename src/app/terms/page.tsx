@@ -28,8 +28,8 @@ export default function TermsPage() {
     { id: "eligibility", title: "2. Eligibility & Student Identity Verification", icon: ShieldCheck },
     { id: "marketplace", title: "3. Student Marketplace Rules", icon: ShoppingBag },
     { id: "commute", title: "4. Campus Commute & Rideshare", icon: Car },
-    { id: "hostels", title: "5. Hostel & Roommate Discovery", icon: Building },
-    { id: "community", title: "6. Community Feed & Code of Conduct", icon: MessageSquare },
+    { id: "services", title: "5. Campus Student Services", icon: Building },
+    { id: "community", title: "6. Community Code of Conduct", icon: MessageSquare },
     { id: "disclaimers", title: "7. Disclaimers & Limitation of Liability", icon: AlertTriangle },
     { id: "termination", title: "8. Account Termination & Suspension", icon: Lock },
     { id: "jurisdiction", title: "9. Governing Law & Dispute Resolution", icon: Scale },
@@ -174,13 +174,13 @@ export default function TermsPage() {
           </section>
 
           {/* Section 5 */}
-          <section id="hostels" className="scroll-mt-24 space-y-3 bg-white dark:bg-[#121215] p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+          <section id="services" className="scroll-mt-24 space-y-3 bg-white dark:bg-[#121215] p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xs">
             <h2 className="text-lg font-bold text-zinc-950 dark:text-white flex items-center gap-2">
               <Building size={18} className="text-zinc-900 dark:text-white" />
-              5. Hostel & Roommate Discovery
+              5. Campus Student Services
             </h2>
             <p>
-              Students searching for private or shared accommodation near campus may use CampuStitch to find vacancies or fellow batchmate flatmates. Listings must accurately describe amenities, rent, and utility terms. Independent rental agreements, tenancy contracts, and deposits are solely between the student and property owner.
+              Students may offer or discover peer services (laundry pickup, ironing, thesis printing, device setup, tailoring) inside campus hostel blocks. All service fees are settled directly in cash between students upon delivery or completion. CampuStitch does not process in-app payments, charge commissions, or act as an employer.
             </p>
           </section>
 

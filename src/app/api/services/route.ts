@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     try {
       const supabase = await createClient();
       let query = supabase
-        .from("hostel_roommates")
+        .from("hostel_services")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -19,28 +19,28 @@ export async function GET(req: NextRequest) {
 
       const { data, error } = await query;
       if (!error && data) {
-        const mapped = data.map((r: any) => ({
-          id: r.id,
-          title: r.title,
-          rent: `Rs. ${r.monthly_rent}`,
-          monthlyRent: Number(r.monthly_rent) || 0,
-          details: r.details || "",
-          roomType: r.room_type || "Shared Room",
-          owner: r.user_name || "Student",
-          verified: r.is_verified ?? true,
-          amenities: Array.isArray(r.amenities) ? r.amenities : [],
-          campusId: r.campus_id,
-          userId: r.user_id,
-          createdAt: r.created_at,
+        const mapped = data.map((s: any) => ({
+          id: s.id,
+          name: s.service_name || s.name || "Campus Service",
+          rate: s.rate || "",
+          location: s.location || "Campus Service Point",
+          schedule: s.turnaround_time || s.schedule || "Daily",
+          provider: s.provider_name || s.provider || "Student",
+          phone: s.phone || "",
+          notes: s.notes || "",
+          verified: s.is_verified ?? true,
+          campusId: s.campus_id,
+          userId: s.user_id,
+          createdAt: s.created_at,
         }));
-        return NextResponse.json({ success: true, roommates: mapped });
+        return NextResponse.json({ success: true, services: mapped });
       }
     } catch (err) {
-      console.warn("DB hostel roommates query notice:", err);
+      console.warn("DB campus services query notice:", err);
     }
 
-    // Honest empty state: zero mock/seeding data rule
-    return NextResponse.json({ success: true, roommates: [] });
+    // Honest empty state: zero mock data rule
+    return NextResponse.json({ success: true, services: [] });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -50,58 +50,58 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      title,
-      monthlyRent,
-      roomType = "Shared Room",
-      details = "",
-      amenities = [],
+      name,
+      rate,
+      location = "Campus Service Point",
+      schedule = "Daily 5 PM – 10 PM",
+      phone = "",
+      notes = "",
+      provider = "Student",
       campusId = null,
       universityId = null,
-      userName = "Student",
       userId = null,
     } = body;
 
-    if (!title || !monthlyRent) {
+    if (!name || !rate) {
       return NextResponse.json(
-        { success: false, error: "Title and monthly rent are required" },
+        { success: false, error: "Service title and rate are required" },
         { status: 400 }
       );
     }
 
     const newRecord: any = {
-      title: String(title).trim(),
-      monthly_rent: Number(String(monthlyRent).replace(/[^\d]/g, "")) || 0,
-      room_type: roomType,
-      details: String(details).trim(),
-      amenities: Array.isArray(amenities) ? amenities : [],
+      service_name: String(name).trim(),
+      rate: String(rate).trim(),
+      location: String(location).trim(),
+      turnaround_time: String(schedule).trim(),
+      phone: String(phone).trim(),
+      notes: String(notes).trim(),
+      provider_name: provider,
       campus_id: campusId,
       university_id: universityId,
-      user_name: userName,
       user_id: userId,
       is_verified: true,
-      available_from: "Immediate",
-      hostel_block: "Hostel Block A",
       created_at: new Date().toISOString(),
     };
 
     try {
       const supabase = await createClient();
       const { data, error } = await supabase
-        .from("hostel_roommates")
+        .from("hostel_services")
         .insert([newRecord])
         .select()
         .single();
 
       if (data && !error) {
-        return NextResponse.json({ success: true, roommate: data });
+        return NextResponse.json({ success: true, service: data });
       }
     } catch (err) {
-      console.warn("DB insert roommate notice:", err);
+      console.warn("DB insert service notice:", err);
     }
 
     return NextResponse.json({
       success: true,
-      roommate: { ...newRecord, id: "rm_" + Date.now() },
+      service: { ...newRecord, id: "srv_" + Date.now() },
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -111,38 +111,37 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, title, monthlyRent, roomType, details, amenities } = body;
+    const { id, name, rate, location, schedule, phone, notes } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "ID is required" }, { status: 400 });
     }
 
     const updates: Record<string, any> = {};
-    if (title !== undefined) updates.title = String(title).trim();
-    if (monthlyRent !== undefined) {
-      updates.monthly_rent = Number(String(monthlyRent).replace(/[^\d]/g, "")) || 0;
-    }
-    if (roomType !== undefined) updates.room_type = roomType;
-    if (details !== undefined) updates.details = String(details).trim();
-    if (amenities !== undefined) updates.amenities = amenities;
+    if (name !== undefined) updates.service_name = String(name).trim();
+    if (rate !== undefined) updates.rate = String(rate).trim();
+    if (location !== undefined) updates.location = String(location).trim();
+    if (schedule !== undefined) updates.turnaround_time = String(schedule).trim();
+    if (phone !== undefined) updates.phone = String(phone).trim();
+    if (notes !== undefined) updates.notes = String(notes).trim();
 
     try {
       const supabase = await createClient();
       const { data, error } = await supabase
-        .from("hostel_roommates")
+        .from("hostel_services")
         .update(updates)
         .eq("id", id)
         .select()
         .single();
 
       if (!error && data) {
-        return NextResponse.json({ success: true, roommate: data });
+        return NextResponse.json({ success: true, service: data });
       }
     } catch (err) {
-      console.warn("DB update roommate notice:", err);
+      console.warn("DB update service notice:", err);
     }
 
-    return NextResponse.json({ success: true, message: "Roommate updated successfully" });
+    return NextResponse.json({ success: true, message: "Service updated successfully" });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -159,12 +158,12 @@ export async function DELETE(req: NextRequest) {
 
     try {
       const supabase = await createClient();
-      await supabase.from("hostel_roommates").delete().eq("id", id);
+      await supabase.from("hostel_services").delete().eq("id", id);
     } catch (err) {
-      console.warn("DB delete roommate notice:", err);
+      console.warn("DB delete service notice:", err);
     }
 
-    return NextResponse.json({ success: true, message: "Roommate vacancy deleted successfully" });
+    return NextResponse.json({ success: true, message: "Service deleted successfully" });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

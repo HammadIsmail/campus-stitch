@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, Tag, Building2, Users } from "lucide-react";
+import { Wrench, Compass, Tag, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -13,11 +13,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: "Home", href: "/", icon: Home, matchExact: true },
+  { name: "Services", href: "/services", icon: Wrench },
   { name: "Commute", href: "/commute", icon: Compass },
   { name: "Market", href: "/market", icon: Tag },
-  { name: "Hostel", href: "/hostel", icon: Building2 },
-  { name: "Community", href: "/community", icon: Users },
+  { name: "Profile", href: "/profile", icon: User },
 ];
 
 export function BottomNav() {

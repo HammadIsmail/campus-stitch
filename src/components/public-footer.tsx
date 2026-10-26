@@ -45,13 +45,13 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/hostel" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
-                  Hostel & Roommate Finder
+                <Link href="/services" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
+                  Campus Student Services
                 </Link>
               </li>
               <li>
-                <Link href="/community" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
-                  University Community Feed
+                <Link href="/profile" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
+                  Student Profile & Reputation
                 </Link>
               </li>
               <li>

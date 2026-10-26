@@ -20,7 +20,7 @@ export function OrganizationSchema() {
         "knowsAbout": [
           "Student Commute & Carpooling",
           "University Peer Marketplace",
-          "Hostel & Roommate Finder",
+          "Student Campus Services",
           "Student Identity Verification"
         ]
       },

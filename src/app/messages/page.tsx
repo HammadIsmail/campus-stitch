@@ -21,6 +21,7 @@ import {
   Users,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
+import { StudentProfileModal } from "@/components/student-profile-modal";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -37,7 +38,7 @@ interface Conversation {
   id: string;
   contactName: string;
   contactVerified: boolean;
-  contextType: "ride" | "listing" | "bike" | "service" | "roommate";
+  contextType: "ride" | "listing" | "bike" | "service";
   contextTitle: string;
   contextSubtitle: string;
   contextLink: string;
@@ -211,7 +212,6 @@ function MessagesContent() {
     | "listing"
     | "bike"
     | "service"
-    | "roommate"
     | null;
   const idParam = searchParams.get("id");
   const nameParam = searchParams.get("name");
@@ -220,6 +220,15 @@ function MessagesContent() {
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [inputMsg, setInputMsg] = React.useState("");
+  const [profileModalStudent, setProfileModalStudent] = React.useState<{
+    id?: string;
+    name: string;
+    campus?: string;
+    isVerified?: boolean;
+    rating?: number;
+    reviewCount?: number;
+    bio?: string;
+  } | null>(null);
 
   // Refs for scrolling
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
@@ -275,9 +284,7 @@ function MessagesContent() {
               ? "Bike Owner"
               : contextParam === "service"
                 ? "Service Provider"
-                : contextParam === "roommate"
-                  ? "Roommate Lister"
-                  : "Seller");
+                : "Seller");
 
         const contextTitle =
           titleParam ||
@@ -287,16 +294,12 @@ function MessagesContent() {
               ? "Bike Rental Inquiry"
               : contextParam === "service"
                 ? "Campus Service Inquiry"
-                : contextParam === "roommate"
-                  ? "Hostel Roommate Inquiry"
-                  : "Marketplace Listing Inquiry");
+                : "Marketplace Listing Inquiry");
 
         const contextSubtitle =
           contextParam === "service"
             ? `Regarding student service: ${titleParam || idParam}`
-            : contextParam === "roommate"
-              ? `Regarding hostel vacancy: ${titleParam || idParam}`
-              : `Regarding reference ID: ${idParam}`;
+            : `Regarding reference ID: ${idParam}`;
 
         const contextLink =
           contextParam === "ride"
@@ -304,10 +307,8 @@ function MessagesContent() {
             : contextParam === "bike"
               ? `/bike-rentals?id=${idParam}`
               : contextParam === "service"
-                ? `/hostel?serviceId=${idParam}`
-                : contextParam === "roommate"
-                  ? `/hostel?id=${idParam}`
-                  : `/market?id=${idParam}`;
+                ? `/services?serviceId=${idParam}`
+                : `/market?id=${idParam}`;
 
         const newChat: Conversation = {
           id: "c_" + Date.now(),
@@ -669,24 +670,48 @@ function MessagesContent() {
                     {activeConv.contextType === "listing" && <Tag size={16} />}
                     {activeConv.contextType === "bike" && <Bike size={16} />}
                     {activeConv.contextType === "service" && <Wrench size={16} />}
-                    {activeConv.contextType === "roommate" && <Users size={16} />}
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5 truncate">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setProfileModalStudent({
+                        name: activeConv.contactName,
+                        isVerified: activeConv.contactVerified,
+                        campus: "Campus Verified",
+                      })
+                    }
+                    className="min-w-0 text-left cursor-pointer group"
+                  >
+                    <div className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5 truncate group-hover:underline">
                       <span>{activeConv.contactName}</span>
                       <ShieldCheck size={12} className="stroke-[2.5px] text-black dark:text-white shrink-0" />
                     </div>
                     <div className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
                       {activeConv.contextTitle} &middot; {activeConv.contextSubtitle}
                     </div>
-                  </div>
+                  </button>
                 </div>
-                <Link
-                  href={activeConv.contextLink}
-                  className="text-xs font-semibold text-black dark:text-white hover:underline shrink-0 ml-2"
-                >
-                  View Details →
-                </Link>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setProfileModalStudent({
+                        name: activeConv.contactName,
+                        isVerified: activeConv.contactVerified,
+                        campus: "Campus Verified",
+                      })
+                    }
+                    className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white border border-zinc-200 dark:border-zinc-800 rounded-md px-2 py-1 transition-colors cursor-pointer"
+                  >
+                    Profile
+                  </button>
+                  <Link
+                    href={activeConv.contextLink}
+                    className="text-xs font-semibold text-black dark:text-white hover:underline"
+                  >
+                    Details →
+                  </Link>
+                </div>
               </div>
 
               {/* Messages Stream - Smooth Internal Scroll */}
@@ -800,6 +825,16 @@ function MessagesContent() {
             </div>
           )}
         </div>
+      )}
+
+      {profileModalStudent && (
+        <StudentProfileModal
+          isOpen={!!profileModalStudent}
+          onClose={() => setProfileModalStudent(null)}
+          userId={profileModalStudent.id}
+          fallbackName={profileModalStudent.name}
+          fallbackVerified={profileModalStudent.isVerified}
+        />
       )}
     </div>
   );

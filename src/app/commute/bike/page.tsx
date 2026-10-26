@@ -14,8 +14,10 @@ import {
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { DataService, BikeItem } from "@/lib/data-service";
+import { useAuth } from "@/lib/auth-context";
 
 function BikeDetailsContent() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const bikeId = searchParams.get("id");
 
@@ -38,7 +40,7 @@ function BikeDetailsContent() {
 
   const handleRequestBike = async () => {
     if (!bike) return;
-    await DataService.rentBike(bike.id, "Muhammad Hammad");
+    await DataService.rentBike(bike.id, user?.name || "Student Renter");
     setRequested(true);
   };
 

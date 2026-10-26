@@ -162,9 +162,26 @@ export const DataService = {
   },
 
   async createRide(ride: Omit<Ride, "id">): Promise<Ride> {
+    try {
+      const res = await fetch("/api/commute/rides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ride),
+      });
+      const json = await res.json();
+      if (json.success && json.ride?.id) {
+        const created = json.ride as Ride;
+        const current = getStored<Ride[]>("rides", []);
+        setStored("rides", [created, ...current]);
+        return created;
+      }
+    } catch (err) {
+      console.warn("createRide API failed, falling back to direct DB/local:", err);
+    }
+
     const newRide: Ride = {
       ...ride,
-      id: "r_" + Math.random().toString(36).slice(2, 9),
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "r_" + Math.random().toString(36).slice(2, 9),
       created_at: new Date().toISOString(),
     };
 
@@ -178,20 +195,7 @@ export const DataService = {
       if (data && !error) {
         newRide.id = data.id;
       }
-    } catch {
-      // Try API route
-      try {
-        const res = await fetch("/api/commute/rides", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newRide),
-        });
-        const json = await res.json();
-        if (json.success && json.ride?.id) {
-          newRide.id = json.ride.id;
-        }
-      } catch {}
-    }
+    } catch {}
 
     const current = getStored<Ride[]>("rides", []);
     const updated = [newRide, ...current];
@@ -253,6 +257,17 @@ export const DataService = {
 
   // ---- MARKET LISTINGS ----
   async getListings(campusId?: string): Promise<Listing[]> {
+    // 1. First fetch via server API route (consistent with mobile)
+    try {
+      const res = await fetch(`/api/market${campusId ? `?campusId=${encodeURIComponent(campusId)}` : ""}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.listings)) {
+        setStored("listings", json.listings);
+        return json.listings as Listing[];
+      }
+    } catch {}
+
+    // 2. Fallback to direct client supabase query
     try {
       const supabase = createClient();
       let query = supabase
@@ -277,9 +292,29 @@ export const DataService = {
   },
 
   async createListing(listing: Omit<Listing, "id">): Promise<Listing> {
+    // 1. Post to /api/market server route (validates mandatory image and auto-generates Postgres UUID)
+    try {
+      const res = await fetch("/api/market", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(listing),
+      });
+      const json = await res.json();
+      if (json.success && json.listing?.id) {
+        const created = json.listing as Listing;
+        const current = getStored<Listing[]>("listings", []);
+        setStored("listings", [created, ...current]);
+        return created;
+      }
+    } catch (err) {
+      console.warn("createListing API call failed:", err);
+    }
+
+    // 2. Direct DB fallback with clean UUID
+    const cleanId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "l_" + Math.random().toString(36).slice(2, 9);
     const newListing: Listing = {
       ...listing,
-      id: "l_" + Math.random().toString(36).slice(2, 9),
+      id: cleanId,
       created_at: new Date().toISOString(),
     };
 
@@ -320,6 +355,17 @@ export const DataService = {
 
   // ---- BIKES ----
   async getBikes(campusId?: string): Promise<BikeItem[]> {
+    // 1. Fetch via /api/commute/bikes
+    try {
+      const res = await fetch(`/api/commute/bikes${campusId ? `?campusId=${encodeURIComponent(campusId)}` : ""}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.bikes)) {
+        setStored("bikes", json.bikes);
+        return json.bikes as BikeItem[];
+      }
+    } catch {}
+
+    // 2. Direct client supabase fallback
     try {
       const supabase = createClient();
       let query = supabase.from("bikes").select("*");
@@ -348,6 +394,15 @@ export const DataService = {
     setStored("my_bike_rentals", rentals);
 
     try {
+      const res = await fetch("/api/commute/bikes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: bikeId, isAvailable: false }),
+      });
+      if (res.ok) return true;
+    } catch {}
+
+    try {
       const supabase = createClient();
       await supabase.from("bike_rentals").insert([
         {
@@ -358,6 +413,43 @@ export const DataService = {
       ]);
     } catch {}
     return true;
+  },
+
+  async listBike(bikeData: {
+    model: string;
+    condition: string;
+    location: string;
+    dailyRate: number;
+    depositAmount: number;
+    rules?: string;
+    imageUrl?: string;
+    ownerName?: string;
+    campusId?: string;
+    universityId?: string;
+  }): Promise<{ success: boolean; bike?: BikeItem; error?: string }> {
+    try {
+      const res = await fetch("/api/commute/bikes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bikeData),
+      });
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err.message || "Failed to list bike" };
+    }
+  },
+
+  async deleteBike(bikeId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await fetch(`/api/commute/bikes?id=${encodeURIComponent(bikeId)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err.message || "Failed to delete bike" };
+    }
   },
 
   // ---- SHARED ITEMS ----

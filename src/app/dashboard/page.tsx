@@ -18,6 +18,8 @@ import {
   MapPin,
   Crown,
   Shield,
+  User,
+  ShieldCheck,
 } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
@@ -187,27 +189,27 @@ export default function DashboardPage() {
               </Link>
 
               <Link
-                href="/community"
+                href="/profile"
                 className="p-4 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-zinc-600 hover:shadow-xs transition-all flex flex-col justify-between gap-3 group"
               >
                 <div className="flex items-center justify-between">
                   <span className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-colors">
-                    <Users size={18} />
+                    <User size={18} />
                   </span>
                   <span className="text-[10px] font-bold text-black dark:text-white uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
-                    Community
+                    Profile
                   </span>
                 </div>
                 <div>
                   <div className="text-base font-bold text-black dark:text-white">
-                    Campus Network
+                    Student Profile
                   </div>
                   <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Verified UET student groups
+                    Peer reputation & KYC verification
                   </div>
                 </div>
                 <div className="text-xs font-semibold text-black dark:text-white flex items-center gap-1 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                  Open community <ArrowRight size={12} />
+                  View profile <ArrowRight size={12} />
                 </div>
               </Link>
             </div>
@@ -280,32 +282,32 @@ export default function DashboardPage() {
               )}
             </section>
 
-            {/* Section: Coming Up */}
+            {/* Section: Student Safety & Verification */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 tracking-wider uppercase">
-                  Coming up on campus
+                  Campus Trust & Verification
                 </div>
                 <Link
-                  href="/community"
+                  href="/verify"
                   className="text-xs font-semibold text-black dark:text-white hover:underline cursor-pointer"
                 >
-                  View all
+                  Verify
                 </Link>
               </div>
               <Link
-                href="/community"
+                href="/verify"
                 className="flex gap-4 items-center p-5 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-2xs block"
               >
                 <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0">
-                  <Users size={22} className="text-black dark:text-white" />
+                  <ShieldCheck size={22} className="text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-bold text-black dark:text-white truncate">
-                    Campus Societies & Study Groups
+                    Official Student Card Verification
                   </div>
                   <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Connect with fellow UET students and join activities
+                    Upload your campus ID card to unlock full peer trust and verified badges
                   </div>
                 </div>
                 <ChevronRight size={18} className="text-zinc-400 dark:text-zinc-500 shrink-0" />

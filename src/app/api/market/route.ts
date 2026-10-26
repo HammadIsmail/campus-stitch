@@ -13,11 +13,10 @@ export async function GET(req: NextRequest) {
       let dbQuery = supabase
         .from("listings")
         .select("*")
-        .eq("status", "available")
         .order("created_at", { ascending: false });
 
-      if (campusId) {
-        dbQuery = dbQuery.eq("campus_id", campusId);
+      if (campusId && campusId !== "all") {
+        dbQuery = dbQuery.or(`campus_id.eq.${campusId},campus_id.is.null`);
       }
       if (category && category !== "All") {
         dbQuery = dbQuery.eq("category", category);
@@ -39,6 +38,9 @@ export async function GET(req: NextRequest) {
           listings: results,
           count: results.length,
         });
+      }
+      if (error) {
+        console.warn("Market listings query error:", error);
       }
     } catch (dbErr) {
       console.warn("Market listings query notice:", dbErr);
@@ -81,8 +83,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!image_url || !String(image_url).trim()) {
+      return NextResponse.json(
+        { success: false, error: "Item photo is compulsory. Please attach a photo." },
+        { status: 400 }
+      );
+    }
+
     const newListing = {
-      id: "l_" + Date.now(),
       title: String(title).trim(),
       price: Number(price),
       category,
@@ -94,27 +102,28 @@ export async function POST(req: NextRequest) {
       campus_id: campus_id || null,
       university_id: university_id || null,
       status: "available",
-      image_url: image_url || null,
+      image_url: String(image_url).trim(),
       created_at: new Date().toISOString(),
     };
 
-    try {
-      const supabase = await createClient();
-      const { data, error } = await supabase
-        .from("listings")
-        .insert([newListing])
-        .select()
-        .single();
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("listings")
+      .insert([newListing])
+      .select()
+      .single();
 
-      if (!error && data) {
-        return NextResponse.json({ success: true, listing: data });
-      }
-    } catch (dbErr) {
-      console.warn("Supabase insert listing notice:", dbErr);
+    if (error) {
+      console.error("Supabase insert listing error:", error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, listing: newListing });
+    return NextResponse.json({ success: true, listing: data });
   } catch (error: any) {
+    console.error("Failed to create listing:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Failed to create listing" },
       { status: 500 }
@@ -125,7 +134,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, status, price, title, description } = body;
+    const { id, status, price, title, description, image_url, condition, category, location } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -139,24 +148,28 @@ export async function PATCH(req: NextRequest) {
     if (price !== undefined) updates.price = Number(price);
     if (title !== undefined) updates.title = String(title).trim();
     if (description !== undefined) updates.description = String(description).trim();
+    if (image_url !== undefined) updates.image_url = image_url;
+    if (condition !== undefined) updates.condition = condition;
+    if (category !== undefined) updates.category = category;
+    if (location !== undefined) updates.location = location;
 
-    try {
-      const supabase = await createClient();
-      const { data, error } = await supabase
-        .from("listings")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("listings")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
 
-      if (!error && data) {
-        return NextResponse.json({ success: true, listing: data });
-      }
-    } catch (dbErr) {
-      console.warn("Update listing notice:", dbErr);
+    if (error) {
+      console.error("Supabase update listing error:", error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, message: "Listing updated successfully" });
+    return NextResponse.json({ success: true, listing: data });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || "Failed to update listing" },
@@ -177,11 +190,15 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    try {
-      const supabase = await createClient();
-      await supabase.from("listings").delete().eq("id", id);
-    } catch (dbErr) {
-      console.warn("Delete listing notice:", dbErr);
+    const supabase = await createClient();
+    const { error } = await supabase.from("listings").delete().eq("id", id);
+
+    if (error) {
+      console.error("Supabase delete listing error:", error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true, message: "Listing deleted successfully" });

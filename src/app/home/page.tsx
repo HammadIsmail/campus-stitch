@@ -37,7 +37,7 @@ export default function LandingHomePage() {
   const [showMobilePrompt, setShowMobilePrompt] = React.useState(false);
   const [showDownloadModal, setShowDownloadModal] = React.useState(false);
   const [selectedFeatureTab, setSelectedFeatureTab] = React.useState<
-    "commute" | "market" | "hostel" | "community" | "kyc" | "voice"
+    "commute" | "market" | "services" | "kyc" | "voice"
   >("commute");
 
   // Detect mobile device on client mount
@@ -84,88 +84,71 @@ export default function LandingHomePage() {
   const features = [
     {
       id: "commute" as const,
-      name: "Campus Commute",
-      tagline: "Student-Verified Carpooling & Fuel Sharing",
+      name: "Campus Commute & Bikes",
+      tagline: "Student-Verified Carpooling & Bike Rentals",
       icon: Car,
       color: "from-blue-500/20 to-indigo-500/10",
       description:
-        "Connect with batchmates and professors traveling on your daily route. Split rising petrol costs, ensure passenger safety with 100% verified campus IDs, and coordinate pickup spots inside campus gates.",
+        "Connect with batchmates and professors traveling on your daily route or rent campus bicycles. Split petrol costs in person, ensure passenger safety with 100% verified campus IDs, and coordinate pickup spots inside campus gates.",
       highlights: [
         "Peer-to-peer fuel cost sharing (zero commission)",
+        "Campus bike rentals with daily rate and security deposit",
         "Verified student & faculty drivers only",
         "Gender-preferential carpooling options for female students",
-        "Real-time seat reservations & pickup coordination",
       ],
-      previewBadge: "100+ Daily Campus Rides",
-      stat: "Save up to PKR 15,000/month",
+      previewBadge: "Peer-to-Peer Rides",
+      stat: "Zero In-App Fees",
     },
     {
       id: "market" as const,
       name: "Textbook & Gear Market",
-      tagline: "Peer-to-Peer Student Marketplace with 0% Fees",
+      tagline: "Peer-to-Peer Student Marketplace with Compulsory Photos",
       icon: Tag,
       color: "from-purple-500/20 to-pink-500/10",
       description:
         "Buy and sell engineering drafters, medical lab coats, scientific calculators, course textbooks, and semester notes directly with students from your department. Safe handoffs inside university libraries and cafeterias.",
       highlights: [
         "100% verified peer buyers and sellers",
-        "Safe in-campus meeting zone guidelines",
+        "Compulsory photo verification for authentic listings",
         "Filter specifically by degree program and semester",
-        "Zero broker commissions or transaction fees",
+        "Direct cash handoffs (no payment intermediaries)",
       ],
-      previewBadge: "500+ Active Semester Listings",
-      stat: "Save 60% on Course Books",
+      previewBadge: "Verified Student Sellers",
+      stat: "Direct Cash Exchange",
     },
     {
-      id: "hostel" as const,
-      name: "Hostel & Roommate Finder",
-      tagline: "Verified Accommodations Near Your Campus",
+      id: "services" as const,
+      name: "Campus Services Hub",
+      tagline: "Verified Student Services & Campus Essentials",
       icon: Building2,
       color: "from-emerald-500/20 to-teal-500/10",
       description:
-        "Searching for affordable private hostels or batchmate flatmates? Discover verified rooms near campus gates, inspect amenities (Wi-Fi, generator, mess), and connect with students before signing tenancy contracts.",
+        "Searching for laundry pickup, urgent thesis printing, tailoring, or room electronics repair? Discover services run by verified fellow students directly inside hostel blocks.",
       highlights: [
-        "Verified student-only roommate listings",
-        "Proximity tags (walking distance to campus gates)",
+        "Student-run campus services (laundry, printing, tailoring)",
+        "Door-to-door hostel delivery and room visits",
         "Direct peer contact without intermediary agent fees",
-        "Genuine reviews from current student boarders",
+        "Genuine peer reviews from current student boarders",
       ],
-      previewBadge: "No Estate Agent Fees",
-      stat: "Find Flatmates in 48 Hours",
-    },
-    {
-      id: "community" as const,
-      name: "Campus Community Hub",
-      tagline: "Reddit-Style University Feeds & Society Notices",
-      icon: Users,
-      color: "from-amber-500/20 to-orange-500/10",
-      description:
-        "Stay in sync with everything happening across your campus. Course reviews, past paper tips, lost & found items, university society announcements, and student discussions isolated to your university tenant.",
-      highlights: [
-        "Strict campus tenant isolation (no outsider spam)",
-        "Upvoting, downvoting, and flair categories",
-        "Campus admin moderation for anti-harassment",
-        "Urgent lost & found and campus alerts",
-      ],
-      previewBadge: "Real-Time Campus Pulse",
-      stat: "10,000+ Monthly Discussions",
+      previewBadge: "Zero Intermediaries",
+      stat: "Direct Cash Exchange",
     },
     {
       id: "kyc" as const,
       name: "Verified Student Identity",
-      tagline: "Student ID Card + Live Camera Verification",
+      tagline: "Student ID Card + Real Peer Reputation",
       icon: ShieldCheck,
       color: "from-emerald-500/20 to-green-500/10",
       description:
-        "We maintain a zero-tolerance policy against fake accounts and outsiders. Every student undergoes automated facial comparison and validation by designated campus moderators before unlocking ride coordinates or posting.",
+        "We maintain a zero-tolerance policy against fake accounts and outsiders. Every student undergoes official student card validation by designated campus moderators before unlocking ride coordinates or posting.",
       highlights: [
         "Official student card verification",
-        "Live camera snapshot selfie comparison",
         "Campus Moderator review queue per university",
-        "Guarantees a safe, 100% authentic community",
+        "Peer reviews and star ratings across all interactions",
+        "Anonymous reporting and safety blocking",
       ],
-      previewBadge: "Zero Impersonation Tolerance",
-      stat: "100% Verified Student Base",
+      previewBadge: "Zero Impersonation",
+      stat: "Real Peer Reviews",
     },
     {
       id: "voice" as const,
@@ -182,7 +165,7 @@ export default function LandingHomePage() {
         "Built specifically for university campus life",
       ],
       previewBadge: "Roman Urdu & English",
-      stat: "< 1s Instant Query Match",
+      stat: "Natural Language",
     },
   ];
 
@@ -409,13 +392,11 @@ export default function LandingHomePage() {
                           ? "/commute"
                           : active.id === "market"
                             ? "/market"
-                            : active.id === "hostel"
-                              ? "/hostel"
-                              : active.id === "community"
-                                ? "/community"
-                                : active.id === "voice"
-                                  ? "/voice"
-                                  : "/verify"
+                            : active.id === "services"
+                              ? "/services"
+                              : active.id === "voice"
+                                ? "/voice"
+                                : "/verify"
                       }
                       className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 text-xs font-bold hover:opacity-90 transition-opacity"
                     >
@@ -511,7 +492,7 @@ export default function LandingHomePage() {
                     </div>
                   )}
 
-                  {active.id === "hostel" && (
+                  {active.id === "services" && (
                     <div className="space-y-3">
                       <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 space-y-1.5">
                         <div className="flex items-center justify-between">
@@ -528,33 +509,12 @@ export default function LandingHomePage() {
                       <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div className="text-xs font-bold text-zinc-950 dark:text-white">
-                            Looking for 1 CS/EE Roommate in Flat
+                            Express Laundry & Ironing (Block B)
                           </div>
-                          <span className="text-xs font-bold">PKR 8,500/mo</span>
+                          <span className="text-xs font-bold">PKR 250/load</span>
                         </div>
                         <div className="text-[11px] text-zinc-500">
-                          Canal Road near UET &bull; Study-focused apartment &bull; Cooking mess included
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {active.id === "community" && (
-                    <div className="space-y-3">
-                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                            #Advising
-                          </span>
-                          <span className="text-[11px] text-zinc-400">Posted by @2023-CS-42</span>
-                        </div>
-                        <div className="text-xs font-bold">
-                          Best electives for 6th semester Computer Science? High GPA vs Industry skills?
-                        </div>
-                        <div className="text-[11px] text-zinc-500 flex items-center gap-3 pt-1">
-                          <span>▲ 48 Upvotes</span>
-                          <span>&bull;</span>
-                          <span>24 Comments</span>
+                          Pickup from room &bull; 24hr turnaround &bull; Run by 3rd-year student
                         </div>
                       </div>
                     </div>
