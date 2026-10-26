@@ -12,14 +12,15 @@ export function OrganizationSchema() {
           "url": "https://campus-stitch.vercel.app/logo.png",
           "caption": "CampuStitch Pakistan Logo"
         },
-        "description": "Multi-tenant university student superapp connecting students across Pakistani institutions for carpooling, marketplace, hostel search, and verified campus identity.",
+        "description": "Connecting university students across Pakistan to share rides, buy and sell items, rent bikes, and offer campus services within a verified community.",
         "areaServed": {
           "@type": "Country",
           "name": "Pakistan"
         },
         "knowsAbout": [
-          "Student Commute & Carpooling",
-          "University Peer Marketplace",
+          "Campus Carpool & Rides",
+          "Student Marketplace",
+          "Bike & Cycle Rentals",
           "Student Campus Services",
           "Student Identity Verification"
         ]

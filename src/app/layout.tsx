@@ -5,18 +5,33 @@ import { OrganizationSchema } from "@/components/organization-schema";
 export const metadata: Metadata = {
   metadataBase: new URL("https://campus-stitch.vercel.app"),
   title: {
-    default: "CampuStitch - Smart Student Marketplace & Commute",
+    default: "CampuStitch - Campus life is easier when we help each other",
     template: "%s | CampuStitch",
   },
   description:
-    "Student-verified commute sharing, peer marketplace, hostel finder, and student community for Pakistani universities.",
+    "Find rides, sell things you no longer need, rent out your bike, and discover services offered by students at your university.",
+  keywords: [
+    "campus rides",
+    "student carpool",
+    "university commute",
+    "student marketplace",
+    "bike rentals",
+    "student services",
+    "peer tutoring",
+    "verified students",
+    "Pakistani universities",
+    "CampuStitch",
+  ],
+  authors: [{ name: "CampuStitch Team", url: "https://campus-stitch.vercel.app" }],
+  creator: "CampuStitch",
+  applicationName: "CampuStitch",
   alternates: {
     canonical: "./",
   },
   openGraph: {
-    title: "CampuStitch - University Student SuperApp",
+    title: "CampuStitch - Campus life is easier when we help each other",
     description:
-      "Verified student commute sharing, marketplace, hostel finder, and campus community across Pakistan.",
+      "Find rides, sell things you no longer need, rent out your bike, and discover services offered by students at your university.",
     url: "https://campus-stitch.vercel.app",
     siteName: "CampuStitch",
     images: [
@@ -32,8 +47,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "CampuStitch - Smart Student Marketplace & Commute",
-    description: "Student-verified commute, marketplace, and hostel network in Pakistan.",
+    title: "CampuStitch - Campus life is easier when we help each other",
+    description:
+      "Find rides, sell things you no longer need, rent out your bike, and discover services offered by students at your university.",
     images: ["/logo.png"],
   },
   icons: {
