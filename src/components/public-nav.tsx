@@ -23,9 +23,13 @@ import { cn } from "@/lib/utils";
 
 interface PublicNavProps {
   onDownloadClick?: () => void;
+  showDownloadButton?: boolean;
 }
 
-export function PublicNav({ onDownloadClick }: PublicNavProps) {
+export function PublicNav({
+  onDownloadClick,
+  showDownloadButton = true,
+}: PublicNavProps) {
   const pathname = usePathname();
   const { resolvedTheme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
@@ -116,13 +120,15 @@ export function PublicNav({ onDownloadClick }: PublicNavProps) {
           </button>
 
           {/* Direct Download App */}
-          <a
-            href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            <Smartphone size={13} />
-            <span>Download App</span>
-          </a>
+          {showDownloadButton && (
+            <a
+              href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+              <Smartphone size={13} />
+              <span>Download App</span>
+            </a>
+          )}
 
           {user ? (
             // Logged In Actions
@@ -219,14 +225,16 @@ export function PublicNav({ onDownloadClick }: PublicNavProps) {
           </div>
 
           <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 flex flex-col gap-2">
-            <a
-              href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-2.5 text-center text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center justify-center gap-1.5"
-            >
-              <Smartphone size={14} />
-              <span>Download Android APK (50.2 MB)</span>
-            </a>
+            {showDownloadButton && (
+              <a
+                href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full py-2.5 text-center text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center justify-center gap-1.5"
+              >
+                <Smartphone size={14} />
+                <span>Download Android APK (50.2 MB)</span>
+              </a>
+            )}
 
             {user ? (
               <>

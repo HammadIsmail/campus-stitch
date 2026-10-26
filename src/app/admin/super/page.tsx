@@ -34,6 +34,9 @@ import {
   Radio,
   Pencil,
   X,
+  Mail,
+  Copy,
+  Check,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
@@ -56,6 +59,9 @@ import {
   useAssignCampusAdminMutation,
   useRevokeCampusAdminMutation,
   usePublishVersionMutation,
+  useSuperAdminWaitlistQuery,
+  useDeleteWaitlistMutation,
+  WaitlistItem,
 } from "@/hooks/use-super-admin-queries";
 
 // Form value interfaces for react-hook-form
@@ -109,14 +115,19 @@ export default function SuperAdminPage() {
   const { user, logout } = useAuth();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = React.useState<"universities" | "admins" | "releases">("universities");
+  const [activeTab, setActiveTab] = React.useState<"universities" | "admins" | "releases" | "waitlist">("universities");
   const [feedback, setFeedback] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
   const [searchUni, setSearchUni] = React.useState("");
+  const [searchWaitlist, setSearchWaitlist] = React.useState("");
+  const [copiedEmail, setCopiedEmail] = React.useState<string | null>(null);
 
   // TanStack React Queries
   const { data: universities = [], isLoading: loadingUnis, isFetching: fetchingUnis } = useSuperAdminUniversitiesQuery();
   const { data: adminsData = { admins: [], candidates: [] }, isLoading: loadingAdmins, isFetching: fetchingAdmins } = useSuperAdminAdminsQuery();
   const { data: appVersion = null, isLoading: loadingVersion, isFetching: fetchingVersion } = useSuperAdminVersionQuery();
+  const { data: waitlistData = { count: 0, waitlist: [] }, isLoading: loadingWaitlist, isFetching: fetchingWaitlist } = useSuperAdminWaitlistQuery();
+
+  const deleteWaitlistMutation = useDeleteWaitlistMutation();
 
   const campusAdmins = adminsData.admins;
   const candidates = adminsData.candidates;
@@ -673,6 +684,21 @@ export default function SuperAdminPage() {
                   v{appVersion?.latestVersion || "1.0.0"}
                 </span>
               </button>
+
+              <button
+                onClick={() => setActiveTab("waitlist")}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                  activeTab === "waitlist"
+                    ? "bg-black dark:bg-white text-white dark:text-black shadow-xs"
+                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                }`}
+              >
+                <Mail size={14} />
+                <span>Play Store Waitlist</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 font-mono font-bold">
+                  {waitlistData?.count || 0}
+                </span>
+              </button>
             </div>
 
             <div>
@@ -1219,6 +1245,201 @@ export default function SuperAdminPage() {
                     </form>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 4: GOOGLE PLAY STORE WAITLIST / EARLY ACCESS          */}
+          {/* ========================================================= */}
+          {activeTab === "waitlist" && (
+            <div className="space-y-6">
+              {/* Header Box */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] shadow-xs">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded bg-black dark:bg-white text-white dark:text-black">
+                      <Mail size={14} />
+                    </span>
+                    <h2 className="text-sm font-extrabold text-black dark:text-white">
+                      Google Play Store Early Access Waitlist
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      Super Admin Only
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Review and export emails of students who requested early access to the upcoming Play Store release.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    onClick={() => {
+                      if (!waitlistData?.waitlist || waitlistData.waitlist.length === 0) return;
+                      const headers = "Email,University,Platform,Date Joined\n";
+                      const rows = waitlistData.waitlist
+                        .map(
+                          (item) =>
+                            `"${item.email}","${item.university || "Not specified"}","${item.platform}","${new Date(item.created_at).toISOString()}"`
+                        )
+                        .join("\n");
+                      const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.setAttribute("href", url);
+                      link.setAttribute("download", `campus-stitch-waitlist-${new Date().toISOString().slice(0, 10)}.csv`);
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    disabled={!waitlistData?.waitlist || waitlistData.waitlist.length === 0}
+                    className="h-9 px-3.5 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-40"
+                  >
+                    <Download size={13} />
+                    <span>Export CSV ({waitlistData?.count || 0})</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type="text"
+                  value={searchWaitlist}
+                  onChange={(e) => setSearchWaitlist(e.target.value)}
+                  placeholder="Filter waitlist by student email or university..."
+                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] text-xs text-black dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-black dark:focus:border-white shadow-2xs"
+                />
+              </div>
+
+              {/* Waitlist Table */}
+              <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121215] overflow-hidden shadow-xs">
+                {loadingWaitlist ? (
+                  <div className="p-12 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Loading waitlist entries from database...</span>
+                  </div>
+                ) : (() => {
+                  const filtered = (waitlistData?.waitlist || []).filter((item) => {
+                    const q = searchWaitlist.toLowerCase().trim();
+                    if (!q) return true;
+                    return (
+                      item.email.toLowerCase().includes(q) ||
+                      (item.university && item.university.toLowerCase().includes(q))
+                    );
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="p-12 text-center space-y-2">
+                        <Mail size={32} className="mx-auto text-zinc-300 dark:text-zinc-700" />
+                        <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                          {searchWaitlist ? "No matching waitlist entries" : "No waitlist registrations yet"}
+                        </div>
+                        <p className="text-[11px] text-zinc-500 max-w-sm mx-auto">
+                          {searchWaitlist
+                            ? "Try searching with a different email address or university keyword."
+                            : "When students enter their email on the landing page, their records will automatically appear here."}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                            <th className="py-3 px-4">#</th>
+                            <th className="py-3 px-4">Student Email</th>
+                            <th className="py-3 px-4">University</th>
+                            <th className="py-3 px-4">Platform</th>
+                            <th className="py-3 px-4">Date Registered</th>
+                            <th className="py-3 px-4 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                          {filtered.map((item, idx) => (
+                            <tr
+                              key={item.id}
+                              className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30 transition-colors"
+                            >
+                              <td className="py-3 px-4 font-mono text-[11px] text-zinc-400">
+                                {idx + 1}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-black dark:text-white flex items-center gap-2">
+                                <span className="font-mono text-xs">{item.email}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(item.email);
+                                    setCopiedEmail(item.id);
+                                    setTimeout(() => setCopiedEmail(null), 2000);
+                                  }}
+                                  className="text-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
+                                  title="Copy email to clipboard"
+                                >
+                                  {copiedEmail === item.id ? (
+                                    <Check size={12} className="text-emerald-500" />
+                                  ) : (
+                                    <Copy size={12} />
+                                  )}
+                                </button>
+                              </td>
+                              <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">
+                                {item.university || (
+                                  <span className="text-zinc-400 italic">Not specified</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                                  {item.platform || "android"}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-zinc-500 font-mono text-[11px]">
+                                {new Date(item.created_at).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (confirm(`Remove "${item.email}" from waitlist?`)) {
+                                      try {
+                                        await deleteWaitlistMutation.mutateAsync(item.id);
+                                        setFeedback({
+                                          type: "success",
+                                          text: `Removed "${item.email}" from waitlist.`,
+                                        });
+                                      } catch (err: any) {
+                                        setFeedback({
+                                          type: "error",
+                                          text: err.message || "Failed to remove entry",
+                                        });
+                                      }
+                                    }
+                                  }}
+                                  disabled={deleteWaitlistMutation.isPending}
+                                  className="p-1.5 rounded-lg border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                  title="Delete waitlist entry"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}

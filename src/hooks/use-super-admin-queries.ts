@@ -60,6 +60,15 @@ export interface AppVersionData {
   updatedBy: string;
 }
 
+export interface WaitlistItem {
+  id: string;
+  email: string;
+  university?: string | null;
+  platform: string;
+  ip_address?: string | null;
+  created_at: string;
+}
+
 // -------------------------------------------------------------
 // Queries
 // -------------------------------------------------------------
@@ -264,3 +273,30 @@ export function usePublishVersionMutation() {
     },
   });
 }
+
+export function useSuperAdminWaitlistQuery() {
+  return useQuery<{ count: number; waitlist: WaitlistItem[] }>({
+    queryKey: ["super-admin", "waitlist"],
+    queryFn: async () => {
+      const res = await apiClient<{ success: boolean; count: number; waitlist: WaitlistItem[] }>(
+        "/api/admin/waitlist"
+      );
+      return { count: res.count || 0, waitlist: res.waitlist || [] };
+    },
+  });
+}
+
+export function useDeleteWaitlistMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return apiClient<{ success: boolean; message: string }>(`/api/admin/waitlist?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["super-admin", "waitlist"] });
+    },
+  });
+}
+

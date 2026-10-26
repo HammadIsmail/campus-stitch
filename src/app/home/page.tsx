@@ -3,171 +3,69 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  Compass,
+  Car,
   Tag,
-  Building2,
-  Users,
+  Bike,
+  Wrench,
   ShieldCheck,
-  Smartphone,
   Globe,
   ArrowRight,
-  Download,
-  Mic,
-  Car,
-  BookOpen,
-  Home as HomeIcon,
+  HelpCircle,
+  Banknote,
+  GraduationCap,
+  MessageCircle,
+  Mail,
+  Loader2,
   CheckCircle2,
-  Sparkles,
-  MapPin,
-  ChevronRight,
-  Star,
-  ExternalLink,
-  QrCode,
-  X,
-  FileText,
-  Shield,
-  Layers,
-  Award,
+  AlertCircle,
+  Smartphone,
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 
 export default function LandingHomePage() {
-  const [isMobileDevice, setIsMobileDevice] = React.useState(false);
-  const [showMobilePrompt, setShowMobilePrompt] = React.useState(false);
-  const [showDownloadModal, setShowDownloadModal] = React.useState(false);
-  const [selectedFeatureTab, setSelectedFeatureTab] = React.useState<
-    "commute" | "market" | "services" | "kyc" | "voice"
-  >("commute");
+  const [waitlistEmail, setWaitlistEmail] = React.useState("");
+  const [waitlistSubmitting, setWaitlistSubmitting] = React.useState(false);
+  const [waitlistStatus, setWaitlistStatus] = React.useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
-  // Detect mobile device on client mount
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const checkMobile = () => {
-        const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-        const isMobileUA =
-          /android|avantgo|blackberry|iemobile|ipad|iphone|ipod|opera mini|palmos|webos|mobile/i.test(
-            userAgent
-          );
-        const isSmallScreen = window.innerWidth < 768;
-        const mobile = isMobileUA || isSmallScreen;
-        setIsMobileDevice(mobile);
+  const handleJoinWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!waitlistEmail || !waitlistEmail.includes("@")) return;
 
-        // Check if user has already dismissed or selected a preference this session
-        const hasChosen = sessionStorage.getItem("campus_stitch_mobile_choice");
-        if (mobile && !hasChosen) {
-          setShowMobilePrompt(true);
-        }
-      };
+    setWaitlistSubmitting(true);
+    setWaitlistStatus(null);
 
-      checkMobile();
-      window.addEventListener("resize", checkMobile);
-      return () => window.removeEventListener("resize", checkMobile);
-    }
-  }, []);
-
-  const handleChooseBrowseWeb = () => {
-    setShowMobilePrompt(false);
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("campus_stitch_mobile_choice", "web");
-    }
-  };
-
-  const handleChooseDownloadApp = () => {
-    setShowMobilePrompt(false);
-    setShowDownloadModal(true);
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("campus_stitch_mobile_choice", "app");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: waitlistEmail }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWaitlistStatus({
+          type: "success",
+          message: data.message || "You're on the early access list!",
+        });
+        setWaitlistEmail("");
+      } else {
+        setWaitlistStatus({
+          type: "error",
+          message: data.message || "Failed to join waitlist. Please try again.",
+        });
+      }
+    } catch {
+      setWaitlistStatus({
+        type: "error",
+        message: "Network error. Please check your connection and try again.",
+      });
+    } finally {
+      setWaitlistSubmitting(false);
     }
   };
-
-  const features = [
-    {
-      id: "commute" as const,
-      name: "Campus Commute & Bikes",
-      tagline: "Student-Verified Carpooling & Bike Rentals",
-      icon: Car,
-      color: "from-blue-500/20 to-indigo-500/10",
-      description:
-        "Connect with batchmates and professors traveling on your daily route or rent campus bicycles. Split petrol costs in person, ensure passenger safety with 100% verified campus IDs, and coordinate pickup spots inside campus gates.",
-      highlights: [
-        "Peer-to-peer fuel cost sharing (zero commission)",
-        "Campus bike rentals with daily rate and security deposit",
-        "Verified student & faculty drivers only",
-        "Gender-preferential carpooling options for female students",
-      ],
-      previewBadge: "Peer-to-Peer Rides",
-      stat: "Zero In-App Fees",
-    },
-    {
-      id: "market" as const,
-      name: "Textbook & Gear Market",
-      tagline: "Peer-to-Peer Student Marketplace with Compulsory Photos",
-      icon: Tag,
-      color: "from-purple-500/20 to-pink-500/10",
-      description:
-        "Buy and sell engineering drafters, medical lab coats, scientific calculators, course textbooks, and semester notes directly with students from your department. Safe handoffs inside university libraries and cafeterias.",
-      highlights: [
-        "100% verified peer buyers and sellers",
-        "Compulsory photo verification for authentic listings",
-        "Filter specifically by degree program and semester",
-        "Direct cash handoffs (no payment intermediaries)",
-      ],
-      previewBadge: "Verified Student Sellers",
-      stat: "Direct Cash Exchange",
-    },
-    {
-      id: "services" as const,
-      name: "Campus Services Hub",
-      tagline: "Verified Student Services & Campus Essentials",
-      icon: Building2,
-      color: "from-emerald-500/20 to-teal-500/10",
-      description:
-        "Searching for laundry pickup, urgent thesis printing, tailoring, or room electronics repair? Discover services run by verified fellow students directly inside hostel blocks.",
-      highlights: [
-        "Student-run campus services (laundry, printing, tailoring)",
-        "Door-to-door hostel delivery and room visits",
-        "Direct peer contact without intermediary agent fees",
-        "Genuine peer reviews from current student boarders",
-      ],
-      previewBadge: "Zero Intermediaries",
-      stat: "Direct Cash Exchange",
-    },
-    {
-      id: "kyc" as const,
-      name: "Verified Student Identity",
-      tagline: "Student ID Card + Real Peer Reputation",
-      icon: ShieldCheck,
-      color: "from-emerald-500/20 to-green-500/10",
-      description:
-        "We maintain a zero-tolerance policy against fake accounts and outsiders. Every student undergoes official student card validation by designated campus moderators before unlocking ride coordinates or posting.",
-      highlights: [
-        "Official student card verification",
-        "Campus Moderator review queue per university",
-        "Peer reviews and star ratings across all interactions",
-        "Anonymous reporting and safety blocking",
-      ],
-      previewBadge: "Zero Impersonation",
-      stat: "Real Peer Reviews",
-    },
-    {
-      id: "voice" as const,
-      name: "Smart Urdu Voice Assistant",
-      tagline: "Search Your Campus Naturally in Urdu or English",
-      icon: Mic,
-      color: "from-rose-500/20 to-red-500/10",
-      description:
-        "Speak naturally in Roman Urdu or English to find anything. Say 'Mujhe kal subah UET Lahore se Gulberg ride chahiye' or 'Calculus Anton Bivens book' to instantly fetch campus records with zero typing.",
-      highlights: [
-        "Bilingual Urdu & English natural language understanding",
-        "Instant query execution for rides, market, and hostels",
-        "Hands-free accessibility for walking across campus",
-        "Built specifically for university campus life",
-      ],
-      previewBadge: "Roman Urdu & English",
-      stat: "Natural Language",
-    },
-  ];
 
   const partnerUniversities = [
     { name: "UET Lahore", city: "Lahore (Main & Sub-campuses)", acronym: "UET" },
@@ -181,132 +79,77 @@ export default function LandingHomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 transition-colors selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
-      <PublicNav onDownloadClick={() => setShowDownloadModal(true)} />
+      <PublicNav showDownloadButton={false} />
 
       {/* ======================================================== */}
-      {/* MOBILE SMART PROMPT BANNER (TRIGGERED ON MOBILE VIEW)   */}
+      {/* 1. HERO SECTION                                          */}
       {/* ======================================================== */}
-      {showMobilePrompt && (
-        <div className="fixed top-16 inset-x-0 z-40 bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 px-4 py-3 shadow-xl border-b border-zinc-800 dark:border-zinc-200 animate-in slide-in-from-top-4 duration-300">
-          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 text-center sm:text-left">
-              <span className="w-8 h-8 rounded-lg bg-white text-zinc-950 dark:bg-zinc-900 dark:text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                📱
-              </span>
-              <div>
-                <div className="text-xs font-bold leading-tight">
-                  How would you like to experience CampuStitch?
-                </div>
-                <div className="text-[11px] opacity-80">
-                  Choose between our responsive web portal or high-performance native Android app.
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={handleChooseBrowseWeb}
-                className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-white/20 dark:border-black/20 hover:bg-white/10 dark:hover:bg-black/10 transition-colors cursor-pointer text-center"
-              >
-                Browse with Web
-              </button>
-              <a
-                href="https://drive.google.com/drive/folders/1fLQR6pBwKDlY_3XzuoMBBwWs2CE6CaFD"
-                className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-zinc-950 dark:bg-zinc-900 dark:text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Download size={13} />
-                <span>Download App</span>
-              </a>
-              <button
-                type="button"
-                onClick={() => setShowMobilePrompt(false)}
-                className="w-7 h-7 flex items-center justify-center text-white/60 dark:text-black/60 hover:text-white dark:hover:text-black cursor-pointer"
-                aria-label="Dismiss banner"
-              >
-                <X size={15} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* HERO SECTION                                             */}
-      {/* ======================================================== */}
-      <section className="relative overflow-hidden pt-12 pb-20 sm:pt-20 sm:pb-28 border-b border-zinc-200/80 dark:border-zinc-800/80">
-        {/* Ambient subtle glow background */}
+      <section className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 border-b border-zinc-200/80 dark:border-zinc-800/80">
+        {/* Subtle ambient background glow */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-emerald-500/10 via-zinc-400/10 to-blue-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
-
-
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-zinc-950 dark:text-white max-w-4xl leading-[1.08]">
-            Your Entire Campus Life,{" "}
-            <span className="bg-gradient-to-r from-zinc-950 via-zinc-700 to-zinc-950 dark:from-white dark:via-zinc-300 dark:to-white bg-clip-text text-transparent underline decoration-emerald-500/40 decoration-wavy decoration-2">
-              Stitched Together
-            </span>
-            .
+            Campus life is easier when we help each other.
           </h1>
 
-          {/* Subtitle */}
+          {/* Supporting Text */}
           <p className="mt-6 text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed font-normal">
-            A platform that makes university life easier. Students can share rides and split fares, buy and sell hostel items, find services like printing and repairing, and join campus communities to share updates, discuss topics, and stay updated about events. Anyone can create their own community and connect with students who share the same interests. Each university has its own space for students.
+            Find rides, sell things you no longer need, rent out your bike, and discover services offered by students at your university.
           </p>
 
           {/* Action Button Row */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <div className="mt-8 flex items-center justify-center w-full">
             <Link
-              href="/"
-              className="w-full sm:w-auto h-12 px-7 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              href="/commute"
+              className="w-full sm:w-auto h-12 px-8 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <Globe size={16} />
               <span>Browse with Web</span>
               <ArrowRight size={15} />
             </Link>
-
-            <a
-              href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
-              className="w-full sm:w-auto h-12 px-6 rounded-xl bg-white dark:bg-[#121215] text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 hover:border-zinc-950 dark:hover:border-zinc-300 font-bold text-sm shadow-2xs flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Download size={16} />
-              <span>Download Android App</span>
-            </a>
           </div>
 
-          {/* Trust Metrics Bar */}
-          <div className="mt-14 pt-8 border-t border-zinc-200/80 dark:border-zinc-800/80 grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-12 text-center max-w-3xl w-full">
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white">
-                15+
+          {/* Honest Student Guarantees (Consistent Emerald Accents) */}
+          <div className="mt-14 pt-8 border-t border-zinc-200/80 dark:border-zinc-800/80 grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 text-center max-w-3xl w-full">
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-1.5 text-zinc-950 dark:text-white font-bold text-sm sm:text-base">
+                <Banknote size={16} className="text-emerald-500 shrink-0" />
+                <span>Direct Cash</span>
               </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">
-                University Campuses
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white">
-                10,000+
-              </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">
-                Verified Students
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                Split costs in person with zero platform cuts
               </div>
             </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                0%
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-1.5 text-zinc-950 dark:text-white font-bold text-sm sm:text-base">
+                <GraduationCap size={16} className="text-emerald-500 shrink-0" />
+                <span>Verified Students</span>
               </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">
-                Platform Fees
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                Student ID checks keep interactions safe
               </div>
             </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white">
-                100%
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-1.5 text-zinc-950 dark:text-white font-bold text-sm sm:text-base">
+                <MessageCircle size={16} className="text-emerald-500 shrink-0" />
+                <span>Direct Contact</span>
               </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">
-                Verified Students
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                Connect with peers without middlemen
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-1.5 text-zinc-950 dark:text-white font-bold text-sm sm:text-base">
+                <ShieldCheck size={16} className="text-emerald-500 shrink-0" />
+                <span>Your University</span>
+              </div>
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                Dedicated spaces for each university campus
               </div>
             </div>
           </div>
@@ -314,263 +157,290 @@ export default function LandingHomePage() {
       </section>
 
       {/* ======================================================== */}
-      {/* INTERACTIVE FEATURE SHOWCASE                             */}
+      {/* 2. REAL-LIFE USE-CASE SECTION (CONSISTENT EMERALD THEME) */}
       {/* ======================================================== */}
       <section className="py-16 sm:py-24 bg-white dark:bg-[#0c0c0e] border-b border-zinc-200/80 dark:border-zinc-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          {/* Header */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          {/* Section Heading */}
           <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Campus Ecosystem
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              Real Student Scenarios
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-950 dark:text-white">
+              Everyday campus problems, made easier.
             </h2>
-            <p className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-950 dark:text-white">
-              Everything Pakistani University Students Need
-            </p>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Tailored specifically to the realities of Pakistani higher education: high fuel prices, expensive textbooks, hostel searches, and campus community coordination.
+              Simple ways students help each other tackle the common challenges of university life.
             </p>
           </div>
 
-          {/* Feature Selector Tabs */}
-          <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {features.map((f) => {
-              const Icon = f.icon;
-              const isSelected = selectedFeatureTab === f.id;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setSelectedFeatureTab(f.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${isSelected
-                      ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs"
-                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
-                    }`}
-                >
-                  <Icon size={14} />
-                  <span>{f.name}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Dynamic Active Feature Card */}
-          {(() => {
-            const active = features.find((f) => f.id === selectedFeatureTab) || features[0];
-            const Icon = active.icon;
-
-            return (
-              <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#121215] p-6 sm:p-10 shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                {/* Left Description Column */}
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 shadow-2xs">
-                      <Icon size={13} className="text-emerald-500" />
-                      <span>{active.previewBadge}</span>
+          {/* Core Features Row: Ride Sharing & Buy & Sell */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+            {/* 1. Ride Sharing Card */}
+            <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#121215] p-6 sm:p-8 flex flex-col justify-between space-y-6 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="space-y-5">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                      <Car size={20} />
                     </span>
-                    <h3 className="text-2xl sm:text-3xl font-extrabold text-zinc-950 dark:text-white">
-                      {active.tagline}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                      {active.description}
-                    </p>
-                  </div>
-
-                  {/* Highlights Bullet List */}
-                  <div className="space-y-2.5">
-                    {active.highlights.map((h, i) => (
-                      <div key={i} className="flex items-start gap-2.5 text-xs text-zinc-700 dark:text-zinc-300">
-                        <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{h}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="pt-2 flex items-center gap-4">
-                    <Link
-                      href={
-                        active.id === "commute"
-                          ? "/commute"
-                          : active.id === "market"
-                            ? "/market"
-                            : active.id === "services"
-                              ? "/services"
-                              : active.id === "voice"
-                                ? "/voice"
-                                : "/verify"
-                      }
-                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 text-xs font-bold hover:opacity-90 transition-opacity"
-                    >
-                      <span>Explore {active.name}</span>
-                      <ArrowRight size={13} />
-                    </Link>
-
-                    <div className="text-xs font-bold text-zinc-500">
-                      {active.stat}
+                    <div>
+                      <h3 className="text-lg font-bold text-zinc-950 dark:text-white">
+                        Ride Sharing
+                      </h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Carpooling &amp; travel coordination
+                      </p>
                     </div>
                   </div>
+                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                    Core Feature
+                  </span>
                 </div>
 
-                {/* Right Interactive Mockup / Metric Visual */}
-                <div className="p-6 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                      <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                      <span className="text-[11px] font-mono font-bold text-zinc-400 ml-2">
-                        tenant://uet-lahore-main/{active.id}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                      LIVE TENANT
-                    </span>
+                {/* Q&A Pair 1 */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200/80 dark:border-zinc-800 space-y-2 shadow-2xs">
+                  <div className="flex items-start gap-2">
+                    <HelpCircle size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <h4 className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white leading-snug">
+                      Your lecture is over, but your friends are still busy?
+                    </h4>
                   </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed pl-6">
+                    Find other students heading your way and share a ride home instead of waiting or paying the full fare alone.
+                  </p>
+                </div>
 
-                  {active.id === "commute" && (
-                    <div className="space-y-3">
-                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <div className="text-xs font-bold text-zinc-950 dark:text-white">
-                            Gulberg III ➔ UET Lahore Main Campus
-                          </div>
-                          <div className="text-[11px] text-zinc-500">
-                            Leaving 07:45 AM &bull; Toyota Corolla (White)
-                          </div>
-                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                            Driver: Ahmed (2022-EE-104 &bull; Verified Student)
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs font-black">PKR 150</div>
-                          <div className="text-[10px] text-zinc-400">2 seats left</div>
-                        </div>
-                      </div>
-
-                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <div className="text-xs font-bold text-zinc-950 dark:text-white">
-                            DHA Phase 5 ➔ UET Lahore
-                          </div>
-                          <div className="text-[11px] text-zinc-500">
-                            Leaving 08:00 AM &bull; Honda City (Silver)
-                          </div>
-                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                            Driver: Fatima (BSCS &bull; Female-Only Carpool)
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs font-black">PKR 200</div>
-                          <div className="text-[10px] text-zinc-400">1 seat left</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {active.id === "market" && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 space-y-2">
-                        <div className="w-full h-20 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center font-bold text-xs text-zinc-500">
-                          📐 Engineering Drafter
-                        </div>
-                        <div className="text-xs font-bold truncate">Omega A2 Drafter + T-Scale</div>
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-extrabold text-zinc-950 dark:text-white">PKR 1,800</span>
-                          <span className="text-emerald-600 font-bold">Save 55%</span>
-                        </div>
-                      </div>
-
-                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 space-y-2">
-                        <div className="w-full h-20 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center font-bold text-xs text-zinc-500">
-                          🔢 Scientific Calculator
-                        </div>
-                        <div className="text-xs font-bold truncate">Casio fx-991EX ClassWiz</div>
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-extrabold text-zinc-950 dark:text-white">PKR 3,500</span>
-                          <span className="text-emerald-600 font-bold">Original</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {active.id === "services" && (
-                    <div className="space-y-3">
-                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs font-bold text-zinc-950 dark:text-white">
-                            Al-Razi Student Hall (Near Gate 3)
-                          </div>
-                          <span className="text-xs font-bold">PKR 12,000/mo</span>
-                        </div>
-                        <div className="text-[11px] text-zinc-500">
-                          2-Seater Room &bull; Attached Bath &bull; 24/7 UPS & Wi-Fi &bull; 3 mins walk to campus
-                        </div>
-                      </div>
-
-                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs font-bold text-zinc-950 dark:text-white">
-                            Express Laundry & Ironing (Block B)
-                          </div>
-                          <span className="text-xs font-bold">PKR 250/load</span>
-                        </div>
-                        <div className="text-[11px] text-zinc-500">
-                          Pickup from room &bull; 24hr turnaround &bull; Run by 3rd-year student
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {active.id === "kyc" && (
-                    <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 space-y-3">
-                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                        <ShieldCheck size={16} />
-                        <span>Student Verification Flow</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-center text-[11px]">
-                        <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                          <div className="font-bold">Step 1</div>
-                          <div className="text-zinc-500">Official Student ID Card</div>
-                        </div>
-                        <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                          <div className="font-bold">Step 2</div>
-                          <div className="text-zinc-500">Live Camera Selfie</div>
-                        </div>
-                      </div>
-                      <div className="text-[11px] text-zinc-500 text-center">
-                        Verified by assigned Campus Admin before gaining access.
-                      </div>
-                    </div>
-                  )}
-
-                  {active.id === "voice" && (
-                    <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
-                      <div className="flex items-center gap-2 text-xs font-bold">
-                        <Mic size={16} className="text-red-500 animate-pulse" />
-                        <span>Voice Query Preview</span>
-                      </div>
-                      <div className="p-3 rounded-lg bg-white dark:bg-zinc-950 font-mono text-xs text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800">
-                        &quot;Mujhe subah 8 baje Johar Town se UET Main Campus ride chahiye&quot;
-                      </div>
-                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
-                        <CheckCircle2 size={13} />
-                        <span>Parsed: Commute &bull; Origin: Johar Town &bull; Dest: UET Main &bull; 8:00 AM</span>
-                      </div>
-                    </div>
-                  )}
+                {/* Q&A Pair 2 */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200/80 dark:border-zinc-800 space-y-2 shadow-2xs">
+                  <div className="flex items-start gap-2">
+                    <HelpCircle size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <h4 className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white leading-snug">
+                      Need to get somewhere on a budget?
+                    </h4>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed pl-6">
+                    Find students travelling in the same direction and split the ride fare.
+                  </p>
                 </div>
               </div>
-            );
-          })()}
+
+              {/* Action Link */}
+              <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between">
+                <Link
+                  href="/commute"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-950 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                >
+                  <span>Browse Campus Rides</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <span className="text-[11px] text-zinc-500">Split petrol costs</span>
+              </div>
+            </div>
+
+            {/* 2. Buy & Sell Card */}
+            <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#121215] p-6 sm:p-8 flex flex-col justify-between space-y-6 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="space-y-5">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                      <Tag size={20} />
+                    </span>
+                    <div>
+                      <h3 className="text-lg font-bold text-zinc-950 dark:text-white">
+                        Buy &amp; Sell
+                      </h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Campus student marketplace
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                    Core Feature
+                  </span>
+                </div>
+
+                {/* Q&A Pair 1 */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200/80 dark:border-zinc-800 space-y-2 shadow-2xs">
+                  <div className="flex items-start gap-2">
+                    <HelpCircle size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <h4 className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white leading-snug">
+                      Have books or items you no longer need?
+                    </h4>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed pl-6">
+                    Sell them to other students on your campus instead of letting them sit unused.
+                  </p>
+                </div>
+
+                {/* Q&A Pair 2 */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200/80 dark:border-zinc-800 space-y-2 shadow-2xs">
+                  <div className="flex items-start gap-2">
+                    <HelpCircle size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <h4 className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white leading-snug">
+                      Looking for something another student is selling?
+                    </h4>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed pl-6">
+                    Browse campus listings to find used books, calculators, and other useful items.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Link */}
+              <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between">
+                <Link
+                  href="/market"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-950 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                >
+                  <span>Explore Marketplace</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <span className="text-[11px] text-zinc-500">In-person handoffs</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary Features Row: Rentals, Campus Services, Student Profiles & Reviews */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 3. Rentals Card */}
+            <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#121215] p-6 flex flex-col justify-between space-y-5 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <Bike size={20} />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-950 dark:text-white">
+                      Rentals
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Campus bike rentals
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200/80 dark:border-zinc-800 space-y-2 shadow-2xs">
+                  <div className="flex items-start gap-2">
+                    <HelpCircle size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <h4 className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white leading-snug">
+                      Your bike is sitting unused?
+                    </h4>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed pl-5">
+                    List it for rent at your own price and connect with students who need a bike.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between">
+                <Link
+                  href="/commute/bike"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-950 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                >
+                  <span>Rent a Bike</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <span className="text-[10px] text-zinc-500">Daily or weekly</span>
+              </div>
+            </div>
+
+            {/* 4. Campus Services Card */}
+            <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#121215] p-6 flex flex-col justify-between space-y-5 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <Wrench size={20} />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-950 dark:text-white">
+                      Campus Services
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Student-offered skills &amp; help
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200/80 dark:border-zinc-800 space-y-2 shadow-2xs">
+                  <div className="flex items-start gap-2">
+                    <HelpCircle size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <h4 className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white leading-snug">
+                      Offer a service on campus?
+                    </h4>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed pl-5">
+                    List your printing, repair, or other services so students can find and contact you.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between">
+                <Link
+                  href="/services"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-950 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                >
+                  <span>Explore Services</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <span className="text-[10px] text-zinc-500">Hostel &amp; campus</span>
+              </div>
+            </div>
+
+            {/* 5. Student Profiles and Reviews Card */}
+            <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#121215] p-6 flex flex-col justify-between space-y-5 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <ShieldCheck size={20} />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-950 dark:text-white">
+                      Profiles &amp; Reviews
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Trust and student reputation
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200/80 dark:border-zinc-800 space-y-2 shadow-2xs">
+                  <div className="flex items-start gap-2">
+                    <HelpCircle size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <h4 className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white leading-snug">
+                      Want to know who you&apos;re dealing with?
+                    </h4>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed pl-5">
+                    View student profiles, check verification badges, and read reviews where available.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between">
+                <Link
+                  href="/verify"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-950 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                >
+                  <span>Student Verification</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <span className="text-[10px] text-zinc-500">Official student cards</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ======================================================== */}
-      {/* PARTNER CAMPUSES TICKER                                  */}
+      {/* 3. SUPPORTED UNIVERSITIES                                */}
       {/* ======================================================== */}
       <section className="py-14 bg-zinc-100/70 dark:bg-[#09090b] border-b border-zinc-200/80 dark:border-zinc-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 text-center">
           <div className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-            Available & Supported Pakistani Higher Education Institutions
+            Designed for students across Pakistani universities
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
@@ -592,16 +462,16 @@ export default function LandingHomePage() {
       </section>
 
       {/* ======================================================== */}
-      {/* HOW IT WORKS (3 SIMPLE STEPS)                           */}
+      {/* 4. HOW IT WORKS (3 SIMPLE STEPS)                        */}
       {/* ======================================================== */}
       <section className="py-16 sm:py-24 bg-white dark:bg-[#0c0c0e] border-b border-zinc-200/80 dark:border-zinc-800/80">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="text-center space-y-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Quick Onboarding
+              Simple Steps
             </h2>
             <p className="text-3xl font-extrabold tracking-tight text-zinc-950 dark:text-white">
-              Get Started in Under 2 Minutes
+              Get Started in Minutes
             </p>
           </div>
 
@@ -611,10 +481,10 @@ export default function LandingHomePage() {
                 1
               </span>
               <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
-                Register Your University
+                Pick Your University
               </h3>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Select your university and campus from our cascading directory. Enter your student roll number and degree program.
+                Choose your university campus and enter your department details to access your campus space.
               </p>
             </div>
 
@@ -623,10 +493,10 @@ export default function LandingHomePage() {
                 2
               </span>
               <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
-                Verify Student ID
+                Verify Student Card
               </h3>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Upload a snapshot of your physical student ID card and take a quick live camera selfie. Your campus moderator validates your credentials.
+                Upload a quick picture of your student ID card so everyone in the campus community knows they are interacting with real students.
               </p>
             </div>
 
@@ -635,10 +505,10 @@ export default function LandingHomePage() {
                 3
               </span>
               <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
-                Stitch Into Your Campus
+                Help &amp; Connect
               </h3>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Share rides to campus, buy second-hand engineering & medical textbooks, discover hostel vacancies, and engage in campus feeds.
+                Find rides to campus, buy or sell used books and calculators, rent bikes, and discover student services.
               </p>
             </div>
           </div>
@@ -646,78 +516,93 @@ export default function LandingHomePage() {
       </section>
 
       {/* ======================================================== */}
-      {/* MOBILE VS WEB EXPERIENCE CTA BANNER                      */}
+      {/* 5. GOOGLE PLAY STORE EARLY ACCESS / WAITLIST SECTION     */}
       {/* ======================================================== */}
-      <section className="py-16 bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-[#0c0c0e] dark:to-[#09090b] border-b border-zinc-200/80 dark:border-zinc-800/80">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-8 sm:p-12 rounded-3xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="space-y-3 text-center md:text-left max-w-lg">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/10 dark:bg-black/10 border border-white/20 dark:border-black/20">
+      <section id="waitlist" className="py-16 sm:py-24 bg-zinc-50 dark:bg-[#0c0c0e] border-b border-zinc-200/80 dark:border-zinc-800/80 scroll-mt-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 shadow-xl space-y-6 text-center">
+            <div className="flex justify-center">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <Smartphone size={13} />
-                <span>Available on Android & Web</span>
+                <span>Google Play Store Release</span>
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
-                Use in Your Browser or Install the Android App
+            </div>
+
+            <div className="space-y-2 max-w-xl mx-auto">
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 dark:text-white">
+                Get Early Access to the Android App
               </h2>
-              <p className="text-xs sm:text-sm text-zinc-300 dark:text-zinc-700 leading-relaxed">
-                CampuStitch runs seamlessly across both modern desktop/mobile web browsers and native Android devices with offline caching.
+              <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                Be the first to download the official CampusStitch app when it launches on Google Play. Leave your email to receive an early access invite.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto shrink-0">
-              <Link
-                href="/"
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-white text-zinc-950 dark:bg-zinc-950 dark:text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-              >
-                <Globe size={15} />
-                <span>Launch Web Portal</span>
-              </Link>
-              <a
-                href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
-                className="w-full sm:w-auto px-6 py-3 rounded-xl border border-white/30 dark:border-black/30 font-bold text-xs flex items-center justify-center gap-2 hover:bg-white/10 dark:hover:bg-black/10 transition-colors cursor-pointer"
-              >
-                <Download size={15} />
-                <span>Download Android APK</span>
-              </a>
-            </div>
+            {/* Email Waitlist Form */}
+            <form onSubmit={handleJoinWaitlist} className="max-w-md mx-auto space-y-3">
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="relative w-full">
+                  <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type="email"
+                    required
+                    value={waitlistEmail}
+                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                    placeholder="Enter your student email..."
+                    disabled={waitlistSubmitting}
+                    className="w-full h-11 pl-10 pr-4 rounded-xl text-xs bg-zinc-50 dark:bg-[#09090b] border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={waitlistSubmitting}
+                  className="w-full sm:w-auto h-11 px-5 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-bold text-xs hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {waitlistSubmitting ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Joining...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Get Early Access</span>
+                      <ArrowRight size={13} />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Status Message */}
+              {waitlistStatus && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 animate-in fade-in ${
+                    waitlistStatus.type === "success"
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"
+                      : "bg-red-500/10 text-red-700 dark:text-red-300 border border-red-500/20"
+                  }`}
+                >
+                  {waitlistStatus.type === "success" ? (
+                    <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />
+                  ) : (
+                    <AlertCircle size={14} className="shrink-0 text-red-500" />
+                  )}
+                  <span>{waitlistStatus.message}</span>
+                </div>
+              )}
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 gap-2">
+                <span>No spam. Only invited Google Play Store testing alerts.</span>
+                <Link
+                  href="/commute"
+                  className="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors inline-flex items-center gap-1"
+                >
+                  <span>Or browse on web</span>
+                  <ArrowRight size={11} />
+                </Link>
+              </div>
+            </form>
           </div>
         </div>
       </section>
-
-      {/* ======================================================== */}
-      {/* APP DOWNLOAD MODAL DIALOG                                */}
-      {/* ======================================================== */}
-      {showDownloadModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-[#121215] rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-5 shadow-2xl relative animate-in zoom-in-95">
-            <button
-              type="button"
-              onClick={() => setShowDownloadModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-950 dark:hover:text-white cursor-pointer"
-              aria-label="Close dialog"
-            >
-              <X size={16} />
-            </button>
-
-            <div className="space-y-1">
-              <h3 className="text-lg font-bold text-zinc-950 dark:text-white">
-                Download CampuStitch APK
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Official Android Release (v1.0.0 &bull; 50.2 MB)
-              </p>
-            </div>
-
-            <a
-              href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
-              className="w-full h-12 px-4 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md"
-            >
-              <Download size={16} />
-              <span>Download APK</span>
-            </a>
-          </div>
-        </div>
-      )}
 
       <PublicFooter />
     </div>

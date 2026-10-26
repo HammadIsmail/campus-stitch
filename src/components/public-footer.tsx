@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ShieldCheck, Heart, Mail, ExternalLink, ArrowUpRight } from "lucide-react";
+import { ShieldCheck, ArrowUpRight, Sparkles } from "lucide-react";
 
 export function PublicFooter() {
   return (
@@ -16,89 +16,91 @@ export function PublicFooter() {
                 CS
               </span>
               <span className="font-extrabold text-xl tracking-tight text-zinc-950 dark:text-white">
-                CampuStitch
+                CampusStitch
               </span>
             </Link>
             <p className="text-xs leading-relaxed max-w-sm text-zinc-600 dark:text-zinc-400">
-              Pakistan&apos;s premier multi-tenant university superapp. Connecting verified students for secure campus carpools, peer-to-peer textbook & gear marketplace, verified hostel discovery, and campus communities.
+              Campus life is easier when we help each other. Connect with students at your university to share rides, buy and sell items, rent bikes, and discover campus services.
             </p>
-            <div className="pt-2 flex items-center gap-2 text-xs text-zinc-500">
+            <div className="pt-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
               <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>Strict Campus ID verification required for all students.</span>
+              <span>Student ID checks keep interactions safe for everyone.</span>
             </div>
           </div>
 
-          {/* Core Modules */}
+          {/* Student Features */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-950 dark:text-white">
-              Campus Services
+              Features
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link href="/commute" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
-                  Campus Commute & Rides
+                  Ride Sharing
                 </Link>
               </li>
               <li>
                 <Link href="/market" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
-                  Student Marketplace
+                  Buy &amp; Sell Marketplace
+                </Link>
+              </li>
+              <li>
+                <Link href="/commute/bike" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
+                  Bike Rentals
                 </Link>
               </li>
               <li>
                 <Link href="/services" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
-                  Campus Student Services
-                </Link>
-              </li>
-              <li>
-                <Link href="/profile" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
-                  Student Profile & Reputation
+                  Campus Services
                 </Link>
               </li>
               <li>
                 <Link href="/verify" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
-                  Student Verification Portal
+                  Student Verification
                 </Link>
               </li>
               <li>
-                <a
-                  href="https://drive.usercontent.google.com/download?id=1-WdkrZmDsuQBogTFdAZwGTMhTOdmPbqU&export=download&authuser=0"
-                  className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                <Link
+                  href="/home#waitlist"
+                  className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
                 >
-                  <span>Download Android APK (50.2 MB)</span>
-                  <ArrowUpRight size={12} />
-                </a>
+                  <span>Play Store Early Access</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20">
+                    Soon
+                  </span>
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* Legal & Policy (Crucial for Google Play Store compliance) */}
+          {/* Legal & Safety */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-950 dark:text-white">
-              Legal & Compliance
+              Safety &amp; Legal
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link
                   href="/terms"
-                  className="font-medium hover:text-zinc-950 dark:hover:text-white transition-colors flex items-center gap-1"
+                  className="hover:text-zinc-950 dark:hover:text-white transition-colors"
                 >
-                  <span>Terms & Conditions</span>
+                  Terms &amp; Conditions
                 </Link>
               </li>
               <li>
                 <Link
                   href="/privacy"
-                  className="font-medium hover:text-zinc-950 dark:hover:text-white transition-colors flex items-center gap-1"
+                  className="hover:text-zinc-950 dark:hover:text-white transition-colors"
                 >
-                  <span>Privacy Policy</span>
+                  Privacy Policy
                 </Link>
               </li>
               <li>
                 <Link
                   href="/delete-account"
-                  className="font-medium hover:text-zinc-950 dark:hover:text-white transition-colors text-amber-600 dark:text-amber-400"
+                  className="hover:text-zinc-950 dark:hover:text-white transition-colors"
                 >
-                  <span>Account & Data Deletion</span>
+                  Account &amp; Data Deletion
                 </Link>
               </li>
               <li>
@@ -106,7 +108,7 @@ export function PublicFooter() {
                   href="/safety"
                   className="hover:text-zinc-950 dark:hover:text-white transition-colors"
                 >
-                  <span>Community Safety Guide</span>
+                  Community Safety Guide
                 </Link>
               </li>
               <li>
@@ -114,34 +116,35 @@ export function PublicFooter() {
                   href="/contact"
                   className="hover:text-zinc-950 dark:hover:text-white transition-colors"
                 >
-                  <span>Contact & Support</span>
+                  Contact &amp; Support
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Universities & App */}
+          {/* Universities */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-950 dark:text-white">
-              Universities
+              Campuses
             </h4>
             <ul className="space-y-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <li>UET Lahore (Main & Sub-campuses)</li>
+              <li>UET Lahore (Main &amp; Campuses)</li>
               <li>NUST Islamabad</li>
               <li>FAST NUCES (All Campuses)</li>
               <li>LUMS Lahore</li>
               <li>COMSATS University</li>
               <li>Punjab University (PU)</li>
+              <li>GIKI Topi</li>
             </ul>
           </div>
         </div>
 
-        {/* Bottom Bar & Store Compliance Notes */}
+        {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-zinc-500">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span>&copy; {new Date().getFullYear()} CampuStitch Pakistan. All rights reserved.</span>
+            <span>&copy; {new Date().getFullYear()} CampusStitch Pakistan. All rights reserved.</span>
             <span>&bull;</span>
-            <span>Complies with Google Play Developer Policy.</span>
+            <span>Connecting university students.</span>
           </div>
 
           <div className="flex items-center gap-4">

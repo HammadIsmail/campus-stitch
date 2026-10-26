@@ -11,6 +11,7 @@ const PUBLIC_PREFIXES = [
   "/auth",
   "/api/upload",
   "/api/contact",
+  "/api/waitlist",
   "/api/app/version",
   "/home",
   "/download",
@@ -55,6 +56,7 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith("/api/universities") ||
       pathname.startsWith("/api/campuses") ||
       pathname.startsWith("/api/contact") ||
+      pathname.startsWith("/api/waitlist") ||
       pathname.startsWith("/api/app/version") ||
       (pathname.startsWith("/api/market") && request.method === "GET") ||
       (pathname.startsWith("/api/commute") && request.method === "GET") ||
