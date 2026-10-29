@@ -152,13 +152,25 @@ export async function proxy(request: NextRequest) {
     if (token) {
       const payload = await verifyJwtToken(token);
       if (payload) {
-        if (payload.role === "super_admin") {
-          return NextResponse.redirect(new URL("/admin/super", request.url));
-        } else if (payload.role === "campus_admin") {
-          return NextResponse.redirect(new URL("/admin", request.url));
-        } else {
-          return NextResponse.redirect(new URL("/commute", request.url));
-        }
+        const redirectParam = request.nextUrl.searchParams.get("redirect");
+        const defaultTarget =
+          payload.role === "super_admin"
+            ? "/admin/super"
+            : payload.role === "campus_admin"
+            ? "/admin"
+            : "/services";
+
+        const target =
+          redirectParam &&
+          redirectParam.startsWith("/") &&
+          !redirectParam.startsWith("/sign-in") &&
+          !redirectParam.startsWith("/sign-up") &&
+          !redirectParam.startsWith("/login") &&
+          redirectParam !== "/"
+            ? redirectParam
+            : defaultTarget;
+
+        return NextResponse.redirect(new URL(target, request.url));
       }
     }
     return NextResponse.next();

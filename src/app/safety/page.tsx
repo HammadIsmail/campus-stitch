@@ -34,7 +34,7 @@ export default function SafetyPage() {
             Trust, Safety & Campus Guidelines
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
-            CampuStitch is built on trust between verified university peers. Learn how we safeguard your campus experience across carpooling, marketplace trades, and student forums.
+            CampuStitch is built on trust between university peers. Learn how we safeguard your campus experience across carpooling, marketplace trades, and student forums.
           </p>
         </div>
       </section>
@@ -48,10 +48,10 @@ export default function SafetyPage() {
               <ShieldCheck size={20} />
             </div>
             <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
-              100% Student Verified
+              Campus Peer Community
             </h3>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Every student must submit their physical campus card and take a live facial verification photo, reviewed by designated campus administrators. Outsiders and non-students are barred from entering campus feeds.
+              Feeds and features are scoped exclusively to students, faculty, and staff of your university campus, fostering safe and accountable interactions.
             </p>
           </div>
 
@@ -63,7 +63,7 @@ export default function SafetyPage() {
               Safe Campus Commute
             </h3>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Rides are shared exclusively with verified university batchmates and faculty. Check driver profiles, vehicle plates, and mutual batch ratings before booking or boarding.
+              Rides are shared with university batchmates and peers. Check driver profiles, vehicle details, and ratings before booking or boarding.
             </p>
           </div>
 

@@ -28,7 +28,6 @@ import {
   ExternalLink,
   Star,
 } from "lucide-react";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -68,9 +67,6 @@ export default function ProfilePage() {
   const [profileUniversity, setProfileUniversity] = React.useState<string>(
     authUser?.universityName || "UET Lahore"
   );
-  const [verificationStatus, setVerificationStatus] = React.useState<
-    "unverified" | "pending" | "verified" | "rejected"
-  >(authUser?.isVerified ? "verified" : "unverified");
 
   // Edit Profile Modal State
   const [showEditProfileModal, setShowEditProfileModal] = React.useState(false);
@@ -82,7 +78,6 @@ export default function ProfilePage() {
 
   // Account Deletion State
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = React.useState("");
   const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
@@ -137,13 +132,6 @@ export default function ProfilePage() {
           }
           if (data.profile.university) {
             setProfileUniversity(data.profile.university);
-          }
-          if (data.profile.verification_status) {
-            setVerificationStatus(data.profile.verification_status);
-          } else if (data.profile.is_verified) {
-            setVerificationStatus("verified");
-          } else {
-            setVerificationStatus("unverified");
           }
         }
       } catch (err) {
@@ -249,13 +237,8 @@ export default function ProfilePage() {
   };
 
   // Permanent Account & Data Deletion via React Query Mutation
-  const handleDeleteAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
-      setDeleteError('Please type "DELETE" to confirm.');
-      return;
-    }
-
+  const handleDeleteAccount = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setIsDeletingAccount(true);
     setDeleteError(null);
 
@@ -370,12 +353,8 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="min-w-0">
-                  <h1 className="text-base font-extrabold text-black dark:text-white flex items-center gap-1.5 truncate">
-                    <span>{user.name}</span>
-                    <VerificationBadge
-                      isVerified={user.verified || verificationStatus === "verified"}
-                      status={verificationStatus}
-                    />
+                  <h1 className="text-base font-extrabold text-black dark:text-white truncate">
+                    {user.name}
                   </h1>
                   <div className="text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300">
                     {user.studentId}
@@ -410,9 +389,8 @@ export default function ProfilePage() {
               {/* Member Tag */}
               <div className="text-right shrink-0">
                 <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-xl">
-                  <ShieldCheck size={14} className="text-black dark:text-white" />
-                  <span className="text-xs font-black text-black dark:text-white">
-                    {user.verified || verificationStatus === "verified" ? "Verified" : "Active"}
+                  <span className="text-xs font-bold text-black dark:text-white">
+                    {profileUniversity}
                   </span>
                 </div>
                 <span className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 block">
@@ -451,32 +429,7 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 text-black dark:text-white font-bold">
-                <VerificationBadge
-                  isVerified={user.verified || verificationStatus === "verified"}
-                  status={verificationStatus}
-                  showText={false}
-                />
-                <span>
-                  {verificationStatus === "verified" || user.verified
-                    ? `Verified Student (${profileUniversity})`
-                    : verificationStatus === "pending"
-                    ? "Verification Under Review"
-                    : "Unverified Student Account"}
-                </span>
-              </div>
-              <span className="text-[11px] font-semibold flex items-center gap-1">
-                {verificationStatus === "verified" || user.verified ? (
-                  <span className="text-black dark:text-white font-bold">Active Student</span>
-                ) : verificationStatus === "pending" ? (
-                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">Pending Review</span>
-                ) : (
-                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">Unverified</span>
-                )}
-              </span>
             </div>
-          </div>
 
           {/* ======================================================== */}
           {/* PEER RATINGS & REPUTATION SUMMARY                        */}
@@ -530,7 +483,7 @@ export default function ProfilePage() {
               </div>
 
               <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-                {user.verified || verificationStatus === "verified" ? "Verified Peer" : "Student Member"}
+                Student Member
               </span>
             </div>
 
@@ -575,94 +528,39 @@ export default function ProfilePage() {
               </div>
             ) : (
               <p className="text-xs text-zinc-400 dark:text-zinc-500 italic text-center py-2">
-                Honest state: You have not received any peer ratings yet. Complete rides or marketplace exchanges to earn your trust badges.
+                You have not received any peer reviews yet. Complete rides or marketplace exchanges with peers to build your reviews.
               </p>
             )}
           </div>
 
-          {/* Verification CTA Banner (Unified Black & White Theme) */}
-          {verificationStatus === "pending" ? (
-            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0">
-                  <Clock size={16} className="animate-pulse" />
-                </div>
-                <div>
-                  <div className="font-bold text-foreground">Verification Under Review</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                    Campus moderators are reviewing your live selfie and student ID card.
-                  </div>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700 shrink-0">
-                Pending
-              </span>
-            </div>
-          ) : verificationStatus !== "verified" && !user.verified ? (
-            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0 shadow-xs">
-                  <ShieldAlert size={16} />
-                </div>
-                <div>
-                  <div className="font-bold text-foreground">You are Unverified</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                    Complete quick face scan & ID card upload to earn verified student badge.
-                  </div>
-                </div>
-              </div>
-              <Link
-                href="/verify"
-                className="px-3.5 py-2 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shrink-0 flex items-center gap-1.5 shadow-xs cursor-pointer"
-              >
-                <span>Verify Yourself</span>
-                <ArrowRight size={13} />
-              </Link>
-            </div>
-          ) : null}
+
 
           {/* ======================================================== */}
           {/* ======================================================== */}
-          {/* DANGER ZONE / ACCOUNT & PERSONAL DATA DELETION          */}
+          {/* DANGER ZONE / ACCOUNT DELETION                           */}
           {/* ======================================================== */}
-          <div className="bg-white dark:bg-[#121214] border border-red-200 dark:border-red-950/70 rounded-2xl p-5 shadow-2xs space-y-4 transition-colors">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-extrabold text-[11px] uppercase tracking-wider">
-                  <Trash2 size={13} />
-                  <span>Account Management &bull; Google Play Compliant</span>
-                </div>
-                <h2 className="text-base font-extrabold text-black dark:text-white mt-1">
-                  Delete Student Account & Purge Data
-                </h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
-                  Permanently delete your CampuStitch student profile and expunge all student ID cards, live face scans, marketplace listings, carpools, and peer messages.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3.5 bg-red-50/70 dark:bg-red-950/20 border border-red-200/80 dark:border-red-900/40 rounded-xl space-y-2 text-xs">
-              <div className="font-bold text-red-700 dark:text-red-400 flex items-center gap-1.5">
-                <AlertTriangle size={14} />
-                <span>Permanent & Irreversible Student Account Deletion</span>
-              </div>
-              <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Deleting your account will immediately revoke all campus services, invalidate your verified student identity badge, and delete all records across our servers within 30 days.
+          <div className="bg-white dark:bg-[#121214] border border-red-200 dark:border-red-950/70 rounded-2xl p-5 shadow-2xs space-y-3 transition-colors">
+            <div>
+              <h2 className="text-sm font-bold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                <Trash2 size={15} />
+                <span>Delete Account</span>
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Permanently delete your account and personal data.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={() => {
-                  setDeleteConfirmText("");
                   setDeleteError(null);
                   setShowDeleteModal(true);
                 }}
-                className="h-10 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-2xs"
+                className="h-9 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-2xs"
               >
                 <Trash2 size={14} />
-                <span>Delete Account & Personal Data</span>
+                <span>Delete Account</span>
               </button>
             </div>
           </div>
@@ -788,7 +686,7 @@ export default function ProfilePage() {
                     <span>Campus Peer Visibility</span>
                   </div>
                   <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Show your bio and verification badge to verified UET students
+                    Show your profile bio to campus peers
                   </div>
                 </div>
                 <input
@@ -798,35 +696,6 @@ export default function ProfilePage() {
                   className="w-4 h-4 accent-black dark:accent-white cursor-pointer"
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Account & Verification Links */}
-          <div className="space-y-2 pt-2">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 px-1">
-              Account & Safety
-            </div>
-            <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-xl divide-y divide-zinc-100 dark:divide-zinc-800 shadow-2xs">
-              <Link
-                href="/verify"
-                className="p-3.5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-2.5 text-xs font-bold text-black dark:text-white">
-                  <CreditCard size={16} />
-                  <span>Update University Student Card</span>
-                </div>
-                <ChevronRight size={16} className="text-zinc-400" />
-              </Link>
-              <Link
-                href="/admin"
-                className="p-3.5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-2.5 text-xs font-bold text-black dark:text-white">
-                  <ShieldCheck size={16} />
-                  <span>Campus Safety & Verification Queue</span>
-                </div>
-                <ChevronRight size={16} className="text-zinc-400" />
-              </Link>
             </div>
           </div>
 
@@ -841,12 +710,12 @@ export default function ProfilePage() {
               {isSigningOut ? (
                 <>
                   <Loader2 size={15} className="animate-spin text-red-600 dark:text-red-400" />
-                  <span>Signing Out of CampuStitch...</span>
+                  <span>Signing Out...</span>
                 </>
               ) : (
                 <>
                   <LogOut size={15} />
-                  <span>Sign Out of CampuStitch</span>
+                  <span>Sign Out</span>
                 </>
               )}
             </button>
@@ -991,11 +860,11 @@ export default function ProfilePage() {
         {/* ======================================================== */}
         {showDeleteModal && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-[#18181b] rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl border border-red-200 dark:border-red-900/60 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="bg-white dark:bg-[#18181b] rounded-2xl w-full max-w-sm p-5 sm:p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4 animate-in fade-in zoom-in-95">
               <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
                 <div className="font-extrabold text-base text-red-600 dark:text-red-400 flex items-center gap-2">
                   <Trash2 size={18} />
-                  <span>Confirm Account Deletion</span>
+                  <span>Delete Account</span>
                 </div>
                 <button
                   type="button"
@@ -1006,65 +875,44 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              <form onSubmit={handleDeleteAccount} className="space-y-4">
-                <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl space-y-1.5 text-xs">
-                  <div className="font-bold text-red-700 dark:text-red-400 flex items-center gap-1.5">
-                    <AlertTriangle size={14} />
-                    <span>Permanent Data Removal</span>
-                  </div>
-                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                    This will permanently delete your student profile for <strong>{user.email}</strong>, all ID card scans, webcam selfies, carpool bookings, and peer messages.
-                  </p>
-                </div>
+              <div className="space-y-2">
+                <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
+                  Your account and all data will be deleted permanently. This action cannot be undone.
+                </p>
+              </div>
 
-                {deleteError && (
-                  <div className="p-3 bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-900 rounded-xl text-xs text-red-700 dark:text-red-300 font-medium">
-                    {deleteError}
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 block mb-1.5">
-                    Type <span className="font-mono text-red-600 dark:text-red-400 font-extrabold">DELETE</span> to confirm
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Type DELETE"
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    className="w-full h-11 px-3.5 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 rounded-xl text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-red-600 dark:focus:border-red-400"
-                  />
+              {deleteError && (
+                <div className="p-3 bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-900 rounded-xl text-xs text-red-700 dark:text-red-300 font-medium">
+                  {deleteError}
                 </div>
+              )}
 
-                <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowDeleteModal(false)}
-                    className="text-xs h-10 px-4 rounded-xl cursor-pointer"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isDeletingAccount || deleteConfirmText.trim().toUpperCase() !== "DELETE"}
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold h-10 px-5 rounded-xl cursor-pointer disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isDeletingAccount ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        <span>Deleting Account...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 size={14} />
-                        <span>Permanently Delete</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
+              <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-xs h-9 px-4 rounded-xl cursor-pointer"
+                  disabled={isDeletingAccount}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleDeleteAccount()}
+                  disabled={isDeletingAccount}
+                  className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold h-9 px-4 rounded-xl cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isDeletingAccount ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <span>Confirm Delete</span>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -1076,7 +924,6 @@ export default function ProfilePage() {
             onClose={() => setShowPublicPreview(false)}
             userId={user.userId || user.email || user.name}
             fallbackName={user.name}
-            fallbackVerified={user.verified || verificationStatus === "verified"}
           />
         )}
       </div>

@@ -31,7 +31,6 @@ export default function robots(): MetadataRoute.Robots {
           "/profile",
           "/dashboard",
           "/delete-account",
-          "/verify",
         ],
       },
     ],

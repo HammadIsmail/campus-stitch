@@ -24,7 +24,6 @@ import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { StudentProfileModal } from "@/components/student-profile-modal";
 import { ReviewModal } from "@/components/review-modal";
 import { CampusService } from "@/hooks/use-services-queries";
@@ -369,10 +368,9 @@ export default function ServicesPage() {
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5">
                               <span className="truncate">{srv.provider}</span>
-                              <VerificationBadge isVerified={srv.verified} size="xs" />
                             </div>
                             <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                              Verified Student Provider · View Profile
+                              Student Provider · View Profile
                             </div>
                           </div>
                         </button>

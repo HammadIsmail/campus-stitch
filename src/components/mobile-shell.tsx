@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/theme-context";
 import { useAuth } from "@/lib/auth-context";
 import { NotificationsSlider } from "@/components/notifications-slider";
-import { UnverifiedDialog } from "@/components/unverified-dialog";
 
 const NAV_LINKS = [
   { name: "Services", href: "/services", icon: Wrench },
@@ -52,14 +51,8 @@ export function MobileShell({
     pathname === "/register" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password" ||
-    pathname === "/verify" ||
-    Boolean(pathname?.startsWith("/sign-in")) ||
-    Boolean(pathname?.startsWith("/sign-up")) ||
-    Boolean(pathname?.startsWith("/login")) ||
-    Boolean(pathname?.startsWith("/register")) ||
     Boolean(pathname?.startsWith("/forgot-password")) ||
     Boolean(pathname?.startsWith("/reset-password")) ||
-    Boolean(pathname?.startsWith("/verify")) ||
     Boolean(pathname?.startsWith("/auth"));
 
   const isMessagesPage =
@@ -245,9 +238,6 @@ export function MobileShell({
         onClose={() => setIsNotificationsOpen(false)}
         onUnreadCountChange={setUnreadCount}
       />
-
-      {/* Post-Registration Unverified Student Dialog */}
-      <UnverifiedDialog />
     </div>
   );
 }

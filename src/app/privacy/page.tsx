@@ -111,7 +111,7 @@ export default function PrivacyPolicyPage() {
             <div className="space-y-3">
               <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
                 <h3 className="text-xs font-bold text-zinc-950 dark:text-white mb-1">
-                  A. Student Profile & Affiliation
+                  A. Student Profile &amp; Affiliation
                 </h3>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   Full name, email address, password hash (bcrypt), degree program, student roll number, University ID, and Campus ID.
@@ -120,16 +120,7 @@ export default function PrivacyPolicyPage() {
 
               <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
                 <h3 className="text-xs font-bold text-zinc-950 dark:text-white mb-1">
-                  B. Student KYC Verification Documents (High-Security)
-                </h3>
-                <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                  A photograph of your official physical student card and a live camera snapshot (selfie). These images are used exclusively to confirm you are an authentic student of the claimed campus and are reviewed only by authorized Campus Administrators.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
-                <h3 className="text-xs font-bold text-zinc-950 dark:text-white mb-1">
-                  C. User Content & Activity
+                  B. User Content &amp; Activity
                 </h3>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   Marketplace listing photos and descriptions, carpool routes and pickup locations, campus student service listings, community forum discussions, upvotes, and direct chat messages between students.
@@ -138,7 +129,7 @@ export default function PrivacyPolicyPage() {
 
               <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
                 <h3 className="text-xs font-bold text-zinc-950 dark:text-white mb-1">
-                  D. Device & Security Telemetry
+                  C. Device &amp; Security Telemetry
                 </h3>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   Device model, operating system version, app version, IP address, and session tokens to secure accounts against credential stuffing and unauthorized account access.
@@ -158,10 +149,10 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>
-                <strong>Camera Permission (<code>android.permission.CAMERA</code>):</strong> Required to capture a live webcam/phone camera selfie during the Student KYC verification process, and to photograph items for student marketplace listings. The camera is never accessed in the background or without user initiation.
+                <strong>Camera Permission (<code>android.permission.CAMERA</code>):</strong> Required to photograph items for student marketplace listings and update profile avatars. The camera is never accessed in the background or without user initiation.
               </li>
               <li>
-                <strong>Storage / Media Images (<code>android.permission.READ_MEDIA_IMAGES</code>):</strong> Required solely to allow you to upload images of your student card or marketplace items from your photo gallery.
+                <strong>Storage / Media Images (<code>android.permission.READ_MEDIA_IMAGES</code>):</strong> Required solely to allow you to upload images for marketplace listings or profile pictures from your photo gallery.
               </li>
               <li>
                 <strong>Location Permission (Optional):</strong> If enabled, used solely to compute distance and convenient meeting or pickup spots for campus carpools.
@@ -178,7 +169,6 @@ export default function PrivacyPolicyPage() {
             <p>We process your information strictly for the following purposes:</p>
             <ul className="list-disc pl-5 space-y-1.5 text-xs text-zinc-600 dark:text-zinc-400">
               <li>Authenticating your student account and issuing cryptographic JWT session tokens.</li>
-              <li>Verifying your campus enrollment status through our dual-factor ID card and facial verification check.</li>
               <li>Displaying campus-isolated carpools, second-hand books, and campus services.</li>
               <li>Enabling student-to-student messaging for coordinating rides and book purchases.</li>
               <li>Moderating forum content to prevent harassment, fraud, and academic dishonesty.</li>

@@ -47,7 +47,7 @@ export function PublicNav({
     if (!user) return "/sign-in";
     if (user.role === "super_admin") return "/admin/super";
     if (user.role === "campus_admin") return "/admin";
-    return "/commute";
+    return "/services";
   };
 
   const getDashboardLabel = () => {

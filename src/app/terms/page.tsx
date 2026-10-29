@@ -25,7 +25,7 @@ export default function TermsPage() {
 
   const sections = [
     { id: "acceptance", title: "1. Acceptance of Terms", icon: Scale },
-    { id: "eligibility", title: "2. Eligibility & Student Identity Verification", icon: ShieldCheck },
+    { id: "eligibility", title: "2. Eligibility & Campus Affiliation", icon: ShieldCheck },
     { id: "marketplace", title: "3. Student Marketplace Rules", icon: ShoppingBag },
     { id: "commute", title: "4. Campus Commute & Rideshare", icon: Car },
     { id: "services", title: "5. Campus Student Services", icon: Building },
@@ -108,23 +108,23 @@ export default function TermsPage() {
           <section id="eligibility" className="scroll-mt-24 space-y-3 bg-white dark:bg-[#121215] p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xs">
             <h2 className="text-lg font-bold text-zinc-950 dark:text-white flex items-center gap-2">
               <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
-              2. Eligibility & Student KYC Verification
+              2. Eligibility &amp; Campus Affiliation
             </h2>
             <p>
-              CampuStitch operates strictly as a closed, verified university network. To maintain student safety and eliminate scams:
+              CampuStitch operates strictly as a university community network. To maintain campus trust and eliminate scams:
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>
                 <strong>Affiliation Requirement:</strong> You must be an actively enrolled student, faculty member, or staff member of an accredited Pakistani higher education institution (e.g., UET Lahore, NUST, FAST NUCES, LUMS, PU, etc.).
               </li>
               <li>
-                <strong>KYC Verification:</strong> Users are required to undergo student identity verification (uploading an authentic physical student identification card and a live camera snapshot selfie).
+                <strong>Accurate Account Information:</strong> You agree to provide true and accurate student profile information upon registration, including your university campus and department.
               </li>
               <li>
-                <strong>Zero Impersonation Tolerance:</strong> Falsifying identity documents, using borrowed or altered student cards, or creating fraudulent accounts will result in immediate permanent banning and formal referral to your university disciplinary committee.
+                <strong>Zero Impersonation Tolerance:</strong> Falsifying identity credentials or creating fraudulent accounts will result in immediate permanent banning and formal referral to campus administration.
               </li>
               <li>
-                <strong>Campus Scoping:</strong> Your account is mapped directly to your specific university campus. You may only interact with feeds, rides, and marketplace items authorized for your campus.
+                <strong>Campus Scoping:</strong> Your account is mapped directly to your specific university campus. You may interact with feeds, rides, and marketplace items authorized for your campus.
               </li>
             </ul>
           </section>
@@ -133,14 +133,14 @@ export default function TermsPage() {
           <section id="marketplace" className="scroll-mt-24 space-y-3 bg-white dark:bg-[#121215] p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xs">
             <h2 className="text-lg font-bold text-zinc-950 dark:text-white flex items-center gap-2">
               <ShoppingBag size={18} className="text-zinc-900 dark:text-white" />
-              3. Student Marketplace Rules & Peer Transactions
+              3. Student Marketplace Rules &amp; Peer Transactions
             </h2>
             <p>
               The CampuStitch Marketplace facilitates peer-to-peer sale and exchange of academic books, engineering calculators, drawing boards, lab coats, and student gear:
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>
-                <strong>Introductory Venue Only:</strong> CampuStitch provides a discovery platform for verified students. We do not act as an escrow agent, retailer, or reseller. All financial transactions occur directly between the buyer and seller.
+                <strong>Introductory Venue Only:</strong> CampuStitch provides a discovery platform for university students. We do not act as an escrow agent, retailer, or reseller. All financial transactions occur directly between the buyer and seller.
               </li>
               <li>
                 <strong>Academic Integrity & Prohibited Items:</strong> It is strictly prohibited to list exam papers, leaked answer keys, unauthorized assignment solutions, weapons, narcotics, counterfeit medications, or any items violating Pakistani law or campus regulations.

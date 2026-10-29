@@ -21,7 +21,6 @@ import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { DataService, Listing } from "@/lib/data-service";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { useAuth } from "@/lib/auth-context";
 import { MapPin, Star } from "lucide-react";
 import { useMarketListingsQuery } from "@/hooks/use-market-queries";
@@ -359,7 +358,6 @@ export default function MarketPage() {
                         >
                           {item.seller_name || "Student"}
                         </button>
-                        <VerificationBadge isVerified={item.seller_verified} size="xs" />
                       </div>
                     </div>
                   </div>
@@ -440,7 +438,6 @@ export default function MarketPage() {
                         >
                           {selectedItem.seller_name}
                         </button>
-                        <VerificationBadge isVerified={selectedItem.seller_verified} size="xs" />
                       </div>
 
                       {!isDrawerMine && (

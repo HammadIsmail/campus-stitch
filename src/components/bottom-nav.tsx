@@ -29,14 +29,12 @@ export function BottomNav() {
     pathname === "/register" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password" ||
-    pathname === "/verify" ||
     Boolean(pathname?.startsWith("/sign-in")) ||
     Boolean(pathname?.startsWith("/sign-up")) ||
     Boolean(pathname?.startsWith("/login")) ||
     Boolean(pathname?.startsWith("/register")) ||
     Boolean(pathname?.startsWith("/forgot-password")) ||
     Boolean(pathname?.startsWith("/reset-password")) ||
-    Boolean(pathname?.startsWith("/verify")) ||
     Boolean(pathname?.startsWith("/auth"));
 
   if (isAuthPage) return null;

@@ -55,11 +55,6 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/verify" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
-                  Student Verification
-                </Link>
-              </li>
-              <li>
                 <Link
                   href="/home#waitlist"
                   className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"

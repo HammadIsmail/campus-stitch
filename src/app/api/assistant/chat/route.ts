@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const searchCommuteRides = tool({
   description:
-    "Search for available student commute rides, carpools, or rickshaw splits between locations (e.g. Khurrialwala, Main Campus, Hostel).",
+    "Search for available student commute rides, carpools, or rickshaw splits between locations (e.g. Khurrialwala, Main Campus, Hostel, City).",
   inputSchema: z.object({
     from: z.string().optional().describe("Starting pickup point or area, e.g. Khurrialwala"),
     to: z.string().optional().describe("Dropoff destination, e.g. University or Campus"),
@@ -36,7 +36,7 @@ const searchCommuteRides = tool({
 const searchBikeRentals = tool({
   description: "Search for available student bikes and motorcycles for daily rent on campus.",
   inputSchema: z.object({
-    model: z.string().optional().describe("Bike model or brand, e.g. Honda CD 70, Yamaha YBR"),
+    model: z.string().optional().describe("Bike model or brand, e.g. Honda CD 70, Yamaha YBR, Bicycle"),
     maxDailyRate: z.number().optional().describe("Maximum daily rental rate in PKR"),
   }),
   execute: async ({ model }: { model?: string; maxDailyRate?: number }) => {
@@ -57,10 +57,10 @@ const searchBikeRentals = tool({
 
 const searchMarketListings = tool({
   description:
-    "Search student marketplace for hostel essentials, electronics, study tables, phone coolers, and graduation sales.",
+    "Search student marketplace for hostel essentials, study tables, calculators, books, phone coolers, and electronics.",
   inputSchema: z.object({
     category: z.string().optional().describe("Category: Electronics, Hostel, Furniture, Books"),
-    keyword: z.string().optional().describe("Keywords like cooler, table, fridge, chair"),
+    keyword: z.string().optional().describe("Keywords like cooler, table, fridge, chair, book, calculator"),
     maxPrice: z.number().optional().describe("Maximum price in PKR"),
   }),
   execute: async ({ category, keyword }: { category?: string; keyword?: string; maxPrice?: number }) => {
@@ -77,6 +77,42 @@ const searchMarketListings = tool({
       console.warn("Supabase listings search notice:", e);
     }
     return { listings: [] };
+  },
+});
+
+const searchCampusServices = tool({
+  description:
+    "Search campus student services and gigs such as laundry pickup, laptop formatting/repair, typing/printing, tutoring, cooler repair, etc.",
+  inputSchema: z.object({
+    keyword: z.string().optional().describe("Service name or category, e.g. laundry, repair, print, tutoring, formatting"),
+  }),
+  execute: async ({ keyword }: { keyword?: string }) => {
+    try {
+      const supabase = await createClient();
+      let query = supabase.from("hostel_services").select("*");
+      if (keyword) {
+        query = query.or(`service_name.ilike.%${keyword}%,notes.ilike.%${keyword}%,location.ilike.%${keyword}%`);
+      }
+      const { data, error } = await query.order("created_at", { ascending: false }).limit(5);
+      if (data && !error) {
+        const mapped = data.map((s: any) => ({
+          id: s.id,
+          name: s.service_name || s.name || "Campus Service",
+          rate: s.rate || "",
+          location: s.location || "Campus Point",
+          schedule: s.turnaround_time || s.schedule || "Daily",
+          provider: s.provider_name || s.provider || "Student",
+          phone: s.phone || "",
+          notes: s.notes || "",
+          verified: s.is_verified ?? true,
+          campusId: s.campus_id,
+        }));
+        return { services: mapped };
+      }
+    } catch (e) {
+      console.warn("Supabase service search notice:", e);
+    }
+    return { services: [] };
   },
 });
 
@@ -148,6 +184,7 @@ const bookRideSeat = tool({
           .from("rides")
           .update({ available_seats: ride.available_seats - 1 })
           .eq("id", rideId);
+
         await supabase.from("ride_bookings").insert([
           {
             ride_id: rideId,
@@ -183,31 +220,34 @@ export async function POST(req: NextRequest) {
     let ridesFound: any[] = [];
     let bikesFound: any[] = [];
     let listingsFound: any[] = [];
+    let servicesFound: any[] = [];
     let communitiesFound: any[] = [];
     let profilesFound: any[] = [];
-    let optionsType: "ride" | "bike" | "listing" | "community" | "profile" | undefined;
+    let optionsType: "ride" | "bike" | "listing" | "service" | "community" | "profile" | undefined;
 
     // Use Vercel AI SDK generateText with tools
     if (apiKey) {
       try {
         const google = createGoogleGenerativeAI({ apiKey });
         const result = await generateText({
-          model: google("gemini-3.8-flash"),
-          system: `You are CampusStitch Student AI, an intelligent campus assistant for UET Lahore students.
+          model: google("gemini-1.5-flash"),
+          system: `You are CampusStitch Student AI, an intelligent campus search assistant for university students.
 You assist students with:
-1. Daily commute rides & splits (especially Khurrialwala to campus).
-2. Campus bike rentals (daily rates, Honda, Yamaha).
-3. Hostel essentials and marketplace listings (coolers, study tables, mini fridges).
-4. Reddit-style communities (e.g. r/cs-uet, r/hostel-life, r/commute-splits) and student discussions.
-5. Student profiles, star ratings, and peer reputation.
+1. Daily commute rides & splits (e.g. asking if someone is going to Khurrialwala, Main Campus, Hostel, City). Call searchCommuteRides.
+2. Campus bike & cycle rentals (daily rates, Honda, Yamaha, bicycle). Call searchBikeRentals.
+3. Student marketplace listings (coolers, study tables, textbooks, electronics, chairs). Call searchMarketListings.
+4. Campus student services and gigs (laundry, ironing, printing, thesis binding, laptop formatting, tutoring). Call searchCampusServices.
+5. Student discussions and sub-communities (r/cs-uet, r/hostel-life). Call searchCommunities.
+6. Verified student profiles and reputation ratings. Call searchProfiles.
 
 When a student asks any question in English, Urdu, or Roman Urdu, ALWAYS call the appropriate tool to query live database records.
-Provide concise, courteous responses directly answering in the student's language.`,
+Provide concise, courteous responses directly answering in the student's language. Never fabricate fake results if none exist in the database.`,
           prompt: query,
           tools: {
             searchCommuteRides,
             searchBikeRentals,
             searchMarketListings,
+            searchCampusServices,
             searchCommunities,
             searchProfiles,
             bookRideSeat,
@@ -233,6 +273,9 @@ Provide concise, courteous responses directly answering in the student's languag
             } else if (tr.toolName === "searchMarketListings" && tr.result?.listings) {
               listingsFound = tr.result.listings;
               optionsType = "listing";
+            } else if (tr.toolName === "searchCampusServices" && tr.result?.services) {
+              servicesFound = tr.result.services;
+              optionsType = "service";
             } else if (tr.toolName === "searchCommunities" && tr.result?.communities) {
               communitiesFound = tr.result.communities;
               optionsType = "community";
@@ -247,24 +290,46 @@ Provide concise, courteous responses directly answering in the student's languag
       }
     }
 
-    // Direct Intent Fallback Execution (if SDK was throttled or key unavailable)
+    // Direct Intent Fallback Execution (if SDK was throttled, model offline, or key unavailable)
     if (
       !optionsType &&
       ridesFound.length === 0 &&
       bikesFound.length === 0 &&
       listingsFound.length === 0 &&
+      servicesFound.length === 0 &&
       communitiesFound.length === 0 &&
       profilesFound.length === 0
     ) {
       const lower = query.toLowerCase();
       const isUrdu = /[\u0600-\u06FF]/.test(query);
 
+      const isService =
+        lower.includes("service") ||
+        lower.includes("services") ||
+        lower.includes("server") ||
+        lower.includes("laundry") ||
+        lower.includes("wash") ||
+        lower.includes("iron") ||
+        lower.includes("print") ||
+        lower.includes("thesis") ||
+        lower.includes("repair") ||
+        lower.includes("tutor") ||
+        lower.includes("formatting") ||
+        lower.includes("typing") ||
+        query.includes("سروس") ||
+        query.includes("لانڈری") ||
+        query.includes("استری") ||
+        query.includes("پرنٹ");
+
       const isRide =
         lower.includes("ride") ||
+        lower.includes("rides") ||
         lower.includes("khurrialwala") ||
         lower.includes("commute") ||
+        lower.includes("carpool") ||
         lower.includes("car") ||
         lower.includes("rickshaw") ||
+        lower.includes("going") ||
         lower.includes("jana") ||
         query.includes("کھڑیاںوالہ") ||
         query.includes("رائیڈ") ||
@@ -273,10 +338,13 @@ Provide concise, courteous responses directly answering in the student's languag
 
       const isBike =
         lower.includes("bike") ||
+        lower.includes("bikes") ||
         lower.includes("cycle") ||
+        lower.includes("bicycle") ||
         lower.includes("honda") ||
         lower.includes("yamaha") ||
         query.includes("بائیک") ||
+        query.includes("سائیکل") ||
         query.includes("موٹرسائیکل");
 
       const isMarket =
@@ -286,9 +354,13 @@ Provide concise, courteous responses directly answering in the student's languag
         lower.includes("table") ||
         lower.includes("fridge") ||
         lower.includes("chair") ||
+        lower.includes("item") ||
+        lower.includes("book") ||
+        lower.includes("calculator") ||
         query.includes("کولر") ||
         query.includes("ٹیبل") ||
         query.includes("سامان") ||
+        query.includes("کتاب") ||
         query.includes("خرید");
 
       const isCommunity =
@@ -305,116 +377,140 @@ Provide concise, courteous responses directly answering in the student's languag
         lower.includes("rating") ||
         lower.includes("profile") ||
         lower.includes("hammad") ||
-        lower.includes("ahmed") ||
-        lower.includes("sara") ||
         lower.includes("student") ||
         query.includes("پروفائل") ||
         query.includes("ریٹنگ");
 
-      if (isCommunity) {
-        const res = await (searchCommunities.execute as any)({ topic: "cs" });
-        communitiesFound = res.communities || [
-          {
-            id: "c_1",
-            name: "r/cs-uet",
-            title: "UET Computer Science & Software Devs",
-            description: "Official hub for UET CS students, projects, and internships.",
-            member_count: 1420,
-          },
-          {
-            id: "c_2",
-            name: "r/hostel-life",
-            title: "UET Hostels (A, B, Zubair)",
-            description: "Hostel life, room swaps, and late-night tea spots.",
-            member_count: 890,
-          },
-        ];
-        optionsType = "community";
-        toolCallsRecorded.push({ toolName: "searchCommunities", args: { topic: query } });
+      if (isService) {
+        let kw = "";
+        if (lower.includes("laundry") || lower.includes("wash") || query.includes("لانڈری")) kw = "laundry";
+        else if (lower.includes("print") || query.includes("پرنٹ")) kw = "print";
+        else if (lower.includes("repair") || query.includes("مرمت")) kw = "repair";
+        else if (lower.includes("tutor") || lower.includes("teaching")) kw = "tutor";
+
+        const res = await (searchCampusServices.execute as any)({ keyword: kw });
+        servicesFound = res.services || [];
+        optionsType = "service";
+        toolCallsRecorded.push({ toolName: "searchCampusServices", args: { keyword: kw } });
+
         if (!replyText) {
-          replyText = isUrdu
-            ? `جی، کیمپس پر رَیڈِٹ اسٹائل کی ${communitiesFound.length} کمیونٹیز موجود ہیں، جیسے r/cs-uet اور r/hostel-life۔`
-            : `Found ${communitiesFound.length} Reddit-style communities for "${query}". You can join discussions and post questions!`;
-        }
-      } else if (isProfile) {
-        const res = await (searchProfiles.execute as any)({ query: "hammad" });
-        profilesFound = res.profiles?.length > 0 ? res.profiles : [
-          {
-            id: "u_2023_cs_807",
-            full_name: "Muhammad Hammad Ismail",
-            student_id: "2023-CS-807",
-            program: "BS Computer Science",
-            university: "UET Lahore",
-            rating_avg: 5.0,
-            rating_count: 3,
-            is_verified: true,
-          },
-        ];
-        optionsType = "profile";
-        toolCallsRecorded.push({ toolName: "searchProfiles", args: { query } });
-        if (!replyText) {
-          replyText = isUrdu
-            ? `طالبعلم محمد حماد اسماعیل (2023-CS-807) کی تصدیق شدہ پروفائل موجود ہے جس کی ریٹنگ ★ 5.0 ہے۔`
-            : `Found verified profile for Muhammad Hammad Ismail (2023-CS-807) with an average rating of ★ 5.0 (3 peer reviews).`;
+          if (servicesFound.length > 0) {
+            replyText = isUrdu
+              ? `جی، کیمپس پر ${servicesFound.length} طالب علم سروسز دستیاب ہیں۔ آپ نیچے سے سروس پرووائیڈر سے رابطہ کر سکتے ہیں۔`
+              : `Found ${servicesFound.length} student-run campus services matching your request. Tap on a service card to contact the provider!`;
+          } else {
+            replyText = isUrdu
+              ? "اس وقت کیمپس پر ایسی کوئی سروس درج نہیں ہے۔"
+              : "No campus services currently match your search. You can check back later or offer a service yourself.";
+          }
         }
       } else if (isRide) {
-        const res = await (searchCommuteRides.execute as any)({ from: "Khurrialwala" });
+        let fromLoc = "";
+        if (lower.includes("khurrialwala") || query.includes("کھڑیاںوالہ")) fromLoc = "Khurrialwala";
+        const res = await (searchCommuteRides.execute as any)({ from: fromLoc });
         ridesFound = res.rides || [];
         optionsType = "ride";
-        toolCallsRecorded.push({ toolName: "searchCommuteRides", args: { from: "Khurrialwala" } });
+        toolCallsRecorded.push({ toolName: "searchCommuteRides", args: { from: fromLoc } });
+
         if (!replyText) {
           if (ridesFound.length > 0) {
             const first = ridesFound[0];
             replyText = isUrdu
-              ? `جی، کھڑیاںوالہ سے رائیڈز دستیاب ہیں۔ سب سے پہلی رائیڈ ${first.organizer_name} کی ہے: ${first.departure_time}، ${first.price_per_seat} روپے فی سیٹ۔`
-              : `Found ${ridesFound.length} rides from Khurrialwala. Earliest is ${first.organizer_name} at ${first.departure_time} (Rs. ${first.price_per_seat}/seat).`;
+              ? `جی، رائیڈز دستیاب ہیں۔ سب سے پہلی رائیڈ ${first.organizer_name} کی ہے: ${first.departure_time}، ${first.price_per_seat} روپے فی سیٹ۔`
+              : `Found ${ridesFound.length} active ride(s). Earliest is ${first.organizer_name} at ${first.departure_time} (Rs. ${first.price_per_seat}/seat).`;
           } else {
             replyText = isUrdu
-              ? "کھڑیاںوالہ کے لیے اس وقت کوئی رائیڈ موجود نہیں ہے۔"
-              : "No active rides currently scheduled for this route.";
+              ? "اس روٹ کے لیے فی الحال کوئی فعال رائیڈ درج نہیں ہے۔"
+              : "No active rides currently scheduled for this route. You can check Commute or offer a ride.";
           }
         }
       } else if (isBike) {
-        const res = await (searchBikeRentals.execute as any)({});
+        let model = "";
+        if (lower.includes("honda") || lower.includes("70")) model = "Honda";
+        else if (lower.includes("yamaha")) model = "Yamaha";
+        const res = await (searchBikeRentals.execute as any)({ model });
         bikesFound = res.bikes || [];
         optionsType = "bike";
-        toolCallsRecorded.push({ toolName: "searchBikeRentals", args: {} });
+        toolCallsRecorded.push({ toolName: "searchBikeRentals", args: { model } });
+
         if (!replyText) {
-          replyText = isUrdu
-            ? `جی، کیمپس پر ${bikesFound.length || 2} تصدیق شدہ بائیکس دستیاب ہیں۔`
-            : `Found verified bikes available for rent on campus.`;
+          if (bikesFound.length > 0) {
+            replyText = isUrdu
+              ? `جی، کیمپس پر کرائے کے لیے ${bikesFound.length} بائیک دستیاب ہیں۔`
+              : `Found ${bikesFound.length} bike(s) available for rent on campus. Tap below to reserve!`;
+          } else {
+            replyText = isUrdu
+              ? "اس وقت کرائے کے لیے کوئی بائیک دستیاب نہیں ہے۔"
+              : "No bikes currently available for rent matching your criteria.";
+          }
         }
       } else if (isMarket) {
-        const res = await (searchMarketListings.execute as any)({});
+        let kw = "";
+        if (lower.includes("cooler") || query.includes("کولر")) kw = "cooler";
+        else if (lower.includes("table") || query.includes("ٹیبل")) kw = "table";
+        else if (lower.includes("book") || query.includes("کتاب")) kw = "book";
+        else if (lower.includes("calculator")) kw = "calculator";
+        else if (lower.includes("fridge")) kw = "fridge";
+
+        const res = await (searchMarketListings.execute as any)({ keyword: kw });
         listingsFound = res.listings || [];
         optionsType = "listing";
-        toolCallsRecorded.push({ toolName: "searchMarketListings", args: {} });
+        toolCallsRecorded.push({ toolName: "searchMarketListings", args: { keyword: kw } });
+
+        if (!replyText) {
+          if (listingsFound.length > 0) {
+            replyText = isUrdu
+              ? `جی، مارکیٹ پلیس میں ${listingsFound.length} اشیاء دستیاب ہیں۔`
+              : `Found ${listingsFound.length} item(s) on the student marketplace.`;
+          } else {
+            replyText = isUrdu
+              ? "اس وقت مارکیٹ میں مطلوبہ سامان دستیاب نہیں ہے۔"
+              : "No marketplace listings found matching your search. Check back later!";
+          }
+        }
+      } else if (isCommunity) {
+        const res = await (searchCommunities.execute as any)({ topic: "cs" });
+        communitiesFound = res.communities || [];
+        optionsType = "community";
+        toolCallsRecorded.push({ toolName: "searchCommunities", args: { topic: query } });
         if (!replyText) {
           replyText = isUrdu
-            ? `جی، مارکیٹ میں مطلوبہ سامان دستیاب ہے۔`
-            : `Found matching items on the student marketplace.`;
+            ? `جی، کیمپس پر رَیڈِٹ اسٹائل کی کمیونٹیز موجود ہیں، جن میں آپ حصہ لے سکتے ہیں۔`
+            : `Found student sub-communities for "${query}". You can join discussions and post questions!`;
+        }
+      } else if (isProfile) {
+        const res = await (searchProfiles.execute as any)({ query: "hammad" });
+        profilesFound = res.profiles || [];
+        optionsType = "profile";
+        toolCallsRecorded.push({ toolName: "searchProfiles", args: { query } });
+        if (!replyText) {
+          replyText = isUrdu
+            ? `طالبعلم کی تصدیق شدہ پروفائل تلاش کر لی گئی ہے۔`
+            : `Found verified student profiles matching your search.`;
         }
       } else {
         if (!replyText) {
           replyText = isUrdu
-            ? `ہم نے کیمپس ریکارڈز میں "${query}" تلاش کیا۔ آپ رائیڈز، بائیک کرایہ، ریڈٹ کمیونٹی یا طالبعلم کی ریٹنگ پوچھ سکتے ہیں۔`
-            : `I searched campus records for "${query}". You can ask about Khurrialwala rides, student bikes, r/cs-uet community, or profile ratings!`;
+            ? `ہم نے کیمپس ڈیٹا میں "${query}" تلاش کیا۔ آپ رائیڈز، بائیک کرایہ، لانڈری/سروسز یا مارکیٹ اشیاء کے متعلق پوچھ سکتے ہیں۔`
+            : `I searched campus records for "${query}". You can ask about rides, bike rentals, student services (laundry/repairs), or marketplace items!`;
         }
       }
     }
 
     const chips =
       optionsType === "ride"
-        ? ["Commute", "Shared Split", "Verified Student"]
+        ? ["Commute", "Shared Split", "Verified Driver"]
         : optionsType === "bike"
-        ? ["Bike", "Campus Verified", "Daily Rent"]
+        ? ["Bike Rental", "Campus Verified", "Daily Rate"]
         : optionsType === "listing"
         ? ["Marketplace", "Student Deal", "Hostel Pickup"]
+        : optionsType === "service"
+        ? ["Campus Service", "Cash on Delivery", "Student Gig"]
         : optionsType === "community"
         ? ["r/cs-uet", "r/hostel-life", "r/commute-splits"]
         : optionsType === "profile"
-        ? ["Profile Rating", "Verified UET", "Peer Reviews"]
-        : ["Commute", "Community", "Marketplace", "Profile Ratings"];
+        ? ["Profile Rating", "Verified Student", "Peer Reviews"]
+        : ["Commute Rides", "Bike Rentals", "Campus Services", "Marketplace"];
 
     return NextResponse.json({
       reply: replyText,
@@ -423,6 +519,7 @@ Provide concise, courteous responses directly answering in the student's languag
       rides: ridesFound,
       bikes: bikesFound,
       listings: listingsFound,
+      services: servicesFound,
       communities: communitiesFound,
       profiles: profilesFound,
       toolCalls: toolCallsRecorded,

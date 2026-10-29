@@ -282,37 +282,6 @@ export default function DashboardPage() {
               )}
             </section>
 
-            {/* Section: Student Safety & Verification */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 tracking-wider uppercase">
-                  Campus Trust & Verification
-                </div>
-                <Link
-                  href="/verify"
-                  className="text-xs font-semibold text-black dark:text-white hover:underline cursor-pointer"
-                >
-                  Verify
-                </Link>
-              </div>
-              <Link
-                href="/verify"
-                className="flex gap-4 items-center p-5 bg-white dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-black dark:hover:border-white transition-all shadow-2xs block"
-              >
-                <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0">
-                  <ShieldCheck size={22} className="text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-black dark:text-white truncate">
-                    Official Student Card Verification
-                  </div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Upload your campus ID card to unlock full peer trust and verified badges
-                  </div>
-                </div>
-                <ChevronRight size={18} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
-              </Link>
-            </section>
 
             {/* Campus Platform & Legal Footer */}
             <div className="pt-6 pb-8 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-2">

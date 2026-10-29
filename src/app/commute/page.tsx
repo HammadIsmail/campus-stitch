@@ -23,7 +23,6 @@ import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DataService, Ride, BikeItem } from "@/lib/data-service";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { useAuth } from "@/lib/auth-context";
 import { MapPin } from "lucide-react";
 import { useRidesQuery, useBikesQuery } from "@/hooks/use-commute-queries";
@@ -368,7 +367,6 @@ export default function CommutePage() {
                               {ride.organizer_name.charAt(0)}
                             </span>
                             <span>{ride.organizer_name}</span>
-                            <VerificationBadge isVerified={ride.organizer_verified} size="xs" />
                           </button>
                           <span
                             className={`text-[11px] font-bold px-2 py-0.5 rounded ${
@@ -481,7 +479,6 @@ export default function CommutePage() {
                               {(b.owner_name?.[0] || "S").toUpperCase()}
                             </span>
                             <span>{b.owner_name || "Student Owner"}</span>
-                            <VerificationBadge isVerified={b.owner_verified} size="xs" />
                           </button>
 
                           <div className="flex items-center gap-2">

@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (campusId) {
-        query = query.eq("campus_id", campusId);
+      if (campusId && campusId !== "all") {
+        query = query.or(`campus_id.eq.${campusId},campus_id.is.null`);
       }
 
       const { data, error } = await query;
@@ -58,7 +58,6 @@ export async function POST(req: NextRequest) {
       notes = "",
       provider = "Student",
       campusId = null,
-      universityId = null,
       userId = null,
     } = body;
 
@@ -78,7 +77,6 @@ export async function POST(req: NextRequest) {
       notes: String(notes).trim(),
       provider_name: provider,
       campus_id: campusId,
-      university_id: universityId,
       user_id: userId,
       is_verified: true,
       created_at: new Date().toISOString(),
@@ -92,17 +90,19 @@ export async function POST(req: NextRequest) {
         .select()
         .single();
 
-      if (data && !error) {
+      if (!error && data) {
         return NextResponse.json({ success: true, service: data });
       }
-    } catch (err) {
+      if (error) {
+        console.error("DB insert service error:", error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      }
+    } catch (err: any) {
       console.warn("DB insert service notice:", err);
+      return NextResponse.json({ success: false, error: err?.message || "Failed to save service" }, { status: 500 });
     }
 
-    return NextResponse.json({
-      success: true,
-      service: { ...newRecord, id: "srv_" + Date.now() },
-    });
+    return NextResponse.json({ success: false, error: "Could not create service" }, { status: 500 });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

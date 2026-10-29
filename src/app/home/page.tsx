@@ -112,7 +112,7 @@ export default function LandingHomePage() {
           </div>
 
           {/* Honest Student Guarantees (Consistent Emerald Accents) */}
-          <div className="mt-14 pt-8 border-t border-zinc-200/80 dark:border-zinc-800/80 grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 text-center max-w-3xl w-full">
+          <div className="mt-14 pt-8 border-t border-zinc-200/80 dark:border-zinc-800/80 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center max-w-2xl w-full">
             <div className="space-y-1">
               <div className="flex items-center justify-center gap-1.5 text-zinc-950 dark:text-white font-bold text-sm sm:text-base">
                 <Banknote size={16} className="text-emerald-500 shrink-0" />
@@ -120,16 +120,6 @@ export default function LandingHomePage() {
               </div>
               <div className="text-xs text-zinc-500 dark:text-zinc-400">
                 Split costs in person with zero platform cuts
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-center gap-1.5 text-zinc-950 dark:text-white font-bold text-sm sm:text-base">
-                <GraduationCap size={16} className="text-emerald-500 shrink-0" />
-                <span>Verified Students</span>
-              </div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                Student ID checks keep interactions safe
               </div>
             </div>
 
@@ -414,20 +404,20 @@ export default function LandingHomePage() {
                     </h4>
                   </div>
                   <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed pl-5">
-                    View student profiles, check verification badges, and read reviews where available.
+                    View student profiles, communicate directly, and read reviews from campus peers.
                   </p>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between">
                 <Link
-                  href="/verify"
+                  href="/profile"
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-950 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                 >
-                  <span>Student Verification</span>
+                  <span>Student Profiles</span>
                   <ArrowRight size={13} />
                 </Link>
-                <span className="text-[10px] text-zinc-500">Official student cards</span>
+                <span className="text-[10px] text-zinc-500">Peer ratings &amp; reviews</span>
               </div>
             </div>
           </div>
@@ -461,59 +451,6 @@ export default function LandingHomePage() {
         </div>
       </section>
 
-      {/* ======================================================== */}
-      {/* 4. HOW IT WORKS (3 SIMPLE STEPS)                        */}
-      {/* ======================================================== */}
-      <section className="py-16 sm:py-24 bg-white dark:bg-[#0c0c0e] border-b border-zinc-200/80 dark:border-zinc-800/80">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="text-center space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Simple Steps
-            </h2>
-            <p className="text-3xl font-extrabold tracking-tight text-zinc-950 dark:text-white">
-              Get Started in Minutes
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl bg-zinc-50 dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-2xs">
-              <span className="w-8 h-8 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-black text-xs flex items-center justify-center">
-                1
-              </span>
-              <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
-                Pick Your University
-              </h3>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Choose your university campus and enter your department details to access your campus space.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-zinc-50 dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-2xs">
-              <span className="w-8 h-8 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-black text-xs flex items-center justify-center">
-                2
-              </span>
-              <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
-                Verify Student Card
-              </h3>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Upload a quick picture of your student ID card so everyone in the campus community knows they are interacting with real students.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-zinc-50 dark:bg-[#121215] border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-2xs">
-              <span className="w-8 h-8 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-black text-xs flex items-center justify-center">
-                3
-              </span>
-              <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
-                Help &amp; Connect
-              </h3>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Find rides to campus, buy or sell used books and calculators, rent bikes, and discover student services.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ======================================================== */}
       {/* 5. GOOGLE PLAY STORE EARLY ACCESS / WAITLIST SECTION     */}

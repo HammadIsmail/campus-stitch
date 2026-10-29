@@ -72,17 +72,17 @@ export default function SignInPage() {
             const params = new URLSearchParams(window.location.search);
             let redirectTarget = params.get("redirect");
 
-            if (!redirectTarget || redirectTarget === "/") {
+            if (!redirectTarget || redirectTarget === "/" || redirectTarget === "/sign-in") {
               if (result.user.role === "super_admin") {
                 redirectTarget = "/admin/super";
               } else if (result.user.role === "campus_admin") {
                 redirectTarget = "/admin";
               } else {
-                redirectTarget = "/commute";
+                redirectTarget = "/services";
               }
             }
 
-            router.push(redirectTarget || "/commute");
+            router.push(redirectTarget || "/services");
           } else {
             setFormError(result.message || "Failed to sign in. Please verify your credentials.");
           }

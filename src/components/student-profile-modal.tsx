@@ -12,7 +12,6 @@ import {
   MapPin,
   GraduationCap,
 } from "lucide-react";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { Button } from "@/components/ui/button";
 
 interface ReviewItem {
@@ -164,7 +163,6 @@ export function StudentProfileModal({
                 <h3 className="text-base font-extrabold text-black dark:text-white leading-tight">
                   {displayName}
                 </h3>
-                <VerificationBadge isVerified={isVerified} size="sm" />
               </div>
 
               <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -207,7 +205,7 @@ export function StudentProfileModal({
             </div>
 
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-              {isVerified ? "Verified Student" : "Student Peer"}
+              Student Peer
             </span>
           </div>
 

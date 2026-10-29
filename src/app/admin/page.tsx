@@ -3,138 +3,24 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  ShieldAlert,
-  ShieldCheck,
-  CheckCircle2,
-  XCircle,
-  RefreshCw,
-  Camera,
-  LogOut,
-  ChevronRight,
-  Loader2,
-  User,
-  GraduationCap,
-  MapPin,
   Building2,
-  Mail,
-  Clock,
+  MapPin,
+  Shield,
   Crown,
+  LogOut,
+  Layers,
+  Car,
+  Tag,
+  Wrench,
+  ArrowRight,
 } from "lucide-react";
 import { MobileShell } from "@/components/mobile-shell";
 import { Button } from "@/components/ui/button";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { useAuth } from "@/lib/auth-context";
 
-interface VerificationItem {
-  id: string;
-  user_id?: string;
-  email?: string;
-  name: string;
-  student_id: string;
-  program: string;
-  department: string;
-  university: string;
-  campus_id?: string;
-  campus_name?: string;
-  city?: string;
-  confidence_status: string;
-  status: "pending" | "approved" | "rejected" | "reupload";
-  card_photo_url?: string;
-  live_photo_url?: string;
-  created_at?: string;
-}
-
-export default function AdminVerificationPage() {
+export default function CampusAdminPage() {
   const { user, logout } = useAuth();
-  const [queue, setQueue] = React.useState<VerificationItem[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [selectedIdx, setSelectedIdx] = React.useState(0);
-  const [isUpdating, setIsUpdating] = React.useState(false);
-  const [actionFeedback, setActionFeedback] = React.useState<string | null>(null);
-  const [campusFilter, setCampusFilter] = React.useState<string>("all");
-  const [campusesList, setCampusesList] = React.useState<any[]>([]);
-
   const isSuperAdmin = user?.role === "super_admin";
-
-  // Load campuses if super admin
-  React.useEffect(() => {
-    if (isSuperAdmin) {
-      fetch("/api/campuses")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && Array.isArray(data.campuses)) {
-            setCampusesList(data.campuses);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isSuperAdmin]);
-
-  // Fetch verifications from API
-  const fetchVerifications = React.useCallback(async () => {
-    setIsLoading(true);
-    try {
-      let url = "/api/verifications";
-      if (isSuperAdmin && campusFilter !== "all") {
-        url += `?campusId=${encodeURIComponent(campusFilter)}`;
-      }
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.verifications)) {
-        setQueue(data.verifications);
-      }
-    } catch (err) {
-      console.error("Failed to load verifications:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isSuperAdmin, campusFilter]);
-
-  React.useEffect(() => {
-    fetchVerifications();
-  }, [fetchVerifications]);
-
-  const currentItem = queue[selectedIdx] || queue[0];
-
-  const handleAction = async (status: "approved" | "rejected" | "pending") => {
-    if (!currentItem) return;
-    setIsUpdating(true);
-    setActionFeedback(null);
-
-    try {
-      const res = await fetch("/api/verifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: currentItem.id,
-          status,
-          userId: currentItem.user_id,
-          studentId: currentItem.student_id,
-          email: currentItem.email,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setQueue((prev) =>
-          prev.map((item, idx) =>
-            idx === selectedIdx ? { ...item, status } : item
-          )
-        );
-        setActionFeedback(
-          status === "approved"
-            ? `Student ${currentItem.name} has been verified!`
-            : `Verification for ${currentItem.name} was rejected.`
-        );
-      } else {
-        alert(data.message || "Failed to update verification status.");
-      }
-    } catch (err: any) {
-      alert("Error updating status: " + err.message);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   return (
     <MobileShell hideNav>
@@ -148,331 +34,107 @@ export default function AdminVerificationPage() {
             </div>
             <Link
               href="/admin/super"
-              className="text-xs font-bold underline hover:opacity-80 flex items-center gap-1"
+              className="text-xs font-bold underline hover:opacity-80"
             >
-              <span>Manage Universities & Campuses</span>
-              <ChevronRight size={14} />
+              Go to Super Admin Console &rarr;
             </Link>
           </div>
         )}
 
         {/* Header */}
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border mb-6 gap-3">
-          <div>
-            <div className="font-extrabold text-lg tracking-tight text-foreground flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-black dark:text-white" />
-              <span>
-                {isSuperAdmin
-                  ? "Global Student Identity Review Portal"
-                  : `Student Verification Portal · ${user?.campusName || "Campus Moderator"}`}
-              </span>
+        <div className="flex items-center justify-between pb-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-foreground font-black text-base border border-border">
+              <Building2 size={20} />
             </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              {isSuperAdmin
-                ? "Reviewing student verification requests across all registered campus tenants"
-                : `Reviewing live selfie & student card front for ${user?.universityName || "University"} (${user?.campusName || "Main Campus"})`}
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-black tracking-tight text-foreground">
+                  Campus Administration
+                </h1>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  {user?.role === "super_admin" ? "Super Admin" : "Campus Admin"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                <MapPin size={12} />
+                <span>{user?.campusName || "Campus Tenant"} &bull; {user?.universityName || "University"}</span>
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {isSuperAdmin && campusesList.length > 0 && (
-              <select
-                value={campusFilter}
-                onChange={(e) => setCampusFilter(e.target.value)}
-                className="h-9 px-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs text-zinc-900 dark:text-zinc-100 font-semibold focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-colors shadow-2xs cursor-pointer"
-              >
-                <option value="all" className="bg-white dark:bg-[#18181b] text-zinc-900 dark:text-zinc-100 py-1.5">
-                  All Campuses ({campusesList.length})
-                </option>
-                {campusesList.map((c) => (
-                  <option
-                    key={c.id}
-                    value={c.id}
-                    className="bg-white dark:bg-[#18181b] text-zinc-900 dark:text-zinc-100 py-1.5"
-                  >
-                    {c.name} ({c.city})
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              onClick={fetchVerifications}
-              disabled={isLoading}
-              className="p-2 rounded-xl border border-border bg-card hover:bg-muted/80 text-foreground transition-colors cursor-pointer"
-              title="Refresh queue"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-            </button>
+
+          <div className="flex items-center gap-2">
             <Link
-              href="/"
-              className="text-xs font-semibold px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
-              title="Exit to public website"
+              href="/services"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
             >
-              Exit to App
+              Enter App
             </Link>
-            <button
-              type="button"
-              onClick={async () => {
-                await logout();
-                window.location.href = "/sign-in";
-              }}
-              className="text-xs font-semibold px-3 py-2 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Log out of admin session"
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => logout()}
+              className="h-8 gap-1.5 text-xs font-semibold"
             >
               <LogOut size={13} />
-              <span>Log Out</span>
-            </button>
+              <span>Sign Out</span>
+            </Button>
           </div>
-        </header>
+        </div>
 
-        {/* Feedback Alert */}
-        {actionFeedback && (
-          <div className="mb-4 p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-black dark:text-white flex items-center gap-2 text-xs font-medium animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{actionFeedback}</span>
-          </div>
-        )}
-
-        {/* Main Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
-          {/* Left / Review Details (2 cols on desktop) */}
-          <div className="lg:col-span-2 space-y-5">
-            {isLoading ? (
-              <div className="p-12 text-center text-muted-foreground border border-border rounded-2xl bg-card flex flex-col items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-foreground mb-2" />
-                <span className="text-xs font-medium">Loading verification requests...</span>
+        {/* Content Body */}
+        <div className="py-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link
+              href="/services"
+              className="p-4 rounded-2xl bg-white dark:bg-[#121215] border border-border hover:border-emerald-500/50 transition-all shadow-xs group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-3">
+                <Wrench size={20} />
               </div>
-            ) : currentItem ? (
-              <div className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-5">
-                <div className="flex justify-between items-center pb-3 border-b border-border">
-                  <div>
-                    <span className="text-sm font-extrabold text-foreground">
-                      Student Identity Comparison
-                    </span>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">
-                      Check if the face selfie matches the face on the student card
-                    </div>
-                  </div>
-                  <VerificationBadge
-                    status={
-                      currentItem.status === "approved"
-                        ? "verified"
-                        : currentItem.status === "rejected"
-                        ? "rejected"
-                        : "pending"
-                    }
-                    isVerified={currentItem.status === "approved"}
-                    size="sm"
-                  />
-                </div>
-
-                {/* SIDE-BY-SIDE COMPARISON: Live Selfie & Student ID Card */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Live Selfie Identity Check */}
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                      <Camera className="w-3.5 h-3.5 text-black dark:text-white" />
-                      <span>1. Live Facial Selfie</span>
-                    </div>
-                    <div className="aspect-square rounded-xl bg-muted/40 border border-border overflow-hidden flex items-center justify-center relative">
-                      {currentItem.live_photo_url ? (
-                        <img
-                          src={currentItem.live_photo_url}
-                          alt="Live Selfie"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-center p-4 text-xs text-muted-foreground">
-                          <Camera className="w-8 h-8 mx-auto mb-1 opacity-40" />
-                          <span>No live photo submitted</span>
-                        </div>
-                      )}
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-black/70 text-white backdrop-blur-sm">
-                        Live Webcam Capture
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Student ID Card */}
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                      <GraduationCap className="w-3.5 h-3.5 text-black dark:text-white" />
-                      <span>2. University Student ID</span>
-                    </div>
-                    <div className="aspect-square rounded-xl bg-muted/40 border border-border overflow-hidden flex items-center justify-center relative">
-                      {currentItem.card_photo_url ? (
-                        <img
-                          src={currentItem.card_photo_url}
-                          alt="Student ID Card"
-                          className="w-full h-full object-contain p-2"
-                        />
-                      ) : (
-                        <div className="text-center p-4 text-xs text-muted-foreground">
-                          <ShieldAlert className="w-8 h-8 mx-auto mb-1 opacity-40" />
-                          <span>No card photo submitted</span>
-                        </div>
-                      )}
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-black/70 text-white backdrop-blur-sm">
-                        Student ID Front
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Student Details Grid */}
-                <div className="p-3.5 rounded-xl bg-muted/30 border border-border grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-[10px] text-muted-foreground block">Full Name</span>
-                    <span className="font-bold text-foreground">{currentItem.name}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground block">Verification Type</span>
-                    <span className="font-bold text-foreground">Live Face + Student ID</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground block">University</span>
-                    <span className="font-bold text-foreground">{currentItem.university}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground block">Campus City</span>
-                    <span className="font-bold text-foreground">{currentItem.city || "Not specified"}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground block">Program / Department</span>
-                    <span className="font-bold text-foreground truncate block">
-                      {currentItem.program} · {currentItem.department}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground block">Email Address</span>
-                    <span className="font-bold text-foreground truncate block">{currentItem.email || "N/A"}</span>
-                  </div>
-                </div>
-
-                {/* Admin Actions */}
-                <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
-                  {currentItem.status === "pending" ? (
-                    <>
-                      <Button
-                        type="button"
-                        onClick={() => handleAction("approved")}
-                        disabled={isUpdating}
-                        className="flex-1 h-11 bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-colors"
-                      >
-                        {isUpdating ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-4 h-4" />
-                            Approve & Verify Student
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleAction("rejected")}
-                        disabled={isUpdating}
-                        className="flex-1 h-11 border-zinc-300 dark:border-zinc-700 text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject Application
-                      </Button>
-                    </>
-                  ) : currentItem.status === "approved" ? (
-                    <div className="w-full flex items-center justify-between p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-black dark:text-white text-xs font-semibold">
-                      <span className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Student is currently Approved & Verified.
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleAction("pending")}
-                        disabled={isUpdating}
-                        className="underline text-[11px] hover:opacity-80"
-                      >
-                        Reset to Pending
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-full flex items-center justify-between p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">
-                      <span className="flex items-center gap-1.5">
-                        <XCircle className="w-4 h-4" />
-                        Application was Rejected.
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleAction("pending")}
-                        disabled={isUpdating}
-                        className="underline text-[11px] hover:opacity-80"
-                      >
-                        Reset to Pending
-                      </button>
-                    </div>
-                  )}
-                </div>
+              <h2 className="text-sm font-bold text-foreground">Campus Services</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Oversee student services, laundry pickup, and repairs on campus.
+              </p>
+              <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-3 group-hover:translate-x-0.5 transition-transform">
+                <span>View Services</span>
+                <ArrowRight size={13} />
               </div>
-            ) : (
-              <div className="p-10 bg-card border border-border rounded-2xl text-center text-xs text-muted-foreground">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                <div className="font-bold text-foreground">All Requests Reviewed!</div>
-                <p className="mt-1">No pending student verification requests at this time.</p>
-              </div>
-            )}
-          </div>
+            </Link>
 
-          {/* Right Column: Queue Sidebar */}
-          <div className="space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-              <span>Verification Queue ({queue.length})</span>
-              <span className="text-[10px] lowercase text-muted-foreground font-normal">
-                {queue.filter((q) => q.status === "pending").length} pending
-              </span>
-            </div>
+            <Link
+              href="/commute"
+              className="p-4 rounded-2xl bg-white dark:bg-[#121215] border border-border hover:border-emerald-500/50 transition-all shadow-xs group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+                <Car size={20} />
+              </div>
+              <h2 className="text-sm font-bold text-foreground">Campus Commute</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                View active carpools, rickshaw splits, and daily campus routes.
+              </p>
+              <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-3 group-hover:translate-x-0.5 transition-transform">
+                <span>View Rides</span>
+                <ArrowRight size={13} />
+              </div>
+            </Link>
 
-            {queue.length === 0 ? (
-              <div className="p-6 bg-card border border-border rounded-2xl text-center text-xs text-muted-foreground">
-                No verification submissions yet.
+            <Link
+              href="/market"
+              className="p-4 rounded-2xl bg-white dark:bg-[#121215] border border-border hover:border-emerald-500/50 transition-all shadow-xs group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3">
+                <Tag size={20} />
               </div>
-            ) : (
-              <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border/60 max-h-[500px] overflow-y-auto">
-                {queue.map((req, idx) => {
-                  const isSelected = selectedIdx === idx;
-                  return (
-                    <button
-                      key={req.id || idx}
-                      type="button"
-                      onClick={() => setSelectedIdx(idx)}
-                      className={`w-full text-left p-3 text-xs flex items-center justify-between transition-colors ${
-                        isSelected
-                          ? "bg-zinc-100 dark:bg-zinc-800 font-bold text-foreground border-l-4 border-black dark:border-white"
-                          : "hover:bg-muted/40 text-foreground"
-                      }`}
-                    >
-                      <div className="min-w-0 pr-2">
-                        <div className="font-bold truncate">{req.name}</div>
-                        <div className="text-[10px] text-muted-foreground truncate">
-                          {req.program || "Student"} &bull; {req.campus_name || req.city || req.university || "Main Campus"}
-                        </div>
-                      </div>
-                      <div className="shrink-0 flex items-center gap-1.5">
-                        <span
-                          className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase border ${
-                            req.status === "approved"
-                              ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
-                              : req.status === "rejected"
-                              ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700"
-                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700"
-                          }`}
-                        >
-                          {req.status}
-                        </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                      </div>
-                    </button>
-                  );
-                })}
+              <h2 className="text-sm font-bold text-foreground">Marketplace</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Check active textbook listings, room coolers, and hostel items.
+              </p>
+              <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-3 group-hover:translate-x-0.5 transition-transform">
+                <span>View Market</span>
+                <ArrowRight size={13} />
               </div>
-            )}
+            </Link>
           </div>
         </div>
       </div>
